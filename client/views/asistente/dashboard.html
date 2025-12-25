@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Asistente - Super Contable</title>
+  <link rel="stylesheet" href="/assets/css/global.css">
+  <link rel="stylesheet" href="/assets/css/asistente.css">
+</head>
+<body>
+  <div class="dashboard">
+    <nav class="navbar">
+      <div class="navbar-content">
+        <div class="navbar-brand">📊 Super Contable</div>
+        <div class="navbar-user">
+          <div>
+            <div class="navbar-user-name" id="userName">Cargando...</div>
+            <span class="navbar-user-role">Asistente</span>
+          </div>
+          <button class="btn btn-sm btn-outline" id="logoutBtn">Cerrar Sesión</button>
+        </div>
+      </div>
+    </nav>
+
+    <div class="dashboard-header">
+      <h1>Panel del Asistente</h1>
+      <p>Validación y aprobación de facturas</p>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">🏢</div>
+        <div class="stat-label">Empresas Asignadas</div>
+        <div class="stat-value" id="totalEmpresas">0</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon">⏳</div>
+        <div class="stat-label">Facturas Pendientes</div>
+        <div class="stat-value" id="facturasPendientes">0</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon">📋</div>
+        <div class="stat-label">Facturas Listas</div>
+        <div class="stat-value" id="facturasListas">0</div>
+      </div>
+    </div>
+
+    <div class="content-section">
+      <div class="section-header">
+        <h2 class="section-title">Facturas</h2>
+        <div>
+          <select id="filterEstado" class="input" style="width: auto;">
+            <option value="">Todos los estados</option>
+            <option value="pending">Pendiente</option>
+            <option value="lista">Lista</option>
+            <option value="aprobada">Aprobada</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Empresa</th>
+              <th>Fecha</th>
+              <th>NCF</th>
+              <th>Proveedor</th>
+              <th>Total</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="facturasTableBody">
+            <tr>
+              <td colspan="8" class="text-center">Cargando...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="facturaModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalTitle">Editar Factura</h3>
+        <button class="modal-close" onclick="closeModal()">×</button>
+      </div>
+      <form id="facturaForm" onsubmit="saveFactura(event)">
+        <div class="modal-body">
+          <input type="hidden" id="facturaId">
+
+          <div class="form-group">
+            <label for="facturaFecha" class="label">Fecha de Factura</label>
+            <input type="date" id="facturaFecha" class="input" required>
+          </div>
+
+          <div class="form-group">
+            <label for="facturaNCF" class="label">NCF</label>
+            <input type="text" id="facturaNCF" class="input" placeholder="B01XXXXXXXX">
+          </div>
+
+          <div class="form-group">
+            <label for="facturaRNC" class="label">RNC</label>
+            <input type="text" id="facturaRNC" class="input" placeholder="123-45678-9">
+          </div>
+
+          <div class="form-group">
+            <label for="facturaProveedor" class="label">Proveedor</label>
+            <input type="text" id="facturaProveedor" class="input">
+          </div>
+
+          <div class="form-group">
+            <label for="facturaITBIS" class="label">ITBIS</label>
+            <input type="number" id="facturaITBIS" class="input" step="0.01">
+          </div>
+
+          <div class="form-group">
+            <label for="facturaTotal" class="label">Total Pagado</label>
+            <input type="number" id="facturaTotal" class="input" step="0.01" required>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal()">
+            Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary">
+            Guardar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/assets/js/utils.js"></script>
+  <script src="/assets/js/asistente.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const user = getUser();
+      if (user) {
+        document.getElementById('userName').textContent = user.nombre_completo;
+      }
+    });
+  </script>
+</body>
+</html>

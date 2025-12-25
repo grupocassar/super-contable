@@ -137,3 +137,32 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Super Contable Specific Files
+# Database
+database/*.db
+database/*.db-journal
+database/*.sqlite
+database/*.sqlite3
+
+# Uploads & Exports
+uploads/
+exports/
+
+# Google Drive credentials
+credentials.json
+token.json
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
