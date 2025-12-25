@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Iniciar Sesión - Super Contable</title>
+  <link rel="stylesheet" href="/assets/css/global.css">
+  <link rel="stylesheet" href="/assets/css/auth.css">
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <h1>📊 Super Contable</h1>
+        <p>Gestión Contable Automatizada</p>
+      </div>
+
+      <h2 class="auth-title">Iniciar Sesión</h2>
+
+      <div id="loginError" class="alert alert-error hidden"></div>
+
+      <form id="loginForm" class="auth-form">
+        <div class="form-group">
+          <label for="email" class="label">Correo Electrónico</label>
+          <input
+            type="email"
+            id="email"
+            class="input"
+            placeholder="correo@ejemplo.com"
+            required
+            autocomplete="email"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="password" class="label">Contraseña</label>
+          <input
+            type="password"
+            id="password"
+            class="input"
+            placeholder="••••••••"
+            required
+            autocomplete="current-password"
+          >
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%;">
+          Iniciar Sesión
+        </button>
+      </form>
+
+      <div class="auth-footer">
+        <p>Super Contable © 2024</p>
+        <p class="mt-2" style="font-size: 0.75rem;">
+          Cuentas de prueba:<br>
+          <strong>Admin:</strong> admin@supercontable.com / admin123<br>
+          <strong>Contable:</strong> juan@contable.com / contable123<br>
+          <strong>Asistente:</strong> maria@asistente.com / asistente123
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script src="/assets/js/utils.js"></script>
+  <script src="/assets/js/auth.js"></script>
+</body>
+</html>

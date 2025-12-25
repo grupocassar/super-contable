@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Administrador - Super Contable</title>
+  <link rel="stylesheet" href="/assets/css/global.css">
+  <link rel="stylesheet" href="/assets/css/admin.css">
+</head>
+<body>
+  <div class="dashboard">
+    <nav class="navbar">
+      <div class="navbar-content">
+        <div class="navbar-brand">📊 Super Contable</div>
+        <div class="navbar-user">
+          <div>
+            <div class="navbar-user-name" id="userName">Cargando...</div>
+            <span class="navbar-user-role">Super Admin</span>
+          </div>
+          <button class="btn btn-sm btn-outline" id="logoutBtn">Cerrar Sesión</button>
+        </div>
+      </div>
+    </nav>
+
+    <div class="dashboard-header">
+      <h1>Panel de Administración</h1>
+      <p>Gestión global del sistema Super Contable</p>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">👥</div>
+        <div class="stat-label">Contables</div>
+        <div class="stat-value" id="totalContables">0</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon">👨‍💼</div>
+        <div class="stat-label">Asistentes</div>
+        <div class="stat-value" id="totalAsistentes">0</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon">🏢</div>
+        <div class="stat-label">Empresas</div>
+        <div class="stat-value" id="totalEmpresas">0</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon">📄</div>
+        <div class="stat-label">Facturas</div>
+        <div class="stat-value" id="totalFacturas">0</div>
+      </div>
+    </div>
+
+    <div class="content-section">
+      <div class="section-header">
+        <h2 class="section-title">Contables</h2>
+        <button class="btn btn-primary" id="createContableBtn">
+          + Crear Contable
+        </button>
+      </div>
+
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Contable</th>
+              <th>Empresas</th>
+              <th>Asistentes</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="contablesTableBody">
+            <tr>
+              <td colspan="6" class="text-center">Cargando...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="contableModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalTitle">Crear Contable</h3>
+        <button class="modal-close" onclick="closeModal()">×</button>
+      </div>
+      <form id="contableForm" onsubmit="saveContable(event)">
+        <div class="modal-body">
+          <input type="hidden" id="contableId">
+
+          <div class="form-group">
+            <label for="contableNombre" class="label">Nombre Completo</label>
+            <input type="text" id="contableNombre" class="input" required>
+          </div>
+
+          <div class="form-group">
+            <label for="contableEmail" class="label">Email</label>
+            <input type="email" id="contableEmail" class="input" required>
+          </div>
+
+          <div class="form-group">
+            <label for="contablePassword" class="label">Contraseña</label>
+            <input type="password" id="contablePassword" class="input" required>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal()">
+            Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary">
+            Guardar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/assets/js/utils.js"></script>
+  <script src="/assets/js/admin.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const user = getUser();
+      if (user) {
+        document.getElementById('userName').textContent = user.nombre_completo;
+      }
+    });
+  </script>
+</body>
+</html>
