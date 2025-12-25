@@ -27,21 +27,6 @@
       <p>Validación y aprobación de facturas</p>
     </div>
 
-    <!-- RESUMEN DE SESIÓN -->
-    <div class="session-summary" id="sessionSummary" style="display: none;">
-      <div class="summary-content">
-        <div class="summary-icon">📋</div>
-        <div class="summary-text">
-          <strong>Tienes <span id="facturasListasCount">0</span> facturas listas para aprobar</strong>
-          <p>Total procesado: <span id="totalListasAmount">RD$ 0.00</span></p>
-        </div>
-        <button class="btn btn-success" onclick="mostrarConfirmacionLote()">
-          ✅ FINALIZAR SESIÓN
-        </button>
-      </div>
-    </div>
-
-    <!-- ESTADÍSTICAS -->
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-icon">🏢</div>
@@ -49,206 +34,129 @@
         <div class="stat-value" id="totalEmpresas">0</div>
       </div>
 
-      <div class="stat-card stat-pending">
+      <div class="stat-card">
         <div class="stat-icon">⏳</div>
-        <div class="stat-label">Pendientes Total</div>
+        <div class="stat-label">Facturas Pendientes</div>
         <div class="stat-value" id="facturasPendientes">0</div>
       </div>
 
-      <div class="stat-card stat-ready">
+      <div class="stat-card">
         <div class="stat-icon">📋</div>
-        <div class="stat-label">Listas (esta sesión)</div>
+        <div class="stat-label">Facturas Listas</div>
         <div class="stat-value" id="facturasListas">0</div>
       </div>
-
-      <div class="stat-card stat-approved">
-        <div class="stat-icon">✅</div>
-        <div class="stat-label">Aprobadas (histórico)</div>
-        <div class="stat-value" id="facturasAprobadas">0</div>
-      </div>
     </div>
 
-    <!-- SECCIONES POR NIVEL DE CONFIANZA -->
+    <!-- Contador de Progreso -->
     <div class="content-section">
-      <div class="section-header confidence-high">
-        <div>
-          <h2 class="section-title">🟢 Revisión Rápida (Alta Confianza >95%)</h2>
-          <p class="section-subtitle">Solo confirmar visualmente - ~10 seg por factura</p>
-        </div>
-        <span class="count-badge" id="countAltaConfianza">0</span>
-      </div>
-      <div class="facturas-grid" id="facturasAltaConfianza">
-        <div class="empty-message">No hay facturas en esta categoría</div>
-      </div>
+      <div id="progressContainer" style="display: none;"></div>
     </div>
 
     <div class="content-section">
-      <div class="section-header confidence-medium">
+      <div class="section-header">
+        <h2 class="section-title">Facturas</h2>
         <div>
-          <h2 class="section-title">🟡 Validar Campos Dudosos (80-95%)</h2>
-          <p class="section-subtitle">Revisar campos marcados - ~30 seg por factura</p>
+          <select id="filterEstado" class="input" style="width: auto;">
+            <option value="">Todos los estados</option>
+            <option value="pending">Pendiente</option>
+            <option value="lista">Lista</option>
+            <option value="aprobada">Aprobada</option>
+          </select>
         </div>
-        <span class="count-badge" id="countMediaConfianza">0</span>
       </div>
-      <div class="facturas-grid" id="facturasMediaConfianza">
-        <div class="empty-message">No hay facturas en esta categoría</div>
-      </div>
-    </div>
 
-    <div class="content-section">
-      <div class="section-header confidence-low">
-        <div>
-          <h2 class="section-title">🔴 Revisar Completo (<80%)</h2>
-          <p class="section-subtitle">Verificar todos los campos - ~2 min por factura</p>
-        </div>
-        <span class="count-badge" id="countBajaConfianza">0</span>
-      </div>
-      <div class="facturas-grid" id="facturasBajaConfianza">
-        <div class="empty-message">No hay facturas en esta categoría</div>
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Empresa</th>
+              <th>Fecha</th>
+              <th>NCF</th>
+              <th>Proveedor</th>
+              <th>Total</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="facturasTableBody">
+            <tr>
+              <td colspan="8" class="text-center">Cargando...</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
 
-  <!-- MODAL SPLIT VIEW -->
-  <div id="validacionModal" class="modal-split">
-    <div class="modal-split-content">
-      <div class="modal-split-header">
-        <h3 class="modal-title">
-          <span id="nivelConfianzaBadge"></span>
-          Validar Factura <span id="facturaCounter"></span>
-        </h3>
-        <button class="modal-close" onclick="closeSplitModal()">×</button>
-      </div>
-      
-      <div class="modal-split-body">
-        <!-- LADO IZQUIERDO: IMAGEN -->
-        <div class="split-view-left">
-          <div class="image-container">
-            <img id="facturaImage" src="" alt="Factura" class="factura-image">
-            <div class="image-placeholder" id="imagePlaceholder">
-              <div class="placeholder-icon">📄</div>
-              <div class="placeholder-text">Vista previa de factura</div>
-              <div class="placeholder-subtext">La imagen se cargará cuando esté disponible</div>
-            </div>
-          </div>
-          <div class="image-controls">
-            <button class="btn btn-sm btn-outline" onclick="zoomIn()">🔍 Zoom +</button>
-            <button class="btn btn-sm btn-outline" onclick="zoomOut()">🔍 Zoom -</button>
-            <button class="btn btn-sm btn-outline" onclick="resetZoom()">↺ Reset</button>
-          </div>
-        </div>
-
-        <!-- LADO DERECHO: DATOS -->
-        <div class="split-view-right">
-          <div class="factura-info">
-            <div class="confidence-badge" id="confidenceBadge">
-              <span id="confidenceValue">--</span>% confianza
-            </div>
-
-            <div class="info-group">
-              <label class="info-label">Empresa</label>
-              <div class="info-value" id="infoEmpresa">--</div>
-            </div>
-
-            <div class="info-group">
-              <label class="info-label">Fecha</label>
-              <input type="date" id="infoFecha" class="input-editable">
-            </div>
-
-            <div class="info-group">
-              <label class="info-label">NCF</label>
-              <input type="text" id="infoNCF" class="input-editable" placeholder="B01XXXXXXXX">
-            </div>
-
-            <div class="info-group">
-              <label class="info-label">RNC del Proveedor</label>
-              <input type="text" id="infoRNC" class="input-editable" placeholder="XXX-XXXXX-X">
-            </div>
-
-            <div class="info-group">
-              <label class="info-label">Proveedor</label>
-              <input type="text" id="infoProveedor" class="input-editable">
-            </div>
-
-            <div class="info-row">
-              <div class="info-group">
-                <label class="info-label">ITBIS</label>
-                <input type="number" id="infoITBIS" class="input-editable" step="0.01">
-              </div>
-
-              <div class="info-group">
-                <label class="info-label">Total Pagado</label>
-                <input type="number" id="infoTotal" class="input-editable" step="0.01">
-              </div>
-            </div>
-
-            <div class="info-alert" id="validationAlert" style="display: none;">
-              ℹ️ <span id="alertMessage"></span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="modal-split-footer">
-        <button class="btn btn-danger" onclick="rechazarFactura()">
-          ❌ Rechazar
-        </button>
-        <div class="footer-center">
-          <button class="btn btn-outline" onclick="navegarFactura('anterior')" id="btnAnterior">
-            ← Anterior
-          </button>
-          <button class="btn btn-outline" onclick="navegarFactura('siguiente')" id="btnSiguiente">
-            Siguiente →
-          </button>
-        </div>
-        <button class="btn btn-primary" onclick="marcarListaModal()">
-          ✓ Marcar Lista
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL CONFIRMACIÓN LOTE -->
-  <div id="confirmacionLoteModal" class="modal">
-    <div class="modal-content modal-large">
+  <div id="facturaModal" class="modal">
+    <div class="modal-content">
       <div class="modal-header">
-        <h3 class="modal-title">Confirmar Aprobación de Sesión</h3>
-        <button class="modal-close" onclick="cerrarConfirmacionLote()">×</button>
+        <h3 class="modal-title" id="modalTitle">Editar Factura</h3>
+        <button class="modal-close" onclick="closeModal()">×</button>
       </div>
-      <div class="modal-body">
-        <div class="resumen-lote">
-          <div class="resumen-header">
-            <div class="resumen-icon">✅</div>
-            <div>
-              <h4>Resumen de tu sesión</h4>
-              <p>Estás a punto de aprobar <strong id="totalFacturasLote">0</strong> facturas</p>
-            </div>
+      <form id="facturaForm" onsubmit="saveFactura(event)">
+        <div class="modal-body">
+          <input type="hidden" id="facturaId">
+
+          <!-- Tooltip de atajos -->
+          <div class="keyboard-hint">
+            <span>⌨️ Presiona <kbd>?</kbd> para ver atajos de teclado</span>
           </div>
 
-          <div class="resumen-stats">
-            <div class="resumen-stat">
-              <span class="resumen-label">Total procesado:</span>
-              <span class="resumen-value" id="totalMontoLote">RD$ 0.00</span>
-            </div>
+          <!-- Alerta de Duplicados -->
+          <div id="duplicadoAlert" style="display: none; margin-bottom: 1rem;"></div>
+
+          <div class="form-group">
+            <label for="facturaFecha" class="label">Fecha de Factura</label>
+            <input type="date" id="facturaFecha" class="input" required>
           </div>
 
-          <div class="resumen-empresas" id="resumenEmpresas">
-            <!-- Se llenará dinámicamente -->
+          <div class="form-group">
+            <label for="facturaNCF" class="label">NCF</label>
+            <input type="text" id="facturaNCF" class="input" placeholder="B01XXXXXXXX">
           </div>
 
-          <div class="resumen-warning">
-            ⚠️ Una vez aprobadas, estas facturas pasarán a tu contable. Asegúrate de haber revisado todo correctamente.
+          <div class="form-group">
+            <label for="facturaRNC" class="label">RNC</label>
+            <input type="text" id="facturaRNC" class="input" placeholder="123-45678-9">
+          </div>
+
+          <div class="form-group">
+            <label for="facturaProveedor" class="label">Proveedor</label>
+            <input type="text" id="facturaProveedor" class="input">
+          </div>
+
+          <div class="form-group">
+            <label for="facturaITBIS" class="label">ITBIS</label>
+            <input type="number" id="facturaITBIS" class="input" step="0.01">
+          </div>
+
+          <div class="form-group">
+            <label for="facturaTotal" class="label">Total Pagado</label>
+            <input type="number" id="facturaTotal" class="input" step="0.01" required>
+          </div>
+
+          <!-- Campo de Notas -->
+          <div class="form-group">
+            <label for="facturaNotas" class="label">💬 Nota para el contable (opcional)</label>
+            <textarea
+              id="facturaNotas"
+              class="input"
+              rows="3"
+              placeholder="Ej: Esta factura parece duplicada, favor verificar"></textarea>
           </div>
         </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-outline" onclick="cerrarConfirmacionLote()">
-          ← Revisar de nuevo
-        </button>
-        <button class="btn btn-success" onclick="confirmarAprobacionLote()">
-          ✅ CONFIRMAR Y APROBAR
-        </button>
-      </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal()">
+            Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary">
+            Guardar
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 

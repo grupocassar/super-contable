@@ -135,7 +135,7 @@ class Factura {
   static async update(id, updates, userId = null) {
     const allowedFields = [
       'fecha_factura', 'ncf', 'rnc', 'proveedor', 'itbis', 'total_pagado',
-      'estado', 'confidence_score', 'drive_url'
+      'estado', 'confidence_score', 'drive_url', 'notas', 'saltada'
     ];
 
     const fields = [];
@@ -222,6 +222,31 @@ class Factura {
     );
 
     return stats;
+  }
+
+  static async findByNCF(ncf, asistenteId = null) {
+    let sql = `
+      SELECT f.*, e.nombre as empresa_nombre, e.codigo_corto
+      FROM facturas f
+      INNER JOIN empresas e ON e.id = f.empresa_id
+      WHERE f.ncf = ?
+    `;
+    const params = [ncf];
+
+    if (asistenteId) {
+      sql += `
+        AND EXISTS (
+          SELECT 1 FROM asistente_empresas ae
+          WHERE ae.empresa_id = f.empresa_id
+          AND ae.asistente_id = ?
+        )
+      `;
+      params.push(asistenteId);
+    }
+
+    sql += ` ORDER BY f.created_at DESC`;
+
+    return await getAll(sql, params);
   }
 }
 

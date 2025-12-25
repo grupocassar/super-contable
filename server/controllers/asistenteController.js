@@ -8,22 +8,6 @@ const getDashboard = asyncHandler(async (req, res) => {
   const empresas = await Empresa.findByAsistenteId(asistenteId);
   const facturaStats = await Factura.getStatsByAsistenteId(asistenteId);
 
-  // Obtener facturas agrupadas por nivel de confianza
-  const todasFacturas = await Factura.findByAsistenteId(asistenteId, {});
-  
-  const facturasAgrupadas = {
-    alta_confianza: todasFacturas.filter(f => 
-      f.estado === 'pending' && (f.confidence_score || 0) >= 95
-    ),
-    media_confianza: todasFacturas.filter(f => 
-      f.estado === 'pending' && (f.confidence_score || 0) >= 80 && (f.confidence_score || 0) < 95
-    ),
-    baja_confianza: todasFacturas.filter(f => 
-      f.estado === 'pending' && (f.confidence_score || 0) < 80
-    ),
-    listas: todasFacturas.filter(f => f.estado === 'lista')
-  };
-
   res.json({
     success: true,
     data: {
@@ -32,8 +16,7 @@ const getDashboard = asyncHandler(async (req, res) => {
         facturas: facturaStats
       },
       empresas,
-      facturas_agrupadas: facturasAgrupadas,
-      facturas_recientes: todasFacturas
+      facturas_recientes: await Factura.findByAsistenteId(asistenteId, {})
     }
   });
 });
@@ -110,8 +93,7 @@ const aprobarFactura = asyncHandler(async (req, res) => {
     });
   }
 
-  // IMPORTANTE: Ahora solo marca como "lista", no como "aprobada"
-  await Factura.update(id, { estado: 'lista' }, asistenteId);
+  await Factura.approve(id, asistenteId);
 
   const updatedFactura = await Factura.findById(id);
 
@@ -135,37 +117,23 @@ const aprobarLote = asyncHandler(async (req, res) => {
   const empresas = await Empresa.findByAsistenteId(asistenteId);
   const empresaIds = empresas.map(e => e.id);
 
-  let aprobadas = 0;
-  let errores = 0;
-
   for (const facturaId of facturas_ids) {
     const factura = await Factura.findById(facturaId);
 
     if (!factura) {
-      errores++;
       continue;
     }
 
     if (!empresaIds.includes(factura.empresa_id)) {
-      errores++;
       continue;
     }
 
-    // Solo aprobar si está en estado "lista"
-    if (factura.estado === 'lista') {
-      await Factura.approve(facturaId, asistenteId);
-      aprobadas++;
-    }
+    await Factura.approve(facturaId, asistenteId);
   }
 
   res.json({
     success: true,
-    message: `${aprobadas} facturas aprobadas`,
-    data: {
-      aprobadas,
-      errores,
-      total: facturas_ids.length
-    }
+    message: `${facturas_ids.length} facturas processed`
   });
 });
 
@@ -201,11 +169,71 @@ const rechazarFactura = asyncHandler(async (req, res) => {
   });
 });
 
+const checkDuplicado = asyncHandler(async (req, res) => {
+  const { ncf } = req.query;
+  const asistenteId = req.user.userId;
+
+  if (!ncf) {
+    return res.status(400).json({
+      success: false,
+      message: 'NCF is required'
+    });
+  }
+
+  const duplicados = await Factura.findByNCF(ncf, asistenteId);
+
+  res.json({
+    success: true,
+    data: duplicados.filter(f => f.ncf === ncf)
+  });
+});
+
+const desmarcarFactura = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const asistenteId = req.user.userId;
+
+  const factura = await Factura.findById(id);
+  if (!factura) {
+    return res.status(404).json({
+      success: false,
+      message: 'Factura not found'
+    });
+  }
+
+  const empresas = await Empresa.findByAsistenteId(asistenteId);
+  const empresaIds = empresas.map(e => e.id);
+
+  if (!empresaIds.includes(factura.empresa_id)) {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied to this factura'
+    });
+  }
+
+  if (factura.estado !== 'lista') {
+    return res.status(400).json({
+      success: false,
+      message: 'Only facturas in "lista" state can be unmarked'
+    });
+  }
+
+  await Factura.update(id, { estado: 'pending' }, asistenteId);
+
+  const updatedFactura = await Factura.findById(id);
+
+  res.json({
+    success: true,
+    data: updatedFactura
+  });
+});
+
 module.exports = {
   getDashboard,
   getFacturas,
   updateFactura,
   aprobarFactura,
   aprobarLote,
-  rechazarFactura
+  rechazarFactura,
+  checkDuplicado,
+  desmarcarFactura
 };
