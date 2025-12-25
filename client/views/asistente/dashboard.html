@@ -47,6 +47,11 @@
       </div>
     </div>
 
+    <!-- Contador de Progreso -->
+    <div class="content-section">
+      <div id="progressContainer" style="display: none;"></div>
+    </div>
+
     <div class="content-section">
       <div class="section-header">
         <h2 class="section-title">Facturas</h2>
@@ -94,6 +99,14 @@
         <div class="modal-body">
           <input type="hidden" id="facturaId">
 
+          <!-- Tooltip de atajos -->
+          <div class="keyboard-hint">
+            <span>⌨️ Presiona <kbd>?</kbd> para ver atajos de teclado</span>
+          </div>
+
+          <!-- Alerta de Duplicados -->
+          <div id="duplicadoAlert" style="display: none; margin-bottom: 1rem;"></div>
+
           <div class="form-group">
             <label for="facturaFecha" class="label">Fecha de Factura</label>
             <input type="date" id="facturaFecha" class="input" required>
@@ -122,6 +135,16 @@
           <div class="form-group">
             <label for="facturaTotal" class="label">Total Pagado</label>
             <input type="number" id="facturaTotal" class="input" step="0.01" required>
+          </div>
+
+          <!-- Campo de Notas -->
+          <div class="form-group">
+            <label for="facturaNotas" class="label">💬 Nota para el contable (opcional)</label>
+            <textarea
+              id="facturaNotas"
+              class="input"
+              rows="3"
+              placeholder="Ej: Esta factura parece duplicada, favor verificar"></textarea>
           </div>
         </div>
 

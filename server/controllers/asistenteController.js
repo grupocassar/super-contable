@@ -169,11 +169,71 @@ const rechazarFactura = asyncHandler(async (req, res) => {
   });
 });
 
+const checkDuplicado = asyncHandler(async (req, res) => {
+  const { ncf } = req.query;
+  const asistenteId = req.user.userId;
+
+  if (!ncf) {
+    return res.status(400).json({
+      success: false,
+      message: 'NCF is required'
+    });
+  }
+
+  const duplicados = await Factura.findByNCF(ncf, asistenteId);
+
+  res.json({
+    success: true,
+    data: duplicados.filter(f => f.ncf === ncf)
+  });
+});
+
+const desmarcarFactura = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const asistenteId = req.user.userId;
+
+  const factura = await Factura.findById(id);
+  if (!factura) {
+    return res.status(404).json({
+      success: false,
+      message: 'Factura not found'
+    });
+  }
+
+  const empresas = await Empresa.findByAsistenteId(asistenteId);
+  const empresaIds = empresas.map(e => e.id);
+
+  if (!empresaIds.includes(factura.empresa_id)) {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied to this factura'
+    });
+  }
+
+  if (factura.estado !== 'lista') {
+    return res.status(400).json({
+      success: false,
+      message: 'Only facturas in "lista" state can be unmarked'
+    });
+  }
+
+  await Factura.update(id, { estado: 'pending' }, asistenteId);
+
+  const updatedFactura = await Factura.findById(id);
+
+  res.json({
+    success: true,
+    data: updatedFactura
+  });
+});
+
 module.exports = {
   getDashboard,
   getFacturas,
   updateFactura,
   aprobarFactura,
   aprobarLote,
-  rechazarFactura
+  rechazarFactura,
+  checkDuplicado,
+  desmarcarFactura
 };

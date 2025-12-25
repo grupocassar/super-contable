@@ -65,6 +65,10 @@ CREATE TABLE IF NOT EXISTS facturas (
   procesado_por INTEGER,
   fecha_procesado DATETIME,
 
+  -- NOTAS Y MARCADORES
+  notas TEXT,
+  saltada BOOLEAN DEFAULT 0,
+
   -- AUDITORÍA
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
