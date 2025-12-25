@@ -8,6 +8,22 @@ const getDashboard = asyncHandler(async (req, res) => {
   const empresas = await Empresa.findByAsistenteId(asistenteId);
   const facturaStats = await Factura.getStatsByAsistenteId(asistenteId);
 
+  // Obtener facturas agrupadas por nivel de confianza
+  const todasFacturas = await Factura.findByAsistenteId(asistenteId, {});
+  
+  const facturasAgrupadas = {
+    alta_confianza: todasFacturas.filter(f => 
+      f.estado === 'pending' && (f.confidence_score || 0) >= 95
+    ),
+    media_confianza: todasFacturas.filter(f => 
+      f.estado === 'pending' && (f.confidence_score || 0) >= 80 && (f.confidence_score || 0) < 95
+    ),
+    baja_confianza: todasFacturas.filter(f => 
+      f.estado === 'pending' && (f.confidence_score || 0) < 80
+    ),
+    listas: todasFacturas.filter(f => f.estado === 'lista')
+  };
+
   res.json({
     success: true,
     data: {
@@ -16,7 +32,8 @@ const getDashboard = asyncHandler(async (req, res) => {
         facturas: facturaStats
       },
       empresas,
-      facturas_recientes: await Factura.findByAsistenteId(asistenteId, {})
+      facturas_agrupadas: facturasAgrupadas,
+      facturas_recientes: todasFacturas
     }
   });
 });
@@ -93,7 +110,8 @@ const aprobarFactura = asyncHandler(async (req, res) => {
     });
   }
 
-  await Factura.approve(id, asistenteId);
+  // IMPORTANTE: Ahora solo marca como "lista", no como "aprobada"
+  await Factura.update(id, { estado: 'lista' }, asistenteId);
 
   const updatedFactura = await Factura.findById(id);
 
@@ -117,23 +135,37 @@ const aprobarLote = asyncHandler(async (req, res) => {
   const empresas = await Empresa.findByAsistenteId(asistenteId);
   const empresaIds = empresas.map(e => e.id);
 
+  let aprobadas = 0;
+  let errores = 0;
+
   for (const facturaId of facturas_ids) {
     const factura = await Factura.findById(facturaId);
 
     if (!factura) {
+      errores++;
       continue;
     }
 
     if (!empresaIds.includes(factura.empresa_id)) {
+      errores++;
       continue;
     }
 
-    await Factura.approve(facturaId, asistenteId);
+    // Solo aprobar si está en estado "lista"
+    if (factura.estado === 'lista') {
+      await Factura.approve(facturaId, asistenteId);
+      aprobadas++;
+    }
   }
 
   res.json({
     success: true,
-    message: `${facturas_ids.length} facturas processed`
+    message: `${aprobadas} facturas aprobadas`,
+    data: {
+      aprobadas,
+      errores,
+      total: facturas_ids.length
+    }
   });
 });
 

@@ -6,15 +6,57 @@ const { validateEnv } = require('../config/env');
 async function initializeDatabase() {
   try {
     console.log('🚀 Initializing Super Contable database...\n');
-
+    
     validateEnv();
-
     await initDatabase();
+    
+    const db = getDatabase();
 
+    // PASO 1: DESACTIVAR FOREIGN KEYS TEMPORALMENTE
+    await new Promise((resolve, reject) => {
+      db.run('PRAGMA foreign_keys = OFF', (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+
+    // PASO 2: BORRAR TODAS LAS TABLAS EXISTENTES
+    console.log('🗑️  Dropping existing tables...');
+    const tables = await new Promise((resolve, reject) => {
+      db.all(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'",
+        (err, rows) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          resolve(rows);
+        }
+      );
+    });
+
+    for (const table of tables) {
+      await new Promise((resolve, reject) => {
+        db.run(`DROP TABLE IF EXISTS ${table.name}`, (err) => {
+          if (err) {
+            console.error(`   ✗ Error dropping table ${table.name}:`, err.message);
+            resolve(); // Continuar aunque falle
+          } else {
+            console.log(`   ✓ Dropped table: ${table.name}`);
+            resolve();
+          }
+        });
+      });
+    }
+
+    if (tables.length > 0) {
+      console.log('');
+    }
+
+    // PASO 3: CREAR TABLAS DESDE SCHEMA
+    console.log('📝 Creating tables from schema...');
     const schemaPath = path.join(__dirname, 'schema.sql');
     const schema = fs.readFileSync(schemaPath, 'utf8');
-
-    const db = getDatabase();
 
     const statements = schema
       .split(';')
@@ -36,7 +78,16 @@ async function initializeDatabase() {
 
     console.log('✓ Database schema created successfully\n');
 
-    const tables = await new Promise((resolve, reject) => {
+    // PASO 4: REACTIVAR FOREIGN KEYS
+    await new Promise((resolve, reject) => {
+      db.run('PRAGMA foreign_keys = ON', (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+
+    // PASO 5: VERIFICAR TABLAS CREADAS
+    const newTables = await new Promise((resolve, reject) => {
       db.all(
         "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'",
         (err, rows) => {
@@ -50,7 +101,7 @@ async function initializeDatabase() {
     });
 
     console.log('📊 Tables created:');
-    tables.forEach(table => {
+    newTables.forEach(table => {
       console.log(`   - ${table.name}`);
     });
 
