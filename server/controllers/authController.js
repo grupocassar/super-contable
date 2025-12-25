@@ -1,6 +1,8 @@
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const { generateToken } = require('../config/jwt');
 const { asyncHandler } = require('../middleware/errorHandler');
+const { config } = require('../config/env');
 
 const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
@@ -21,14 +23,7 @@ const login = asyncHandler(async (req, res) => {
     });
   }
 
-  if (!user.activo) {
-    return res.status(403).json({
-      success: false,
-      message: 'Account is inactive'
-    });
-  }
-
-  const isValidPassword = await User.verifyPassword(password, user.password_hash);
+  const isValidPassword = await bcrypt.compare(password, user.password_hash);
 
   if (!isValidPassword) {
     return res.status(401).json({
@@ -37,12 +32,15 @@ const login = asyncHandler(async (req, res) => {
     });
   }
 
-  const token = generateToken({
-    userId: user.id,
-    email: user.email,
-    rol: user.rol,
-    contableId: user.contable_id
-  });
+  const token = jwt.sign(
+    {
+      userId: user.id,
+      email: user.email,
+      rol: user.rol
+    },
+    config.jwt.secret,
+    { expiresIn: config.jwt.expiresIn }
+  );
 
   res.json({
     success: true,
@@ -52,8 +50,7 @@ const login = asyncHandler(async (req, res) => {
         id: user.id,
         email: user.email,
         nombre_completo: user.nombre_completo,
-        rol: user.rol,
-        contable_id: user.contable_id
+        rol: user.rol
       }
     }
   });
@@ -62,23 +59,20 @@ const login = asyncHandler(async (req, res) => {
 const verify = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user.userId);
 
-  if (!user || !user.activo) {
-    return res.status(401).json({
+  if (!user) {
+    return res.status(404).json({
       success: false,
-      message: 'Invalid token'
+      message: 'User not found'
     });
   }
 
   res.json({
     success: true,
     data: {
-      user: {
-        id: user.id,
-        email: user.email,
-        nombre_completo: user.nombre_completo,
-        rol: user.rol,
-        contable_id: user.contable_id
-      }
+      id: user.id,
+      email: user.email,
+      nombre_completo: user.nombre_completo,
+      rol: user.rol
     }
   });
 });

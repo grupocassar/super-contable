@@ -1,7 +1,14 @@
 let currentUser = null;
 let facturas = [];
+let facturasAgrupadas = {
+  alta_confianza: [],
+  media_confianza: [],
+  baja_confianza: [],
+  listas: []
+};
 let empresas = [];
 let currentFacturaIndex = 0;
+let currentZoom = 1;
 let facturasActuales = [];
 let ultimaFacturaMarcada = null;
 let timerDeshacer = null;
@@ -22,13 +29,12 @@ document.addEventListener('DOMContentLoaded', () => {
   actualizarContadorProgreso();
 
   document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);
-  document.getElementById('filterEstado')?.addEventListener('change', filterFacturas);
 });
 
 // ========== ATAJOS DE TECLADO ==========
 function inicializarAtajosTeclado() {
   document.addEventListener('keydown', (e) => {
-    const modal = document.getElementById('facturaModal');
+    const modal = document.getElementById('validacionModal');
     const isModalOpen = modal && modal.classList.contains('show');
 
     if (isModalOpen) {
@@ -41,9 +47,14 @@ function inicializarAtajosTeclado() {
 }
 
 function handleKeyboardShortcuts(e) {
+  // No interceptar si está escribiendo en un campo
+  const target = e.target;
+  const isTyping = target.tagName === 'TEXTAREA' || 
+                   (target.tagName === 'INPUT' && target.type !== 'date');
+
   if (e.key === 'Escape') {
     e.preventDefault();
-    closeModal();
+    closeSplitModal();
     return;
   }
 
@@ -53,25 +64,21 @@ function handleKeyboardShortcuts(e) {
     return;
   }
 
-  if (e.key === 'Enter' && !e.ctrlKey) {
-    const target = e.target;
-    if (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT') {
-      return;
-    }
+  if (e.key === 'Enter' && !e.ctrlKey && !isTyping) {
     e.preventDefault();
     guardarYSiguiente();
     return;
   }
 
-  if (e.key === 'r' || e.key === 'R') {
+  if ((e.key === 'r' || e.key === 'R') && !isTyping) {
     e.preventDefault();
-    rechazarFacturaActual();
+    rechazarFactura();
     return;
   }
 
-  if (e.key === 's' || e.key === 'S') {
+  if ((e.key === 's' || e.key === 'S') && !isTyping) {
     e.preventDefault();
-    saltarFacturaActual();
+    saltarFactura();
     return;
   }
 
@@ -146,87 +153,17 @@ function mostrarAyudaAtajos() {
 }
 
 async function guardarYSiguiente() {
-  const formElement = document.getElementById('facturaForm');
-  if (!formElement) return;
-
-  await saveFactura({ preventDefault: () => {} });
-
-  setTimeout(() => {
-    navegarFactura('siguiente');
-  }, 300);
+  await marcarListaModal();
+  if (currentFacturaIndex < facturasActuales.length - 1) {
+    setTimeout(() => navegarFactura('siguiente'), 300);
+  } else {
+    setTimeout(() => closeSplitModal(), 300);
+  }
 }
 
 async function guardarYCerrar() {
-  await saveFactura({ preventDefault: () => {} });
-  setTimeout(() => {
-    closeModal();
-  }, 300);
-}
-
-async function rechazarFacturaActual() {
-  const id = document.getElementById('facturaId').value;
-  if (!id) return;
-
-  if (!confirm('¿Está seguro de rechazar esta factura?')) {
-    return;
-  }
-
-  try {
-    await fetchAPI(`/asistente/facturas/${id}/rechazar`, {
-      method: 'POST'
-    });
-
-    showToast('Factura rechazada', 'success');
-    closeModal();
-    loadDashboard();
-  } catch (error) {
-    showToast('Error: ' + error.message, 'error');
-  }
-}
-
-async function saltarFacturaActual() {
-  const id = document.getElementById('facturaId').value;
-  if (!id) return;
-
-  try {
-    await fetchAPI(`/asistente/facturas/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify({ saltada: true })
-    });
-
-    showToast('Factura saltada (se revisará después)', 'info');
-    navegarFactura('siguiente');
-  } catch (error) {
-    showToast('Error: ' + error.message, 'error');
-  }
-}
-
-function navegarFactura(direccion) {
-  if (direccion === 'siguiente') {
-    currentFacturaIndex = (currentFacturaIndex + 1) % facturasActuales.length;
-  } else if (direccion === 'anterior') {
-    currentFacturaIndex = (currentFacturaIndex - 1 + facturasActuales.length) % facturasActuales.length;
-  }
-
-  if (facturasActuales.length > 0) {
-    const factura = facturasActuales[currentFacturaIndex];
-    cargarFacturaEnModal(factura);
-  }
-}
-
-function cargarFacturaEnModal(factura) {
-  document.getElementById('facturaId').value = factura.id;
-  document.getElementById('facturaFecha').value = factura.fecha_factura || '';
-  document.getElementById('facturaNCF').value = factura.ncf || '';
-  document.getElementById('facturaRNC').value = factura.rnc || '';
-  document.getElementById('facturaProveedor').value = factura.proveedor || '';
-  document.getElementById('facturaITBIS').value = factura.itbis || '';
-  document.getElementById('facturaTotal').value = factura.total_pagado || '';
-  document.getElementById('facturaNotas').value = factura.notas || '';
-
-  if (factura.ncf) {
-    checkDuplicado(factura.ncf, factura.id);
-  }
+  await marcarListaModal();
+  setTimeout(() => closeSplitModal(), 300);
 }
 
 // ========== CONTADOR DE PROGRESO ==========
@@ -327,6 +264,10 @@ function mostrarBannerDeshacer(facturaId) {
     existingBanner.remove();
   }
 
+  if (timerDeshacer) {
+    clearInterval(timerDeshacer);
+  }
+
   ultimaFacturaMarcada = { id: facturaId, timestamp: Date.now() };
 
   const banner = document.createElement('div');
@@ -334,8 +275,7 @@ function mostrarBannerDeshacer(facturaId) {
   banner.className = 'undo-banner';
   banner.innerHTML = `
     <span>✓ Factura #${facturaId} marcada como lista</span>
-    <button onclick="deshacerMarcar()" class="btn-undo">⏮️ Deshacer</button>
-    <span id="undoTimer">8</span>
+    <button onclick="deshacerMarcar()" class="btn-undo">⏮️ Deshacer (<span id="undoTimer">8</span>s)</button>
   `;
   document.body.appendChild(banner);
 
@@ -365,8 +305,9 @@ async function deshacerMarcar() {
   }
 
   try {
-    await fetchAPI(`/asistente/facturas/${ultimaFacturaMarcada.id}/desmarcar`, {
-      method: 'POST'
+    await fetchAPI(`/asistente/facturas/${ultimaFacturaMarcada.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ estado: 'pending' })
     });
 
     showToast('✓ Factura desmarcada', 'success');
@@ -396,7 +337,7 @@ async function checkDuplicado(ncf, currentId) {
   try {
     const response = await fetchAPI(`/asistente/facturas/check-duplicado?ncf=${encodeURIComponent(ncf)}`);
 
-    if (response.success) {
+    if (response.success && response.data) {
       const duplicados = response.data.filter(f => f.id != currentId);
 
       if (duplicados.length > 0) {
@@ -409,7 +350,7 @@ async function checkDuplicado(ncf, currentId) {
               <p>Ya existe factura con NCF ${ncf}</p>
               <ul>
                 <li>Fecha: ${formatDate(dup.fecha_factura)}</li>
-                <li>Empresa: ${dup.empresa_nombre}</li>
+                <li>Empresa: ${dup.empresa_nombre || 'N/A'}</li>
                 <li>Monto: ${formatCurrency(dup.total_pagado)}</li>
                 <li>Estado: ${getEstadoLabel(dup.estado)}</li>
               </ul>
@@ -423,6 +364,7 @@ async function checkDuplicado(ncf, currentId) {
     }
   } catch (error) {
     console.error('Error checking duplicado:', error);
+    alertContainer.style.display = 'none';
   }
 }
 
@@ -435,8 +377,15 @@ async function loadDashboard() {
       displayStats(dashboardData.data.stats);
       empresas = dashboardData.data.empresas || [];
       facturas = dashboardData.data.facturas_recientes || [];
-      facturasActuales = facturas.filter(f => f.estado === 'pending' || f.estado === 'lista');
-      displayFacturas(facturas);
+      facturasAgrupadas = dashboardData.data.facturas_agrupadas || {
+        alta_confianza: [],
+        media_confianza: [],
+        baja_confianza: [],
+        listas: []
+      };
+
+      mostrarResumenSesion();
+      displayFacturasAgrupadas();
       actualizarContadorProgreso();
     }
   } catch (error) {
@@ -450,150 +399,349 @@ function displayStats(stats) {
   const facturasStats = stats.facturas || {};
   document.getElementById('facturasPendientes').textContent = facturasStats.pendientes || 0;
   document.getElementById('facturasListas').textContent = facturasStats.listas || 0;
+  document.getElementById('facturasAprobadas').textContent = facturasStats.aprobadas || 0;
 }
 
-function displayFacturas(facturas) {
-  const tbody = document.getElementById('facturasTableBody');
+function mostrarResumenSesion() {
+  const listas = facturasAgrupadas.listas || [];
+  const sessionSummary = document.getElementById('sessionSummary');
+  
+  if (listas.length > 0) {
+    document.getElementById('facturasListasCount').textContent = listas.length;
+    sessionSummary.style.display = 'block';
+  } else {
+    sessionSummary.style.display = 'none';
+  }
+}
 
-  if (!tbody) return;
+function displayFacturasAgrupadas() {
+  displayFacturasSeccion(
+    facturasAgrupadas.alta_confianza || [],
+    'facturasAltaConfianza',
+    'countAltaConfianza',
+    'high'
+  );
+
+  displayFacturasSeccion(
+    facturasAgrupadas.media_confianza || [],
+    'facturasMediaConfianza',
+    'countMediaConfianza',
+    'medium'
+  );
+
+  displayFacturasSeccion(
+    facturasAgrupadas.baja_confianza || [],
+    'facturasBajaConfianza',
+    'countBajaConfianza',
+    'low'
+  );
+}
+
+function displayFacturasSeccion(facturas, containerId, countId, confidenceLevel) {
+  const container = document.getElementById(containerId);
+  const countBadge = document.getElementById(countId);
+
+  if (!container) return;
+
+  countBadge.textContent = facturas.length;
 
   if (facturas.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="8" class="text-center">
-          <div class="empty-state">
-            <div class="empty-state-icon">📄</div>
-            <p>No hay facturas asignadas</p>
-          </div>
-        </td>
-      </tr>
-    `;
+    container.innerHTML = '<div class="empty-message">No hay facturas en esta categoría</div>';
     return;
   }
 
-  tbody.innerHTML = facturas.map(factura => `
-    <tr>
-      <td>${factura.id}</td>
-      <td>
-        ${factura.empresa_nombre || '-'}
-        ${factura.saltada ? '<span class="badge badge-warning" style="margin-left: 5px;">⏭️</span>' : ''}
-        ${factura.notas ? '<span class="badge badge-info" style="margin-left: 5px;">💬</span>' : ''}
-      </td>
-      <td>${formatDate(factura.fecha_factura)}</td>
-      <td>${factura.ncf || '-'}</td>
-      <td>${factura.proveedor || '-'}</td>
-      <td>${formatCurrency(factura.total_pagado)}</td>
-      <td>
-        <span class="badge ${getEstadoBadgeClass(factura.estado)}">
-          ${getEstadoLabel(factura.estado)}
-        </span>
-      </td>
-      <td>
-        <div class="actions">
-          ${factura.estado === 'pending' || factura.estado === 'lista' ? `
-            <button class="btn btn-sm btn-primary" onclick="editFactura(${factura.id})">
-              Editar
-            </button>
-            <button class="btn btn-sm btn-secondary" onclick="aprobarFactura(${factura.id})">
-              Aprobar
-            </button>
-          ` : ''}
-          ${factura.drive_url ? `
-            <a href="${factura.drive_url}" target="_blank" class="btn btn-sm btn-outline">
-              Ver
-            </a>
-          ` : ''}
+  container.innerHTML = facturas.map((factura, index) => {
+    const badges = [];
+    if (factura.saltada) badges.push('<span class="badge-mini">⏭️</span>');
+    if (factura.notas) badges.push('<span class="badge-mini">💬</span>');
+    
+    return `
+    <div class="factura-card" onclick="abrirValidacionSeccion('${confidenceLevel}', ${index})">
+      <div class="factura-card-header">
+        <div class="factura-empresa">
+          ${factura.empresa_nombre || 'Sin empresa'}
+          ${badges.join(' ')}
         </div>
-      </td>
-    </tr>
-  `).join('');
+        <div class="factura-confidence ${confidenceLevel}">
+          ${(factura.confidence_score || 0).toFixed(0)}%
+        </div>
+      </div>
+      
+      <div class="factura-info-row">
+        <span class="factura-info-label">Fecha:</span>
+        <span class="factura-info-value">${formatDate(factura.fecha_factura)}</span>
+      </div>
+      
+      <div class="factura-info-row">
+        <span class="factura-info-label">NCF:</span>
+        <span class="factura-info-value">${factura.ncf || '-'}</span>
+      </div>
+      
+      <div class="factura-info-row">
+        <span class="factura-info-label">Proveedor:</span>
+        <span class="factura-info-value">${factura.proveedor || '-'}</span>
+      </div>
+      
+      <div class="factura-total">
+        ${formatCurrency(factura.total_pagado)}
+      </div>
+    </div>
+  `}).join('');
 }
 
-async function filterFacturas() {
-  const estado = document.getElementById('filterEstado').value;
+// ========== MODAL SPLIT VIEW ==========
+function abrirValidacionSeccion(seccion, index) {
+  const seccionMap = {
+    'high': facturasAgrupadas.alta_confianza,
+    'medium': facturasAgrupadas.media_confianza,
+    'low': facturasAgrupadas.baja_confianza
+  };
 
-  try {
-    const params = new URLSearchParams();
-    if (estado) params.append('estado', estado);
+  facturasActuales = seccionMap[seccion] || [];
+  
+  if (facturasActuales.length === 0) {
+    showToast('No hay facturas disponibles', 'error');
+    return;
+  }
 
-    const response = await fetchAPI(`/asistente/facturas?${params.toString()}`);
+  currentFacturaIndex = index;
+  mostrarFacturaEnModal(currentFacturaIndex);
+  document.getElementById('validacionModal').classList.add('show');
+}
 
-    if (response.success) {
-      facturas = response.data;
-      facturasActuales = facturas.filter(f => f.estado === 'pending' || f.estado === 'lista');
-      displayFacturas(facturas);
-    }
-  } catch (error) {
-    showToast('Error al filtrar facturas: ' + error.message, 'error');
+function mostrarFacturaEnModal(index) {
+  const factura = facturasActuales[index];
+  if (!factura) return;
+
+  const confidence = factura.confidence_score || 0;
+  let nivelLabel = '';
+  let nivelClass = '';
+  
+  if (confidence >= 95) {
+    nivelLabel = '🟢 Revisión Rápida';
+    nivelClass = 'high';
+  } else if (confidence >= 80) {
+    nivelLabel = '🟡 Validar Campos';
+    nivelClass = 'medium';
+  } else {
+    nivelLabel = '🔴 Revisar Completo';
+    nivelClass = 'low';
+  }
+
+  document.getElementById('nivelConfianzaBadge').textContent = nivelLabel;
+  document.getElementById('facturaCounter').textContent = `(${index + 1} de ${facturasActuales.length})`;
+
+  document.getElementById('infoEmpresa').textContent = factura.empresa_nombre || '-';
+  document.getElementById('infoFecha').value = factura.fecha_factura || '';
+  document.getElementById('infoNCF').value = factura.ncf || '';
+  document.getElementById('infoRNC').value = factura.rnc || '';
+  document.getElementById('infoProveedor').value = factura.proveedor || '';
+  document.getElementById('infoITBIS').value = factura.itbis || '';
+  document.getElementById('infoTotal').value = factura.total_pagado || '';
+  document.getElementById('infoNotas').value = factura.notas || '';
+
+  const badge = document.getElementById('confidenceBadge');
+  document.getElementById('confidenceValue').textContent = confidence.toFixed(0);
+  badge.className = 'confidence-badge ' + nivelClass;
+
+  document.getElementById('imagePlaceholder').style.display = 'flex';
+  document.getElementById('facturaImage').style.display = 'none';
+
+  resetZoom();
+
+  document.getElementById('btnAnterior').disabled = index === 0;
+  document.getElementById('btnSiguiente').disabled = index === facturasActuales.length - 1;
+
+  document.getElementById('validationAlert').style.display = 'none';
+
+  // Check duplicados
+  if (factura.ncf) {
+    checkDuplicado(factura.ncf, factura.id);
   }
 }
 
-function editFactura(id) {
-  const factura = facturas.find(f => f.id === id);
-  if (!factura) return;
-
-  currentFacturaIndex = facturasActuales.findIndex(f => f.id === id);
-  if (currentFacturaIndex === -1) currentFacturaIndex = 0;
-
-  document.getElementById('modalTitle').textContent = `Editar Factura #${factura.id}`;
-  cargarFacturaEnModal(factura);
-
-  document.getElementById('facturaModal').classList.add('show');
+function navegarFactura(direccion) {
+  if (direccion === 'siguiente' && currentFacturaIndex < facturasActuales.length - 1) {
+    currentFacturaIndex++;
+    mostrarFacturaEnModal(currentFacturaIndex);
+  } else if (direccion === 'anterior' && currentFacturaIndex > 0) {
+    currentFacturaIndex--;
+    mostrarFacturaEnModal(currentFacturaIndex);
+  }
 }
 
-function closeModal() {
-  const modal = document.getElementById('facturaModal');
-  modal.classList.remove('show');
-
-  const helpPanel = document.getElementById('keyboardHelp');
-  if (helpPanel) helpPanel.remove();
+function closeSplitModal() {
+  document.getElementById('validacionModal').classList.remove('show');
+  resetZoom();
 }
 
-async function saveFactura(e) {
-  e.preventDefault();
+// ========== ZOOM DE IMAGEN ==========
+function zoomIn() {
+  currentZoom += 0.2;
+  if (currentZoom > 3) currentZoom = 3;
+  applyZoom();
+}
 
-  const id = document.getElementById('facturaId').value;
-  const formData = {
-    fecha_factura: document.getElementById('facturaFecha').value,
-    ncf: document.getElementById('facturaNCF').value,
-    rnc: document.getElementById('facturaRNC').value,
-    proveedor: document.getElementById('facturaProveedor').value,
-    itbis: parseFloat(document.getElementById('facturaITBIS').value) || 0,
-    total_pagado: parseFloat(document.getElementById('facturaTotal').value) || 0,
-    notas: document.getElementById('facturaNotas').value || '',
+function zoomOut() {
+  currentZoom -= 0.2;
+  if (currentZoom < 0.5) currentZoom = 0.5;
+  applyZoom();
+}
+
+function resetZoom() {
+  currentZoom = 1;
+  applyZoom();
+}
+
+function applyZoom() {
+  const img = document.getElementById('facturaImage');
+  img.style.transform = `scale(${currentZoom})`;
+}
+
+// ========== MARCAR COMO LISTA ==========
+async function marcarListaModal() {
+  const factura = facturasActuales[currentFacturaIndex];
+  
+  const datosActualizados = {
+    fecha_factura: document.getElementById('infoFecha').value || null,
+    ncf: document.getElementById('infoNCF').value || null,
+    rnc: document.getElementById('infoRNC').value || null,
+    proveedor: document.getElementById('infoProveedor').value || null,
+    itbis: document.getElementById('infoITBIS').value ? parseFloat(document.getElementById('infoITBIS').value) : null,
+    total_pagado: document.getElementById('infoTotal').value ? parseFloat(document.getElementById('infoTotal').value) : null,
+    notas: document.getElementById('infoNotas').value || null,
     estado: 'lista'
   };
 
   try {
-    await fetchAPI(`/asistente/facturas/${id}`, {
+    await fetchAPI(`/asistente/facturas/${factura.id}`, {
       method: 'PUT',
-      body: JSON.stringify(formData)
+      body: JSON.stringify(datosActualizados)
     });
 
-    showToast('Factura actualizada', 'success');
+    showToast('✓ Factura marcada como lista', 'success');
     incrementarProgreso();
-    mostrarBannerDeshacer(id);
-
+    mostrarBannerDeshacer(factura.id);
     loadDashboard();
   } catch (error) {
     showToast('Error: ' + error.message, 'error');
   }
 }
 
-async function aprobarFactura(id) {
-  if (!confirm('¿Está seguro de aprobar esta factura?')) {
+async function rechazarFactura() {
+  const factura = facturasActuales[currentFacturaIndex];
+  
+  if (!confirm('¿Está seguro de rechazar esta factura?')) {
     return;
   }
 
   try {
-    await fetchAPI(`/asistente/facturas/${id}/aprobar`, {
-      method: 'POST'
+    await fetchAPI(`/asistente/facturas/${factura.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ estado: 'rechazada' })
     });
 
-    showToast('Factura aprobada', 'success');
+    showToast('Factura rechazada', 'success');
+    
+    if (currentFacturaIndex < facturasActuales.length - 1) {
+      navegarFactura('siguiente');
+    } else {
+      closeSplitModal();
+    }
+    
     loadDashboard();
   } catch (error) {
     showToast('Error: ' + error.message, 'error');
+  }
+}
+
+async function saltarFactura() {
+  const factura = facturasActuales[currentFacturaIndex];
+
+  try {
+    await fetchAPI(`/asistente/facturas/${factura.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ saltada: true })
+    });
+
+    showToast('Factura saltada (se revisará después)', 'info');
+    
+    if (currentFacturaIndex < facturasActuales.length - 1) {
+      navegarFactura('siguiente');
+    } else {
+      closeSplitModal();
+    }
+    
+    loadDashboard();
+  } catch (error) {
+    showToast('Error: ' + error.message, 'error');
+  }
+}
+
+// ========== APROBACIÓN EN LOTE ==========
+function mostrarConfirmacionLote() {
+  const listas = facturasAgrupadas.listas || [];
+  
+  if (listas.length === 0) {
+    showToast('No hay facturas listas para aprobar', 'warning');
+    return;
+  }
+
+  const porEmpresa = {};
+  listas.forEach(f => {
+    const empresa = f.empresa_nombre || 'Sin empresa';
+    if (!porEmpresa[empresa]) {
+      porEmpresa[empresa] = { count: 0, monto: 0 };
+    }
+    porEmpresa[empresa].count++;
+    porEmpresa[empresa].monto += parseFloat(f.total_pagado) || 0;
+  });
+
+  document.getElementById('totalFacturasLote').textContent = listas.length;
+
+  const resumenEmpresas = document.getElementById('resumenEmpresas');
+  resumenEmpresas.innerHTML = Object.entries(porEmpresa)
+    .map(([empresa, data]) => `
+      <div class="resumen-empresa-item">
+        <span><strong>${empresa}</strong></span>
+        <span>${data.count} factura${data.count > 1 ? 's' : ''} - ${formatCurrency(data.monto)}</span>
+      </div>
+    `).join('');
+
+  document.getElementById('confirmacionLoteModal').classList.add('show');
+}
+
+function cerrarConfirmacionLote() {
+  document.getElementById('confirmacionLoteModal').classList.remove('show');
+}
+
+async function confirmarAprobacionLote() {
+  const listas = facturasAgrupadas.listas || [];
+  
+  if (listas.length === 0) {
+    showToast('No hay facturas para aprobar', 'error');
+    return;
+  }
+
+  const facturasIds = listas.map(f => f.id);
+
+  try {
+    const response = await fetchAPI('/asistente/aprobar-lote', {
+      method: 'POST',
+      body: JSON.stringify({ facturas_ids: facturasIds })
+    });
+
+    if (response.success) {
+      showToast(`✅ ${response.data.aprobadas} facturas aprobadas correctamente`, 'success');
+      
+      // Limpiar sesión
+      localStorage.removeItem('sesion_procesadas');
+      
+      cerrarConfirmacionLote();
+      loadDashboard();
+    }
+  } catch (error) {
+    showToast('Error al aprobar lote: ' + error.message, 'error');
   }
 }
 

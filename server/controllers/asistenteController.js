@@ -8,6 +8,22 @@ const getDashboard = asyncHandler(async (req, res) => {
   const empresas = await Empresa.findByAsistenteId(asistenteId);
   const facturaStats = await Factura.getStatsByAsistenteId(asistenteId);
 
+  // Obtener facturas agrupadas por nivel de confianza
+  const todasFacturas = await Factura.findByAsistenteId(asistenteId, {});
+  
+  const facturasAgrupadas = {
+    alta_confianza: todasFacturas.filter(f => 
+      f.estado === 'pending' && (f.confidence_score || 0) >= 95
+    ),
+    media_confianza: todasFacturas.filter(f => 
+      f.estado === 'pending' && (f.confidence_score || 0) >= 80 && (f.confidence_score || 0) < 95
+    ),
+    baja_confianza: todasFacturas.filter(f => 
+      f.estado === 'pending' && (f.confidence_score || 0) < 80
+    ),
+    listas: todasFacturas.filter(f => f.estado === 'lista')
+  };
+
   res.json({
     success: true,
     data: {
@@ -16,7 +32,8 @@ const getDashboard = asyncHandler(async (req, res) => {
         facturas: facturaStats
       },
       empresas,
-      facturas_recientes: await Factura.findByAsistenteId(asistenteId, {})
+      facturas_agrupadas: facturasAgrupadas,
+      facturas_recientes: todasFacturas
     }
   });
 });
@@ -93,7 +110,8 @@ const aprobarFactura = asyncHandler(async (req, res) => {
     });
   }
 
-  await Factura.approve(id, asistenteId);
+  // Marcar como "lista", no como "aprobada"
+  await Factura.update(id, { estado: 'lista' }, asistenteId);
 
   const updatedFactura = await Factura.findById(id);
 
@@ -117,23 +135,37 @@ const aprobarLote = asyncHandler(async (req, res) => {
   const empresas = await Empresa.findByAsistenteId(asistenteId);
   const empresaIds = empresas.map(e => e.id);
 
+  let aprobadas = 0;
+  let errores = 0;
+
   for (const facturaId of facturas_ids) {
     const factura = await Factura.findById(facturaId);
 
     if (!factura) {
+      errores++;
       continue;
     }
 
     if (!empresaIds.includes(factura.empresa_id)) {
+      errores++;
       continue;
     }
 
-    await Factura.approve(facturaId, asistenteId);
+    // Solo aprobar si está en estado "lista"
+    if (factura.estado === 'lista') {
+      await Factura.approve(facturaId, asistenteId);
+      aprobadas++;
+    }
   }
 
   res.json({
     success: true,
-    message: `${facturas_ids.length} facturas processed`
+    message: `${aprobadas} facturas aprobadas`,
+    data: {
+      aprobadas,
+      errores,
+      total: facturas_ids.length
+    }
   });
 });
 
@@ -169,61 +201,27 @@ const rechazarFactura = asyncHandler(async (req, res) => {
   });
 });
 
+// NUEVO: Check duplicados
 const checkDuplicado = asyncHandler(async (req, res) => {
   const { ncf } = req.query;
   const asistenteId = req.user.userId;
 
   if (!ncf) {
-    return res.status(400).json({
-      success: false,
-      message: 'NCF is required'
-    });
-  }
-
-  const duplicados = await Factura.findByNCF(ncf, asistenteId);
-
-  res.json({
-    success: true,
-    data: duplicados.filter(f => f.ncf === ncf)
-  });
-});
-
-const desmarcarFactura = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const asistenteId = req.user.userId;
-
-  const factura = await Factura.findById(id);
-  if (!factura) {
-    return res.status(404).json({
-      success: false,
-      message: 'Factura not found'
-    });
+    return res.json({ success: true, data: [] });
   }
 
   const empresas = await Empresa.findByAsistenteId(asistenteId);
   const empresaIds = empresas.map(e => e.id);
 
-  if (!empresaIds.includes(factura.empresa_id)) {
-    return res.status(403).json({
-      success: false,
-      message: 'Access denied to this factura'
-    });
-  }
-
-  if (factura.estado !== 'lista') {
-    return res.status(400).json({
-      success: false,
-      message: 'Only facturas in "lista" state can be unmarked'
-    });
-  }
-
-  await Factura.update(id, { estado: 'pending' }, asistenteId);
-
-  const updatedFactura = await Factura.findById(id);
+  // Buscar facturas con mismo NCF en empresas del asistente
+  const todasFacturas = await Factura.findByAsistenteId(asistenteId, {});
+  const duplicados = todasFacturas.filter(f => 
+    f.ncf && f.ncf.toLowerCase() === ncf.toLowerCase()
+  );
 
   res.json({
     success: true,
-    data: updatedFactura
+    data: duplicados
   });
 });
 
@@ -234,6 +232,5 @@ module.exports = {
   aprobarFactura,
   aprobarLote,
   rechazarFactura,
-  checkDuplicado,
-  desmarcarFactura
+  checkDuplicado
 };

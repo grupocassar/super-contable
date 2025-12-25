@@ -1,12 +1,14 @@
+require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const morgan = require('morgan');
 const path = require('path');
-const { config, validateEnv } = require('./config/env');
+const cors = require('cors');
 const { initDatabase } = require('./config/database');
+const { validateEnv, config } = require('./config/env');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
+const { authenticateToken } = require('./middleware/auth');
+const { requireRole } = require('./middleware/roles');
 
+// Routes
 const authRoutes = require('./routes/auth.routes');
 const adminRoutes = require('./routes/admin.routes');
 const contableRoutes = require('./routes/contable.routes');
@@ -14,78 +16,74 @@ const asistenteRoutes = require('./routes/asistente.routes');
 
 const app = express();
 
-validateEnv();
-
-app.use(helmet({
-  contentSecurityPolicy: false
-}));
-
-app.use(cors({
-  origin: config.client.url,
-  credentials: true
-}));
-
-if (config.env === 'development') {
-  app.use(morgan('dev'));
-}
-
+// Middleware
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use(express.static(path.join(__dirname, '../client')));
+// Static files
+app.use('/assets', express.static(path.join(__dirname, '../client/assets')));
+app.use('/views', express.static(path.join(__dirname, '../client/views')));
 
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    environment: config.env
-  });
-});
-
+// API Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/contable', contableRoutes);
-app.use('/api/asistente', asistenteRoutes);
+app.use('/api/admin', authenticateToken, requireRole(['super_admin']), adminRoutes);
+app.use('/api/contable', authenticateToken, requireRole(['contable', 'super_admin']), contableRoutes);
+app.use('/api/asistente', authenticateToken, requireRole(['asistente', 'contable', 'super_admin']), asistenteRoutes);
 
+// Root route
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../client/views/auth/login.html'));
 });
 
+// Error handling
 app.use(notFound);
 app.use(errorHandler);
 
+// Initialize database and start server
 async function startServer() {
   try {
+    validateEnv();
     await initDatabase();
 
-    const server = app.listen(config.port, () => {
+    const port = config.server.port;
+
+    app.listen(port, () => {
       console.log('\n🚀 Super Contable Server Started!\n');
-      console.log(`   Environment:  ${config.env}`);
-      console.log(`   Port:         ${config.port}`);
-      console.log(`   URL:          http://localhost:${config.port}`);
+      console.log(`   Environment:  ${config.server.env}`);
+      console.log(`   Port:         ${port}`);
+      console.log(`   URL:          http://localhost:${port}`);
       console.log(`   Database:     ${config.database.path}\n`);
       console.log('✓ Server is ready to accept connections\n');
     });
-
-    const shutdown = async () => {
-      console.log('\n⚠️  Shutting down gracefully...');
-      server.close(() => {
-        console.log('✓ Server closed');
-        process.exit(0);
-      });
-    };
-
-    process.on('SIGTERM', shutdown);
-    process.on('SIGINT', shutdown);
-
   } catch (error) {
     console.error('❌ Failed to start server:', error.message);
     process.exit(1);
   }
 }
 
-if (require.main === module) {
-  startServer();
-}
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('\n⚠️  Shutting down gracefully...');
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('\n⚠️  Shutting down gracefully...');
+  process.exit(0);
+});
+
+// Handle uncaught errors
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
+
+startServer();
 
 module.exports = app;
