@@ -36,7 +36,6 @@
       padding-left: 35px;
     }
 
-    /* Botón de inspección profesional */
     .btn-view-icon {
       background: none;
       border: none;
@@ -50,6 +49,236 @@
     }
     .btn-view-icon:hover {
       transform: scale(1.2);
+    }
+
+    /* MODAL ULTRA-COMPACTO CON CAMPOS EDITABLES */
+    .modal-split {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.6);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-split.show {
+      display: flex;
+    }
+
+    .modal-split-content {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+      width: 97%;
+      max-width: 1350px;
+      height: 90vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* HEADER ULTRA-COMPACTO */
+    .modal-split-header {
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: #f8fafc;
+      flex-shrink: 0;
+    }
+
+    .modal-split-header .modal-title {
+      font-size: 1rem;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    /* BODY OPTIMIZADO */
+    .modal-split-body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .split-view-left {
+      flex: 1.3;
+      border-right: 1px solid #e2e8f0;
+      background-color: #f8f9fa;
+      padding: 0.5rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .split-view-right {
+      flex: 1;
+      padding: 0.5rem 0.75rem;
+      overflow-y: auto;
+    }
+
+    .image-container {
+      background-color: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 0.4rem;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .factura-image {
+      max-width: 100%;
+      max-height: 100%;
+      transition: transform 0.2s;
+      cursor: zoom-in;
+      object-fit: contain;
+    }
+
+    .image-placeholder {
+      text-align: center;
+      color: #94a3b8;
+    }
+
+    .placeholder-icon {
+      font-size: 2.5rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .placeholder-text {
+      font-size: 0.85rem;
+    }
+
+    .image-controls {
+      display: flex;
+      gap: 0.4rem;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* INFO COMPACTA CON CAMPOS EDITABLES */
+    .factura-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .info-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+    }
+
+    .info-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .info-label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .info-value {
+      font-size: 0.9rem;
+      color: #1e293b;
+      padding: 0.35rem 0.5rem;
+      background-color: #f8fafc;
+      border-radius: 0.25rem;
+      border: 1px solid #e2e8f0;
+    }
+
+    /* CAMPOS EDITABLES EN MODAL */
+    .modal-input {
+      width: 100%;
+      font-size: 0.9rem;
+      color: #1e293b;
+      padding: 0.35rem 0.5rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 0.25rem;
+      background: white;
+      transition: all 0.2s;
+    }
+
+    .modal-input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+    }
+
+    .modal-input:hover {
+      background-color: #fefefe;
+    }
+
+    /* NOTA DEL ASISTENTE - COMPACTA */
+    .nota-asistente-box {
+      background-color: #fffbeb;
+      border-left: 3px solid #f59e0b;
+      padding: 0.5rem 0.6rem;
+      border-radius: 0.25rem;
+      margin-top: 0.2rem;
+    }
+
+    .nota-asistente-box pre {
+      white-space: pre-wrap;
+      line-height: 1.3;
+      color: #1e293b;
+      margin: 0;
+      font-family: inherit;
+      font-size: 0.8rem;
+    }
+
+    /* FOOTER ULTRA-COMPACTO */
+    .modal-split-footer {
+      padding: 0.5rem 0.75rem;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      gap: 0.5rem;
+      background-color: #f8fafc;
+      flex-shrink: 0;
+    }
+
+    .footer-actions {
+      display: flex;
+      gap: 0.4rem;
+    }
+
+    .btn-aprobar, .btn-rechazar {
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 0.35rem;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+      transition: opacity 0.2s;
+    }
+
+    .btn-aprobar {
+      background: #10b981;
+      color: white;
+    }
+
+    .btn-rechazar {
+      background: #ef4444;
+      color: white;
+    }
+
+    .btn-aprobar:hover, .btn-rechazar:hover {
+      opacity: 0.9;
     }
   </style>
 </head>
@@ -111,6 +340,7 @@
         <table class="table table-editable">
           <thead>
             <tr>
+              <th width="50" class="nota-column text-center" title="Notas de Asistente">💬</th>
               <th width="50" class="text-center">Ver</th>
               <th width="140">Fecha</th>
               <th>Empresa</th>
@@ -124,7 +354,7 @@
           </thead>
           <tbody id="facturasTableBody">
             <tr>
-              <td colspan="9" class="text-center">Cargando historial de facturas...</td>
+              <td colspan="10" class="text-center">Cargando historial de facturas...</td>
             </tr>
           </tbody>
         </table>
@@ -132,39 +362,100 @@
     </div>
   </div>
 
-  <div id="detailModal" class="modal">
-    <div class="modal-content" style="max-width: 1100px; width: 95%;">
-      <div class="modal-header">
-        <h3 class="modal-title">Detalle de Factura #<span id="detailFacturaId"></span></h3>
-        <button class="modal-close" onclick="closeModal('detailModal')">&times;</button>
+  <!-- MODAL ULTRA-COMPACTO CON EDICIÓN -->
+  <div id="facturaModal" class="modal-split">
+    <div class="modal-split-content">
+      <div class="modal-split-header">
+        <h3 class="modal-title">
+          📄 <span id="facturaModalTitle">Factura</span>
+        </h3>
+        <button class="modal-close" onclick="cerrarModalFactura()">×</button>
       </div>
-      <div class="modal-body">
-        <div class="modal-detail-layout">
-          <div class="invoice-preview-full">
-            <img id="detailImage" src="" alt="Cargando documento...">
+      
+      <div class="modal-split-body">
+        <!-- LADO IZQUIERDO: IMAGEN -->
+        <div class="split-view-left">
+          <div class="image-container">
+            <img id="facturaImage" src="" alt="Factura" class="factura-image" style="display: none;">
+            <div class="image-placeholder" id="facturaImagePlaceholder">
+              <div class="placeholder-icon">📄</div>
+              <div class="placeholder-text">Cargando...</div>
+            </div>
           </div>
-          <div class="detail-info-panel">
-            <div>
-              <label class="detail-label">Cliente</label>
-              <div id="detailEmpresa" style="font-size: 18px; font-weight: 600; color: #1e293b;"></div>
+          <div class="image-controls">
+            <button class="btn btn-sm btn-outline" onclick="zoomInFactura()">🔍+</button>
+            <button class="btn btn-sm btn-outline" onclick="zoomOutFactura()">🔍-</button>
+            <button class="btn btn-sm btn-outline" onclick="resetZoomFactura()">↺</button>
+          </div>
+        </div>
+
+        <!-- LADO DERECHO: DATOS EDITABLES -->
+        <div class="split-view-right">
+          <div class="factura-info">
+            
+            <!-- EMPRESA (NO EDITABLE) -->
+            <div class="info-group">
+              <label class="info-label">Empresa</label>
+              <div class="info-value" id="facturaEmpresa" style="font-weight: 700; font-size: 0.95rem;">--</div>
             </div>
-            <div>
-              <label class="detail-label">Observaciones Contables</label>
-              <textarea id="detailNotas" class="notes-area" placeholder="Notas para el cierre fiscal..."></textarea>
-            </div>
-            <div>
-              <label class="detail-label">Validación</label>
-              <div class="status-actions">
-                <button class="btn-approve" id="approveBtn">APROBAR</button>
-                <button class="btn-reject" id="rejectBtn">RECHAZAR</button>
+
+            <!-- FECHA Y RNC (EDITABLES) -->
+            <div class="info-row">
+              <div class="info-group">
+                <label class="info-label">Fecha</label>
+                <input type="date" id="modalFechaInput" class="modal-input" onchange="saveFieldFromModal('fecha_factura', this.value)">
+              </div>
+              <div class="info-group">
+                <label class="info-label">RNC Emisor</label>
+                <input type="text" id="modalRNCInput" class="modal-input" placeholder="XXX-XXXXX-X" onblur="saveFieldFromModal('rnc', this.value)">
               </div>
             </div>
+
+            <!-- NCF (EDITABLE) -->
+            <div class="info-group">
+              <label class="info-label">NCF (Comprobante)</label>
+              <input type="text" id="modalNCFInput" class="modal-input" placeholder="B01..." onblur="saveFieldFromModal('ncf', this.value)">
+            </div>
+
+            <!-- PROVEEDOR (EDITABLE) -->
+            <div class="info-group">
+              <label class="info-label">Proveedor</label>
+              <input type="text" id="modalProveedorInput" class="modal-input" placeholder="Nombre del proveedor" onblur="saveFieldFromModal('proveedor', this.value)">
+            </div>
+
+            <!-- ITBIS Y TOTAL (EDITABLES) -->
+            <div class="info-row">
+              <div class="info-group">
+                <label class="info-label">ITBIS</label>
+                <input type="number" id="modalITBISInput" class="modal-input" step="0.01" onblur="saveFieldFromModal('itbis', this.value)">
+              </div>
+              <div class="info-group">
+                <label class="info-label">Total Pagado</label>
+                <input type="number" id="modalTotalInput" class="modal-input" step="0.01" style="font-weight: 700;" onblur="saveFieldFromModal('total_pagado', this.value)">
+              </div>
+            </div>
+
+            <!-- NOTA DEL ASISTENTE (SOLO SI EXISTE) -->
+            <div class="info-group" id="notaAsistenteContainer" style="display: none; margin-top: 0.25rem;">
+              <label class="info-label" style="color: #92400e; font-size: 0.7rem;">
+                💬 Nota del Asistente
+              </label>
+              <div class="nota-asistente-box">
+                <pre id="notaAsistenteContenido">--</pre>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
-      <div class="modal-footer">
-        <button class="btn btn-outline" onclick="closeModal('detailModal')">Cerrar</button>
-        <button class="btn btn-primary" id="saveDetailBtn">Guardar Notas</button>
+
+      <div class="modal-split-footer">
+        <button class="btn btn-outline" onclick="cerrarModalFactura()">Cerrar</button>
+        
+        <div class="footer-actions">
+          <button class="btn-rechazar" id="btnRechazarFactura">❌ Rechazar</button>
+          <button class="btn-aprobar" id="btnAprobarFactura">✅ Aprobar</button>
+        </div>
       </div>
     </div>
   </div>

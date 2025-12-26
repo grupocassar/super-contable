@@ -3,6 +3,10 @@ let empresas = [];
 let asistentes = [];
 let facturas = [];
 
+// Variables para modal unificado
+let currentZoomFactura = 1;
+let currentFacturaIdInModal = null; // ✅ NUEVA: ID actual en modal
+
 document.addEventListener('DOMContentLoaded', () => {
   if (!requireAuth()) return;
 
@@ -63,8 +67,6 @@ async function loadDashboard() {
   }
 }
 
-// --- MOTOR DE FILTRADO DINÁMICO ---
-
 function populateCompanyFilter() {
   const select = document.getElementById('filterEmpresa');
   if (!select) return;
@@ -103,27 +105,39 @@ function applyDynamicFilters() {
   renderFacturasTable(filtradas);
 }
 
-// --- RENDERIZADO DE TABLA MAESTRA (ORDEN: FECHA > EMPRESA > RNC > NCF > PROV > ITBIS > TOTAL) ---
+// ============================================
+// RENDERIZADO DE TABLA CON COLUMNA DE NOTAS
+// ============================================
+
 function renderFacturasTable(lista) {
   const tbody = document.getElementById('facturasTableBody');
   if (!tbody) return;
 
   if (lista.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9" class="text-center">No se encontraron facturas</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" class="text-center">No se encontraron facturas</td></tr>';
     return;
   }
 
   tbody.innerHTML = lista.map(f => {
-    // Formatear fecha para el input date (YYYY-MM-DD)
     const fechaFormatted = f.fecha_factura ? f.fecha_factura.split('T')[0] : '';
+    
+    // Badge de nota - Solo si hay nota del asistente
+    const notaColumn = f.notas && f.notas.trim() !== '' ? `
+      <span class="nota-badge" 
+            onclick="abrirModalFactura(${f.id})"
+            title="Ver nota de asistente">
+        💬
+      </span>
+    ` : '';
 
     return `
     <tr data-id="${f.id}">
+      <td class="nota-column">${notaColumn}</td>
       <td class="text-center">
         <button class="btn-view-icon" 
                 title="Ver Detalle Completo"
                 onmouseenter="showImagePreview(${f.id}, '${f.archivo_url || f.drive_url}')" 
-                onclick="openFullModal(${f.id})">
+                onclick="abrirModalFactura(${f.id})">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
         </button>
       </td>
@@ -161,10 +175,149 @@ function renderFacturasTable(lista) {
         <span class="badge-status bg-${f.estado.toLowerCase()}">${f.estado.toUpperCase()}</span>
       </td>
     </tr>
-  `;}).join('');
+  `}).join('');
 }
 
-// --- GUARDADO AUTOMÁTICO ---
+// ============================================
+// MODAL UNIFICADO CON CAMPOS EDITABLES
+// ============================================
+
+function abrirModalFactura(facturaId) {
+  const factura = facturas.find(f => f.id === facturaId);
+  if (!factura) return;
+
+  // ✅ Guardar ID para edición
+  currentFacturaIdInModal = facturaId;
+
+  // Título
+  document.getElementById('facturaModalTitle').textContent = `Factura #${factura.id}`;
+  
+  // Empresa (no editable)
+  document.getElementById('facturaEmpresa').textContent = factura.empresa_nombre || 'Sin empresa';
+  
+  // ✅ CAMPOS EDITABLES (inputs)
+  const fechaFormatted = factura.fecha_factura ? factura.fecha_factura.split('T')[0] : '';
+  document.getElementById('modalFechaInput').value = fechaFormatted;
+  document.getElementById('modalRNCInput').value = factura.rnc || '';
+  document.getElementById('modalNCFInput').value = factura.ncf || '';
+  document.getElementById('modalProveedorInput').value = factura.proveedor || '';
+  document.getElementById('modalITBISInput').value = factura.itbis || 0;
+  document.getElementById('modalTotalInput').value = factura.total_pagado || 0;
+
+  // Imagen
+  const imgEl = document.getElementById('facturaImage');
+  const placeholderEl = document.getElementById('facturaImagePlaceholder');
+  if (imgEl && placeholderEl) {
+    imgEl.src = factura.archivo_url || factura.drive_url || '/assets/img/no-image.png';
+    imgEl.style.display = 'block';
+    placeholderEl.style.display = 'none';
+  }
+
+  // Nota del asistente (si existe)
+  const notaAsistenteContainer = document.getElementById('notaAsistenteContainer');
+  const notaAsistenteContenido = document.getElementById('notaAsistenteContenido');
+  
+  if (factura.notas && factura.notas.trim() !== '') {
+    notaAsistenteContenido.textContent = factura.notas;
+    notaAsistenteContainer.style.display = 'block';
+  } else {
+    notaAsistenteContainer.style.display = 'none';
+  }
+
+  // Configurar botones
+  const btnAprobar = document.getElementById('btnAprobarFactura');
+  const btnRechazar = document.getElementById('btnRechazarFactura');
+
+  if (btnAprobar) {
+    btnAprobar.onclick = () => actualizarEstadoFactura(factura.id, 'aprobada');
+  }
+  
+  if (btnRechazar) {
+    btnRechazar.onclick = () => actualizarEstadoFactura(factura.id, 'rechazada');
+  }
+
+  // Mostrar modal
+  document.getElementById('facturaModal').classList.add('show');
+  
+  // Reset zoom
+  currentZoomFactura = 1;
+  applyZoomFactura();
+}
+
+function cerrarModalFactura() {
+  document.getElementById('facturaModal').classList.remove('show');
+  currentZoomFactura = 1;
+  currentFacturaIdInModal = null;
+}
+
+// ✅ NUEVA FUNCIÓN: Guardar desde el modal
+async function saveFieldFromModal(field, value) {
+  if (!currentFacturaIdInModal) return;
+  
+  const factura = facturas.find(f => f.id === currentFacturaIdInModal);
+  if (factura && factura[field] == value) return; // Sin cambios
+
+  try {
+    const response = await fetchAPI(`/contable/facturas/${currentFacturaIdInModal}`, {
+      method: 'PUT',
+      body: JSON.stringify({ [field]: value })
+    });
+
+    if (response.success) {
+      if (factura) factura[field] = value;
+      showToast('✓ Guardado', 'success');
+      // Recargar tabla en background
+      loadDashboard();
+    }
+  } catch (error) {
+    showToast('Error al guardar', 'error');
+  }
+}
+
+async function actualizarEstadoFactura(facturaId, nuevoEstado) {
+  try {
+    const response = await fetchAPI(`/contable/facturas/${facturaId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ estado: nuevoEstado })
+    });
+
+    if (response.success) {
+      showToast(`Factura ${nuevoEstado}`, 'success');
+      cerrarModalFactura();
+      loadDashboard(); // Recargar tabla
+    }
+  } catch (error) {
+    showToast('Error al actualizar estado', 'error');
+  }
+}
+
+// Funciones de zoom
+function zoomInFactura() {
+  currentZoomFactura += 0.2;
+  if (currentZoomFactura > 3) currentZoomFactura = 3;
+  applyZoomFactura();
+}
+
+function zoomOutFactura() {
+  currentZoomFactura -= 0.2;
+  if (currentZoomFactura < 0.5) currentZoomFactura = 0.5;
+  applyZoomFactura();
+}
+
+function resetZoomFactura() {
+  currentZoomFactura = 1;
+  applyZoomFactura();
+}
+
+function applyZoomFactura() {
+  const img = document.getElementById('facturaImage');
+  if (img) img.style.transform = `scale(${currentZoomFactura})`;
+}
+
+// ============================================
+// GUARDADO INLINE (EDICIÓN EN TABLA)
+// ============================================
+
 async function saveField(facturaId, field, value) {
   const factura = facturas.find(f => f.id === facturaId);
   if (factura && factura[field] == value) return; 
@@ -185,53 +338,10 @@ async function saveField(facturaId, field, value) {
   }
 }
 
-// --- MODAL DE DETALLES PROFESIONAL ---
-async function openFullModal(id) {
-    const factura = facturas.find(f => f.id === id);
-    if (!factura) return;
+// ============================================
+// PREVIEW AL HOVER (SE MANTIENE)
+// ============================================
 
-    safeUpdate('detailFacturaId', factura.id);
-    safeUpdate('detailEmpresa', factura.empresa_nombre || 'Sin Empresa');
-    
-    const imgEl = document.getElementById('detailImage');
-    if (imgEl) imgEl.src = factura.archivo_url || factura.drive_url || '/assets/img/no-image.png';
-
-    const notesEl = document.getElementById('detailNotas');
-    if (notesEl) notesEl.value = factura.notas || '';
-
-    document.getElementById('approveBtn').onclick = () => updateFacturaStatus(id, 'aprobada');
-    document.getElementById('rejectBtn').onclick = () => updateFacturaStatus(id, 'rechazada');
-    document.getElementById('saveDetailBtn').onclick = () => saveFacturaNotes(id, notesEl.value);
-
-    const modal = document.getElementById('detailModal');
-    if (modal) modal.classList.add('show');
-}
-
-async function updateFacturaStatus(id, estado) {
-    try {
-        const response = await fetchAPI(`/contable/facturas/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify({ estado })
-        });
-        if (response.success) {
-            showToast(`Factura ${estado}`, 'success');
-            closeModal('detailModal');
-            loadDashboard();
-        }
-    } catch (error) { showToast('Error al actualizar', 'error'); }
-}
-
-async function saveFacturaNotes(id, notas) {
-    try {
-        const response = await fetchAPI(`/contable/facturas/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify({ notas })
-        });
-        if (response.success) showToast('Notas guardadas', 'success');
-    } catch (error) { showToast('Error al guardar notas', 'error'); }
-}
-
-// --- PREVIEW HOVER ---
 function showImagePreview(id, url) {
     if (!url || url === 'undefined' || url === 'null') return;
 
@@ -273,7 +383,10 @@ function showImagePreview(id, url) {
     }
 }
 
-// --- GESTIÓN DE EMPRESAS Y ASISTENTES ---
+// ============================================
+// RESTO DE FUNCIONES (EMPRESAS, ASISTENTES)
+// ============================================
+
 function displayStats(stats) {
   safeUpdate('totalEmpresas', stats.total_empresas || 0);
   safeUpdate('totalAsistentes', stats.total_asistentes || 0);
@@ -423,7 +536,6 @@ async function saveAsignaciones() {
   } catch (error) { showToast(error.message, 'error'); }
 }
 
-// --- UTILS ---
 function safeUpdate(id, value) {
   const el = document.getElementById(id);
   if (el) el.textContent = value;

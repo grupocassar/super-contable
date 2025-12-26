@@ -6,90 +6,6 @@
   <title>Dashboard - Super Contable</title>
   <link rel="stylesheet" href="/assets/css/global.css">
   <link rel="stylesheet" href="/assets/css/contable.css">
-  <style>
-    /* Estilos para el Modal de Detalles y optimización de espacio */
-    .modal-detail-layout {
-      display: grid;
-      grid-template-columns: 1fr 350px;
-      gap: 20px;
-      min-height: 450px;
-    }
-    
-    .invoice-preview-full {
-      background: #f8fafc;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-      border: 1px solid #e2e8f0;
-      padding: 10px;
-    }
-    
-    .invoice-preview-full img {
-      max-width: 100%;
-      max-height: 600px;
-      height: auto;
-      object-fit: contain;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    
-    .detail-info-panel {
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-      padding: 5px;
-    }
-    
-    .status-actions {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-top: 10px;
-    }
-    
-    .btn-approve { background: #10b981; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: 700; transition: opacity 0.2s; }
-    .btn-reject { background: #ef4444; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: 700; transition: opacity 0.2s; }
-    .btn-approve:hover, .btn-reject:hover { opacity: 0.9; }
-
-    .notes-area {
-      width: 100%;
-      min-height: 120px;
-      padding: 12px;
-      border: 1px solid #cbd5e1;
-      border-radius: 6px;
-      font-family: inherit;
-      font-size: 14px;
-      resize: vertical;
-      background: #fdfdfd;
-    }
-
-    .detail-label {
-      display: block; 
-      font-weight: 600; 
-      margin-bottom: 8px; 
-      font-size: 13px; 
-      color: #475569;
-      text-transform: uppercase;
-      letter-spacing: 0.025em;
-    }
-
-    /* Botón de inspección profesional (SVG) */
-    .btn-view-icon {
-      background: none;
-      border: none;
-      color: var(--primary-color);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: transform 0.2s;
-    }
-    .btn-view-icon:hover { transform: scale(1.2); }
-
-    .text-right { text-align: right; }
-    .text-center { text-align: center; }
-  </style>
 </head>
 <body>
   <div class="dashboard">
@@ -120,6 +36,7 @@
       <p>Bienvenido. Aquí tienes el resumen de las operaciones de hoy.</p>
     </div>
 
+    <!-- SOLO ESTADÍSTICAS -->
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-icon">🏢</div>
@@ -143,73 +60,38 @@
       </div>
     </div>
 
+    <!-- ACCESOS RÁPIDOS -->
     <div class="content-section">
       <div class="section-header">
-        <h2 class="section-title">Actividad Reciente</h2>
-        <a href="facturas.html" class="btn btn-sm btn-outline">Ver Historial Completo →</a>
+        <h2 class="section-title">Accesos Rápidos</h2>
       </div>
-      <div class="table-container">
-        <table class="table">
-          <thead>
-            <tr>
-              <th class="text-center" style="width: 50px;">Ver</th>
-              <th style="width: 120px;">Fecha</th>
-              <th>Empresa</th>
-              <th style="width: 110px;">RNC</th>
-              <th style="width: 140px;">NCF</th>
-              <th>Proveedor</th>
-              <th class="text-right" style="width: 120px;">ITBIS</th>
-              <th class="text-right" style="width: 120px;">Total</th>
-              <th class="text-center" style="width: 110px;">Estado</th>
-            </tr>
-          </thead>
-          <tbody id="facturasTableBody">
-            <tr><td colspan="9" class="text-center">Cargando actividad reciente...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <div id="detailModal" class="modal">
-    <div class="modal-content" style="max-width: 1100px; width: 95%;">
-      <div class="modal-header">
-        <h3 class="modal-title">Inspección de Factura #<span id="detailFacturaId"></span></h3>
-        <button class="modal-close" onclick="closeModal('detailModal')">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div class="modal-detail-layout">
-          <div class="invoice-preview-full">
-            <img id="detailImage" src="" alt="Vista previa de factura">
-          </div>
-          
-          <div class="detail-info-panel">
-            <div>
-              <label class="detail-label">Empresa Cliente</label>
-              <div id="detailEmpresa" style="font-size: 18px; font-weight: 600; color: #1e293b;"></div>
-            </div>
-
-            <div>
-              <label class="detail-label">Comentarios Contables</label>
-              <textarea id="detailNotas" class="notes-area" placeholder="Ej: NCF reportado en periodo anterior..."></textarea>
-            </div>
-
-            <div>
-              <label class="detail-label">Acción Requerida</label>
-              <p style="font-size: 13px; color: #64748b; margin-bottom: 15px;">Valide la consistencia del RNC y el NCF antes de proceder.</p>
-              <div class="status-actions">
-                <button class="btn-approve" id="approveBtn">APROBAR</button>
-                <button class="btn-reject" id="rejectBtn">RECHAZAR</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-outline" onclick="closeModal('detailModal')">Cerrar</button>
-        <button class="btn btn-primary" id="saveDetailBtn">Guardar Notas</button>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+        <a href="empresas.html" class="stat-card" style="text-decoration: none; cursor: pointer; border: 2px solid transparent; transition: all 0.2s;">
+          <div class="stat-icon">🏢</div>
+          <div class="stat-label">Gestionar Empresas</div>
+          <p style="font-size: 0.875rem; color: var(--text-secondary); margin-top: 0.5rem;">
+            Alta, edición y consulta de clientes
+          </p>
+        </a>
+        
+        <a href="asistentes.html" class="stat-card" style="text-decoration: none; cursor: pointer; border: 2px solid transparent; transition: all 0.2s;">
+          <div class="stat-icon">👥</div>
+          <div class="stat-label">Gestionar Asistentes</div>
+          <p style="font-size: 0.875rem; color: var(--text-secondary); margin-top: 0.5rem;">
+            Asignación de empresas y permisos
+          </p>
+        </a>
+        
+        <a href="facturas.html" class="stat-card" style="text-decoration: none; cursor: pointer; border: 2px solid transparent; transition: all 0.2s;">
+          <div class="stat-icon">📋</div>
+          <div class="stat-label">Historial de Facturas</div>
+          <p style="font-size: 0.875rem; color: var(--text-secondary); margin-top: 0.5rem;">
+            Consulta, validación y exportación
+          </p>
+        </a>
       </div>
     </div>
+
   </div>
 
   <script src="/assets/js/utils.js"></script>
