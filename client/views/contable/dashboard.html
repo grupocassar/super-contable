@@ -6,6 +6,30 @@
   <title>Panel Contable - Super Contable</title>
   <link rel="stylesheet" href="/assets/css/global.css">
   <link rel="stylesheet" href="/assets/css/contable.css">
+  <style>
+    /* Estilos para el modal de asignación */
+    .checkbox-list {
+      max-height: 250px;
+      overflow-y: auto;
+      border: 1px solid #eee;
+      padding: 10px;
+      border-radius: 8px;
+    }
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      padding: 8px;
+      border-bottom: 1px solid #f9f9f9;
+      cursor: pointer;
+    }
+    .checkbox-item:hover { background: #f0f7ff; }
+    .checkbox-item input { margin-right: 12px; width: 18px; height: 18px; }
+    
+    .actions {
+      display: flex;
+      gap: 5px;
+    }
+  </style>
 </head>
 <body>
   <div class="dashboard">
@@ -33,19 +57,16 @@
         <div class="stat-label">Empresas</div>
         <div class="stat-value" id="totalEmpresas">0</div>
       </div>
-
       <div class="stat-card">
         <div class="stat-icon">👨‍💼</div>
         <div class="stat-label">Asistentes</div>
         <div class="stat-value" id="totalAsistentes">0</div>
       </div>
-
       <div class="stat-card">
         <div class="stat-icon">⏳</div>
         <div class="stat-label">Facturas Pendientes</div>
         <div class="stat-value" id="facturasPendientes">0</div>
       </div>
-
       <div class="stat-card">
         <div class="stat-icon">✅</div>
         <div class="stat-label">Facturas Aprobadas</div>
@@ -56,11 +77,8 @@
     <div class="content-section">
       <div class="section-header">
         <h2 class="section-title">Empresas</h2>
-        <button class="btn btn-primary" id="createEmpresaBtn">
-          + Crear Empresa
-        </button>
+        <button class="btn btn-primary" id="createEmpresaBtn">+ Crear Empresa</button>
       </div>
-
       <div class="table-container">
         <table class="table">
           <thead>
@@ -73,9 +91,7 @@
             </tr>
           </thead>
           <tbody id="empresasTableBody">
-            <tr>
-              <td colspan="5" class="text-center">Cargando...</td>
-            </tr>
+            <tr><td colspan="5" class="text-center">Cargando...</td></tr>
           </tbody>
         </table>
       </div>
@@ -83,9 +99,27 @@
 
     <div class="content-section">
       <div class="section-header">
-        <h2 class="section-title">Facturas Recientes</h2>
+        <h2 class="section-title">Mis Asistentes</h2>
+        <button class="btn btn-primary" onclick="showCreateAsistenteModal()">+ Nuevo Asistente</button>
       </div>
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Correo</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="asistentesTableBody">
+            <tr><td colspan="3" class="text-center">Cargando asistentes...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
+    <div class="content-section">
+      <div class="section-header"><h2 class="section-title">Facturas Recientes</h2></div>
       <div class="table-container">
         <table class="table">
           <thead>
@@ -99,9 +133,7 @@
             </tr>
           </thead>
           <tbody id="facturasTableBody">
-            <tr>
-              <td colspan="6" class="text-center">Cargando...</td>
-            </tr>
+            <tr><td colspan="6" class="text-center">Cargando...</td></tr>
           </tbody>
         </table>
       </div>
@@ -112,36 +144,77 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title" id="modalTitle">Crear Empresa</h3>
-        <button class="modal-close" onclick="closeModal()">×</button>
+        <button class="modal-close" onclick="closeModal('empresaModal')">×</button>
       </div>
       <form id="empresaForm">
         <div class="modal-body">
           <input type="hidden" id="empresaId">
-
           <div class="form-group">
             <label for="empresaNombre" class="label">Nombre de la Empresa</label>
             <input type="text" id="empresaNombre" class="input" required placeholder="Ej: Inversiones Pérez">
           </div>
-
           <div class="form-group">
             <label for="empresaRNC" class="label">RNC</label>
             <input type="text" id="empresaRNC" class="input" placeholder="123-45678-9">
           </div>
-
           <div class="form-group" id="codigoCortoContainer" style="display: none;">
             <label for="empresaCodigo" class="label">Código Corto (Automático)</label>
-            <input type="text" id="empresaCodigo" class="input" readonly style="background-color: #f9f9f9; cursor: not-allowed;">
-            <small style="color: #666;">Este código se genera automáticamente para Telegram.</small>
+            <input type="text" id="empresaCodigo" class="input" readonly style="background-color: #f9f9f9;">
           </div>
         </div>
-
         <div class="modal-footer">
-          <button type="button" class="btn btn-outline" onclick="closeModal()">
-            Cancelar
-          </button>
-          <button type="submit" class="btn btn-primary">
-            Guardar
-          </button>
+          <button type="button" class="btn btn-outline" onclick="closeModal('empresaModal')">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="assignModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Asignar Empresas</h3>
+        <button class="modal-close" onclick="closeModal('assignModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <p id="assignModalSub" style="margin-bottom: 15px; color: #666;"></p>
+        <input type="hidden" id="assignAsistenteId">
+        <div class="checkbox-list" id="companiesCheckboxList"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeModal('assignModal')">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="saveAsignaciones()">Guardar Cambios</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="asistenteModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="asistenteModalTitle">Nuevo Asistente</h3>
+        <button class="modal-close" onclick="closeModal('asistenteModal')">×</button>
+      </div>
+      <form id="asistenteForm">
+        <div class="modal-body">
+          <input type="hidden" id="asistenteId">
+          
+          <div class="form-group">
+            <label for="asistenteNombre" class="label">Nombre Completo</label>
+            <input type="text" id="asistenteNombre" class="input" required placeholder="Ej: María Pérez">
+          </div>
+          <div class="form-group">
+            <label for="asistenteEmail" class="label">Correo Electrónico</label>
+            <input type="email" id="asistenteEmail" class="input" required placeholder="maria@asistente.com">
+          </div>
+          <div class="form-group">
+            <label for="asistentePassword" class="label">Contraseña</label>
+            <input type="password" id="asistentePassword" class="input" required placeholder="••••••••" autocomplete="new-password">
+            <small id="passHelp" class="text-muted"></small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('asistenteModal')">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btnSaveAsistente">Crear Asistente</button>
         </div>
       </form>
     </div>
@@ -152,10 +225,9 @@
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const user = getUser();
-      if (user) {
-        document.getElementById('userName').textContent = user.nombre_completo;
-      }
+      if (user) document.getElementById('userName').textContent = user.nombre_completo;
     });
+    function closeModal(id) { document.getElementById(id).classList.remove('show'); }
   </script>
 </body>
 </html>

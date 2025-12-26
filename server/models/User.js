@@ -55,12 +55,20 @@ class User {
   static create(userData) {
     return new Promise((resolve, reject) => {
       const db = getDatabase();
-      const { email, password_hash, nombre_completo, rol, contable_id } = userData;
+      // Ajuste quirúrgico: Extraemos 'password' por si viene del controlador
+      // y lo asignamos a 'password_hash' que es lo que pide la DB
+      const { email, password, password_hash, nombre_completo, rol, contable_id } = userData;
+      
+      const finalPassword = password_hash || password;
+
+      if (!finalPassword) {
+        return reject(new Error('La contraseña es obligatoria'));
+      }
 
       db.run(
         `INSERT INTO users (email, password_hash, nombre_completo, rol, contable_id)
          VALUES (?, ?, ?, ?, ?)`,
-        [email, password_hash, nombre_completo, rol, contable_id || null],
+        [email, finalPassword, nombre_completo, rol, contable_id || null],
         function(err) {
           if (err) reject(err);
           else resolve({ id: this.lastID, ...userData });

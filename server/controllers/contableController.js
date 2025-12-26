@@ -1,27 +1,27 @@
 const User = require('../models/User');
 const Empresa = require('../models/Empresa');
 const Factura = require('../models/Factura');
+const bcrypt = require('bcryptjs'); // IMPORTANTE: Para que el login funcione
 const { asyncHandler } = require('../middleware/errorHandler');
+const { getDatabase } = require('../config/database');
 
 /**
  * Función auxiliar para generar un código corto único basado en el nombre
- * Ejemplo: "Supermercado Pinos" -> SUPE123
  */
 function generarCodigoAutomatico(nombre) {
   const prefijo = nombre
     .toUpperCase()
-    .normalize("NFD")               // Descompone caracteres con acentos
-    .replace(/[\u0300-\u036f]/g, "") // Elimina los acentos
-    .replace(/[^A-Z]/g, "")          // Elimina todo lo que no sean letras
-    .substring(0, 4);                // Toma las primeras 4 letras
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Z]/g, "")
+    .substring(0, 4);
 
-  const sufijo = Math.floor(100 + Math.random() * 900); // Agrega 3 números aleatorios
+  const sufijo = Math.floor(100 + Math.random() * 900);
   return `${prefijo}${sufijo}`;
 }
 
 const getDashboard = asyncHandler(async (req, res) => {
   const contableId = req.user.rol === 'contable' ? req.user.userId : req.user.contableId;
-
   const empresas = await Empresa.findByContableId(contableId);
   const asistentes = await User.findAll({ contable_id: contableId, rol: 'asistente' });
   const facturaStats = await Factura.getStatsByContableId(contableId);
@@ -42,147 +42,145 @@ const getDashboard = asyncHandler(async (req, res) => {
 
 const getEmpresas = asyncHandler(async (req, res) => {
   const contableId = req.user.rol === 'contable' ? req.user.userId : req.user.contableId;
-
   const empresas = await Empresa.findByContableId(contableId);
-
   const empresasWithStats = await Promise.all(
     empresas.map(async (empresa) => {
       const stats = await Empresa.getStats(empresa.id);
-      return {
-        ...empresa,
-        stats
-      };
+      return { ...empresa, stats };
     })
   );
-
-  res.json({
-    success: true,
-    data: empresasWithStats
-  });
+  res.json({ success: true, data: empresasWithStats });
 });
 
 const createEmpresa = asyncHandler(async (req, res) => {
   const contableId = req.user.rol === 'contable' ? req.user.userId : req.user.contableId;
-  const { nombre, rnc } = req.body; // Ya no necesitamos recibir codigo_corto del frontend
-
-  if (!nombre) {
-    return res.status(400).json({
-      success: false,
-      message: 'El nombre es obligatorio'
-    });
-  }
-
-  // --- LÓGICA AUTOMÁTICA ---
-  // Generamos el código aquí para que el contable no tenga que inventarlo
+  const { nombre, rnc } = req.body;
+  if (!nombre) return res.status(400).json({ success: false, message: 'El nombre es obligatorio' });
   const codigo_corto = generarCodigoAutomatico(nombre);
-
-  const result = await Empresa.create({
-    contable_id: contableId,
-    nombre,
-    rnc,
-    codigo_corto // Se guarda el código generado automáticamente
-  });
-
+  const result = await Empresa.create({ contable_id: contableId, nombre, rnc, codigo_corto });
   const newEmpresa = await Empresa.findById(result.id);
-
-  res.status(201).json({
-    success: true,
-    data: newEmpresa
-  });
+  res.status(201).json({ success: true, data: newEmpresa });
 });
 
 const updateEmpresa = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const contableId = req.user.rol === 'contable' ? req.user.userId : req.user.contableId;
-  const updates = req.body;
-
   const empresa = await Empresa.findById(id);
-  if (!empresa) {
-    return res.status(404).json({
-      success: false,
-      message: 'Empresa no encontrada'
-    });
-  }
-
+  if (!empresa) return res.status(404).json({ success: false, message: 'Empresa no encontrada' });
   if (empresa.contable_id !== contableId && req.user.rol !== 'super_admin') {
-    return res.status(403).json({
-      success: false,
-      message: 'Acceso denegado'
-    });
+    return res.status(403).json({ success: false, message: 'Acceso denegado' });
   }
-
-  await Empresa.update(id, updates);
-
-  const updatedEmpresa = await Empresa.findById(id);
-
-  res.json({
-    success: true,
-    data: updatedEmpresa
-  });
+  await Empresa.update(id, req.body);
+  res.json({ success: true, data: await Empresa.findById(id) });
 });
 
 const getFacturas = asyncHandler(async (req, res) => {
   const contableId = req.user.rol === 'contable' ? req.user.userId : req.user.contableId;
-  const { estado, empresa_id, fecha_desde, fecha_hasta } = req.query;
-
-  const filters = {
-    estado,
-    empresa_id: empresa_id ? parseInt(empresa_id) : undefined,
-    fecha_desde,
-    fecha_hasta
-  };
-
-  const facturas = await Factura.findByContableId(contableId, filters);
-
-  res.json({
-    success: true,
-    data: facturas
-  });
+  const { estado, empresa_id } = req.query;
+  const facturas = await Factura.findByContableId(contableId, { estado, empresa_id: empresa_id ? parseInt(empresa_id) : undefined });
+  res.json({ success: true, data: facturas });
 });
+
+// --- GESTIÓN DE ASISTENTES ---
 
 const createAsistente = asyncHandler(async (req, res) => {
   const contableId = req.user.userId;
   const { email, password, nombre_completo } = req.body;
 
   if (!email || !password || !nombre_completo) {
-    return res.status(400).json({
-      success: false,
-      message: 'Email, password y nombre_completo son requeridos'
-    });
+    return res.status(400).json({ success: false, message: 'Faltan datos requeridos' });
   }
 
   const existingUser = await User.findByEmail(email);
-  if (existingUser) {
-    return res.status(409).json({
-      success: false,
-      message: 'El email ya existe'
-    });
-  }
+  if (existingUser) return res.status(409).json({ success: false, message: 'El email ya existe' });
 
-  const result = await User.create({
-    email,
-    password,
-    nombre_completo,
-    rol: 'asistente',
-    contable_id: contableId
+  // ENCRIPTACIÓN DE CONTRASEÑA
+  const salt = await bcrypt.genSalt(10);
+  const password_hash = await bcrypt.hash(password, salt);
+
+  const result = await User.create({ 
+    email, 
+    password_hash, 
+    nombre_completo, 
+    rol: 'asistente', 
+    contable_id: contableId 
   });
-
-  const newUser = await User.findById(result.id);
-
-  res.status(201).json({
-    success: true,
-    data: newUser
-  });
+  
+  res.status(201).json({ success: true, data: await User.findById(result.id) });
 });
 
 const getAsistentes = asyncHandler(async (req, res) => {
   const contableId = req.user.userId;
-
   const asistentes = await User.findAll({ contable_id: contableId, rol: 'asistente' });
+  res.json({ success: true, data: asistentes });
+});
 
-  res.json({
-    success: true,
-    data: asistentes
+const updateAsistente = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const contableId = req.user.userId;
+  const { email, password, nombre_completo } = req.body;
+
+  const asistente = await User.findById(id);
+  if (!asistente) return res.status(404).json({ success: false, message: 'Asistente no encontrado' });
+
+  if (asistente.contable_id !== contableId) {
+    return res.status(403).json({ success: false, message: 'No tienes permiso para editar este asistente' });
+  }
+
+  const updates = { email, nombre_completo };
+  
+  // SI SE ESCRIBIÓ UNA CONTRASEÑA, SE ENCRIPTA
+  if (password && password.trim() !== '') {
+    const salt = await bcrypt.genSalt(10);
+    updates.password_hash = await bcrypt.hash(password, salt);
+  }
+
+  await User.update(id, updates);
+  res.json({ success: true, data: await User.findById(id) });
+});
+
+/**
+ * Obtiene las IDs de las empresas asignadas a un asistente
+ */
+const getAsistenteEmpresas = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const db = getDatabase();
+
+  db.all(
+    'SELECT empresa_id FROM asistente_empresas WHERE asistente_id = ?',
+    [id],
+    (err, rows) => {
+      if (err) return res.status(500).json({ success: false, message: err.message });
+      res.json({ success: true, data: rows.map(r => r.empresa_id) });
+    }
+  );
+});
+
+/**
+ * Asigna/Actualiza las empresas de un asistente
+ */
+const assignEmpresasToAsistente = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { empresasIds } = req.body;
+  const db = getDatabase();
+
+  if (!Array.isArray(empresasIds)) {
+    return res.status(400).json({ success: false, message: 'Se requiere un array de IDs de empresas' });
+  }
+
+  db.serialize(() => {
+    db.run('BEGIN TRANSACTION');
+    db.run('DELETE FROM asistente_empresas WHERE asistente_id = ?', [id]);
+    const stmt = db.prepare('INSERT INTO asistente_empresas (asistente_id, empresa_id, created_at) VALUES (?, ?, ?)');
+    const now = new Date().toISOString();
+    empresasIds.forEach(empresaId => {
+      stmt.run(id, empresaId, now);
+    });
+    stmt.finalize();
+    db.run('COMMIT', (err) => {
+      if (err) return res.status(500).json({ success: false, message: 'Error en la transacción' });
+      res.json({ success: true, message: 'Asignaciones actualizadas correctamente' });
+    });
   });
 });
 
@@ -193,5 +191,8 @@ module.exports = {
   updateEmpresa,
   getFacturas,
   createAsistente,
-  getAsistentes
+  getAsistentes,
+  updateAsistente,
+  getAsistenteEmpresas,
+  assignEmpresasToAsistente
 };
