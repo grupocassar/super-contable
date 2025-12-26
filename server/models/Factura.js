@@ -104,6 +104,61 @@ class Factura {
     });
   }
 
+  // --- NUEVOS MÉTODOS PARA EL CONTABLE ---
+
+  static findByContableId(contableId, filters = {}) {
+    return new Promise((resolve, reject) => {
+      const db = getDatabase();
+      let query = `
+        SELECT f.*, e.nombre as empresa_nombre
+        FROM facturas f
+        INNER JOIN empresas e ON f.empresa_id = e.id
+        WHERE e.contable_id = ?
+      `;
+      const params = [contableId];
+
+      if (filters.estado) {
+        query += ' AND f.estado = ?';
+        params.push(filters.estado);
+      }
+
+      if (filters.empresa_id) {
+        query += ' AND f.empresa_id = ?';
+        params.push(filters.empresa_id);
+      }
+
+      query += ' ORDER BY f.created_at DESC';
+
+      db.all(query, params, (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows || []);
+      });
+    });
+  }
+
+  static getStatsByContableId(contableId) {
+    return new Promise((resolve, reject) => {
+      const db = getDatabase();
+      db.get(
+        `SELECT 
+          COUNT(CASE WHEN f.estado = 'pending' THEN 1 END) as pendientes,
+          COUNT(CASE WHEN f.estado = 'lista' THEN 1 END) as listas,
+          COUNT(CASE WHEN f.estado = 'aprobada' THEN 1 END) as aprobadas,
+          COUNT(CASE WHEN f.estado = 'rechazada' THEN 1 END) as rechazadas
+         FROM facturas f
+         INNER JOIN empresas e ON f.empresa_id = e.id
+         WHERE e.contable_id = ?`,
+        [contableId],
+        (err, row) => {
+          if (err) reject(err);
+          else resolve(row || { pendientes: 0, listas: 0, aprobadas: 0, rechazadas: 0 });
+        }
+      );
+    });
+  }
+
+  // --- MÉTODOS DE ESCRITURA ---
+
   static create(facturaData) {
     return new Promise((resolve, reject) => {
       const db = getDatabase();

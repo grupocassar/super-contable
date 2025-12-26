@@ -65,15 +65,35 @@ class Empresa {
     });
   }
 
+  static getStats(empresaId) {
+    return new Promise((resolve, reject) => {
+      const db = getDatabase();
+      db.get(
+        `SELECT 
+           COUNT(CASE WHEN estado = 'pending' THEN 1 END) as pendientes,
+           COUNT(CASE WHEN estado = 'lista' THEN 1 END) as listas,
+           COUNT(CASE WHEN estado = 'aprobada' THEN 1 END) as aprobadas
+         FROM facturas
+         WHERE empresa_id = ?`,
+        [empresaId],
+        (err, row) => {
+          if (err) reject(err);
+          else resolve(row || { pendientes: 0, listas: 0, aprobadas: 0 });
+        }
+      );
+    });
+  }
+
   static create(empresaData) {
     return new Promise((resolve, reject) => {
       const db = getDatabase();
-      const { nombre, rnc, contable_id, telegram_chat_id } = empresaData;
+      // Eliminamos telegram_chat_id de la destructuración
+      const { nombre, rnc, contable_id, codigo_corto } = empresaData;
 
       db.run(
-        `INSERT INTO empresas (nombre, rnc, contable_id, telegram_chat_id)
+        `INSERT INTO empresas (nombre, rnc, contable_id, codigo_corto)
          VALUES (?, ?, ?, ?)`,
-        [nombre, rnc || null, contable_id, telegram_chat_id || null],
+        [nombre, rnc || null, contable_id, codigo_corto],
         function(err) {
           if (err) reject(err);
           else resolve({ id: this.lastID, ...empresaData });

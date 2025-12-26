@@ -3,6 +3,22 @@ const Empresa = require('../models/Empresa');
 const Factura = require('../models/Factura');
 const { asyncHandler } = require('../middleware/errorHandler');
 
+/**
+ * Función auxiliar para generar un código corto único basado en el nombre
+ * Ejemplo: "Supermercado Pinos" -> SUPE123
+ */
+function generarCodigoAutomatico(nombre) {
+  const prefijo = nombre
+    .toUpperCase()
+    .normalize("NFD")               // Descompone caracteres con acentos
+    .replace(/[\u0300-\u036f]/g, "") // Elimina los acentos
+    .replace(/[^A-Z]/g, "")          // Elimina todo lo que no sean letras
+    .substring(0, 4);                // Toma las primeras 4 letras
+
+  const sufijo = Math.floor(100 + Math.random() * 900); // Agrega 3 números aleatorios
+  return `${prefijo}${sufijo}`;
+}
+
 const getDashboard = asyncHandler(async (req, res) => {
   const contableId = req.user.rol === 'contable' ? req.user.userId : req.user.contableId;
 
@@ -47,20 +63,24 @@ const getEmpresas = asyncHandler(async (req, res) => {
 
 const createEmpresa = asyncHandler(async (req, res) => {
   const contableId = req.user.rol === 'contable' ? req.user.userId : req.user.contableId;
-  const { nombre, rnc, codigo_corto } = req.body;
+  const { nombre, rnc } = req.body; // Ya no necesitamos recibir codigo_corto del frontend
 
   if (!nombre) {
     return res.status(400).json({
       success: false,
-      message: 'Nombre is required'
+      message: 'El nombre es obligatorio'
     });
   }
+
+  // --- LÓGICA AUTOMÁTICA ---
+  // Generamos el código aquí para que el contable no tenga que inventarlo
+  const codigo_corto = generarCodigoAutomatico(nombre);
 
   const result = await Empresa.create({
     contable_id: contableId,
     nombre,
     rnc,
-    codigo_corto
+    codigo_corto // Se guarda el código generado automáticamente
   });
 
   const newEmpresa = await Empresa.findById(result.id);
@@ -80,14 +100,14 @@ const updateEmpresa = asyncHandler(async (req, res) => {
   if (!empresa) {
     return res.status(404).json({
       success: false,
-      message: 'Empresa not found'
+      message: 'Empresa no encontrada'
     });
   }
 
   if (empresa.contable_id !== contableId && req.user.rol !== 'super_admin') {
     return res.status(403).json({
       success: false,
-      message: 'Access denied'
+      message: 'Acceso denegado'
     });
   }
 
@@ -127,7 +147,7 @@ const createAsistente = asyncHandler(async (req, res) => {
   if (!email || !password || !nombre_completo) {
     return res.status(400).json({
       success: false,
-      message: 'Email, password, and nombre_completo are required'
+      message: 'Email, password y nombre_completo son requeridos'
     });
   }
 
@@ -135,7 +155,7 @@ const createAsistente = asyncHandler(async (req, res) => {
   if (existingUser) {
     return res.status(409).json({
       success: false,
-      message: 'Email already exists'
+      message: 'El email ya existe'
     });
   }
 

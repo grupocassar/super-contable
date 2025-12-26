@@ -13,6 +13,10 @@ let facturasActuales = [];
 let ultimaFacturaMarcada = null;
 let timerDeshacer = null;
 
+// Variables de filtro
+let filtroEstado = 'pending';
+let filtroEmpresa = '';
+
 // ========== INICIALIZACIÓN ==========
 document.addEventListener('DOMContentLoaded', () => {
   if (!requireAuth()) return;
@@ -384,8 +388,14 @@ async function loadDashboard() {
         listas: []
       };
 
+      // Poblar dropdown de empresas
+      poblarFiltroEmpresas();
+      
+      // Inicializar listeners de filtros
+      inicializarFiltros();
+
       mostrarResumenSesion();
-      displayFacturasAgrupadas();
+      aplicarFiltros();
       actualizarContadorProgreso();
     }
   } catch (error) {
@@ -414,27 +424,110 @@ function mostrarResumenSesion() {
   }
 }
 
-function displayFacturasAgrupadas() {
-  displayFacturasSeccion(
-    facturasAgrupadas.alta_confianza || [],
-    'facturasAltaConfianza',
-    'countAltaConfianza',
-    'high'
-  );
+// ========== FILTROS ==========
+function poblarFiltroEmpresas() {
+  const select = document.getElementById('filterEmpresa');
+  if (!select) return;
 
-  displayFacturasSeccion(
-    facturasAgrupadas.media_confianza || [],
-    'facturasMediaConfianza',
-    'countMediaConfianza',
-    'medium'
-  );
+  // Limpiar opciones excepto "Todas"
+  select.innerHTML = '<option value="">🏢 Todas</option>';
 
-  displayFacturasSeccion(
-    facturasAgrupadas.baja_confianza || [],
-    'facturasBajaConfianza',
-    'countBajaConfianza',
-    'low'
-  );
+  // Agregar cada empresa
+  empresas.forEach(empresa => {
+    const option = document.createElement('option');
+    option.value = empresa.id;
+    option.textContent = empresa.nombre;
+    select.appendChild(option);
+  });
+}
+
+function inicializarFiltros() {
+  const selectEstado = document.getElementById('filterEstado');
+  const selectEmpresa = document.getElementById('filterEmpresa');
+
+  if (selectEstado) {
+    selectEstado.value = filtroEstado;
+    selectEstado.addEventListener('change', (e) => {
+      filtroEstado = e.target.value;
+      aplicarFiltros();
+    });
+  }
+
+  if (selectEmpresa) {
+    selectEmpresa.value = filtroEmpresa;
+    selectEmpresa.addEventListener('change', (e) => {
+      filtroEmpresa = e.target.value;
+      aplicarFiltros();
+    });
+  }
+}
+
+function aplicarFiltros() {
+  // Filtrar facturas por estado
+  let facturasFiltradas = [];
+  
+  if (filtroEstado === 'pending') {
+    facturasFiltradas = [
+      ...facturasAgrupadas.alta_confianza,
+      ...facturasAgrupadas.media_confianza,
+      ...facturasAgrupadas.baja_confianza
+    ];
+  } else if (filtroEstado === 'lista') {
+    facturasFiltradas = facturasAgrupadas.listas || [];
+  } else {
+    // Para aprobada/rechazada, buscar en todas las facturas
+    facturasFiltradas = facturas.filter(f => f.estado === filtroEstado);
+  }
+
+  // Filtrar por empresa si está seleccionada
+  if (filtroEmpresa) {
+    facturasFiltradas = facturasFiltradas.filter(f => f.empresa_id == filtroEmpresa);
+  }
+
+  // Mostrar u ocultar secciones según el estado
+  const secciones = document.querySelectorAll('.content-section');
+  
+  if (filtroEstado === 'pending') {
+    // Mostrar las 3 secciones de colores
+    secciones.forEach(s => s.style.display = 'block');
+    
+    // Reagrupar facturas filtradas
+    const reagrupadas = {
+      alta_confianza: facturasFiltradas.filter(f => (f.confidence_score || 0) >= 95),
+      media_confianza: facturasFiltradas.filter(f => (f.confidence_score || 0) >= 80 && (f.confidence_score || 0) < 95),
+      baja_confianza: facturasFiltradas.filter(f => (f.confidence_score || 0) < 80)
+    };
+
+    displayFacturasSeccion(reagrupadas.alta_confianza, 'facturasAltaConfianza', 'countAltaConfianza', 'high');
+    displayFacturasSeccion(reagrupadas.media_confianza, 'facturasMediaConfianza', 'countMediaConfianza', 'medium');
+    displayFacturasSeccion(reagrupadas.baja_confianza, 'facturasBajaConfianza', 'countBajaConfianza', 'low');
+  } else {
+    // Ocultar segunda y tercera sección, usar solo la primera para mostrar lista
+    secciones[1].style.display = 'none';
+    secciones[2].style.display = 'none';
+    
+    // Cambiar el título de la primera sección
+    const primeraSeccion = secciones[0];
+    const titulo = primeraSeccion.querySelector('.section-title');
+    const subtitulo = primeraSeccion.querySelector('.section-subtitle');
+    const header = primeraSeccion.querySelector('.section-header');
+    
+    // Remover clases de confianza
+    header.classList.remove('confidence-high', 'confidence-medium', 'confidence-low');
+    
+    if (filtroEstado === 'lista') {
+      titulo.textContent = '✅ Facturas Listas para Aprobar';
+      subtitulo.textContent = 'Facturas que has marcado en esta sesión';
+    } else if (filtroEstado === 'aprobada') {
+      titulo.textContent = '✔️ Facturas Aprobadas';
+      subtitulo.textContent = 'Histórico de facturas aprobadas';
+    } else if (filtroEstado === 'rechazada') {
+      titulo.textContent = '❌ Facturas Rechazadas';
+      subtitulo.textContent = 'Facturas que fueron rechazadas';
+    }
+    
+    displayFacturasSeccion(facturasFiltradas, 'facturasAltaConfianza', 'countAltaConfianza', 'neutral');
+  }
 }
 
 function displayFacturasSeccion(facturas, containerId, countId, confidenceLevel) {
@@ -491,13 +584,30 @@ function displayFacturasSeccion(facturas, containerId, countId, confidenceLevel)
 
 // ========== MODAL SPLIT VIEW ==========
 function abrirValidacionSeccion(seccion, index) {
-  const seccionMap = {
-    'high': facturasAgrupadas.alta_confianza,
-    'medium': facturasAgrupadas.media_confianza,
-    'low': facturasAgrupadas.baja_confianza
-  };
+  // Si estamos en modo filtrado (no pending), usar las facturas filtradas
+  let facturasAUsar;
+  
+  if (filtroEstado === 'pending') {
+    const seccionMap = {
+      'high': facturasAgrupadas.alta_confianza,
+      'medium': facturasAgrupadas.media_confianza,
+      'low': facturasAgrupadas.baja_confianza
+    };
+    facturasAUsar = seccionMap[seccion] || [];
+    
+    // Aplicar filtro de empresa si está activo
+    if (filtroEmpresa) {
+      facturasAUsar = facturasAUsar.filter(f => f.empresa_id == filtroEmpresa);
+    }
+  } else {
+    // En otros estados, todas las facturas están en la misma lista
+    facturasAUsar = facturas.filter(f => f.estado === filtroEstado);
+    if (filtroEmpresa) {
+      facturasAUsar = facturasAUsar.filter(f => f.empresa_id == filtroEmpresa);
+    }
+  }
 
-  facturasActuales = seccionMap[seccion] || [];
+  facturasActuales = facturasAUsar;
   
   if (facturasActuales.length === 0) {
     showToast('No hay facturas disponibles', 'error');

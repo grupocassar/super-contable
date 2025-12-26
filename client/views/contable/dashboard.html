@@ -114,13 +114,13 @@
         <h3 class="modal-title" id="modalTitle">Crear Empresa</h3>
         <button class="modal-close" onclick="closeModal()">×</button>
       </div>
-      <form id="empresaForm" onsubmit="saveEmpresa(event)">
+      <form id="empresaForm">
         <div class="modal-body">
           <input type="hidden" id="empresaId">
 
           <div class="form-group">
             <label for="empresaNombre" class="label">Nombre de la Empresa</label>
-            <input type="text" id="empresaNombre" class="input" required>
+            <input type="text" id="empresaNombre" class="input" required placeholder="Ej: Inversiones Pérez">
           </div>
 
           <div class="form-group">
@@ -128,9 +128,10 @@
             <input type="text" id="empresaRNC" class="input" placeholder="123-45678-9">
           </div>
 
-          <div class="form-group">
-            <label for="empresaCodigo" class="label">Código Corto</label>
-            <input type="text" id="empresaCodigo" class="input" placeholder="EMP01">
+          <div class="form-group" id="codigoCortoContainer" style="display: none;">
+            <label for="empresaCodigo" class="label">Código Corto (Automático)</label>
+            <input type="text" id="empresaCodigo" class="input" readonly style="background-color: #f9f9f9; cursor: not-allowed;">
+            <small style="color: #666;">Este código se genera automáticamente para Telegram.</small>
           </div>
         </div>
 

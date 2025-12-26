@@ -6,6 +6,31 @@
   <title>Iniciar Sesión - Super Contable</title>
   <link rel="stylesheet" href="/assets/css/global.css">
   <link rel="stylesheet" href="/assets/css/auth.css">
+  <style>
+    /* Estilos para las cuentas de prueba */
+    .dev-login-list {
+      margin-top: 1rem;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.03);
+      border-radius: 8px;
+      text-align: left;
+    }
+    .dev-user-row {
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+      font-size: 0.75rem;
+      border: 1px solid transparent;
+      margin-bottom: 2px;
+    }
+    .dev-user-row:hover {
+      background-color: #fff;
+      border-color: #4338ca;
+      color: #4338ca;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+  </style>
 </head>
 <body>
   <div class="auth-container">
@@ -44,19 +69,28 @@
           >
         </div>
 
-        <button type="submit" class="btn btn-primary" style="width: 100%;">
+        <button type="submit" id="submitBtn" class="btn btn-primary" style="width: 100%;">
           Iniciar Sesión
         </button>
       </form>
 
       <div class="auth-footer">
         <p>Super Contable © 2024</p>
-        <p class="mt-2" style="font-size: 0.75rem;">
-          Cuentas de prueba:<br>
-          <strong>Admin:</strong> admin@supercontable.com / admin123<br>
-          <strong>Contable:</strong> juan@contable.com / contable123<br>
-          <strong>Asistente:</strong> maria@asistente.com / asistente123
-        </p>
+        <div class="dev-login-list">
+          <p style="font-weight: bold; margin-bottom: 5px; font-size: 0.7rem; color: #666;">ACCESO RÁPIDO (DEV):</p>
+          
+          <div class="dev-user-row" data-email="admin@supercontable.com" data-pass="admin123">
+            <strong>Admin:</strong> admin@supercontable.com / admin123
+          </div>
+          
+          <div class="dev-user-row" data-email="juan@contable.com" data-pass="contable123">
+            <strong>Contable:</strong> juan@contable.com / contable123
+          </div>
+          
+          <div class="dev-user-row" data-email="maria@asistente.com" data-pass="asistente123">
+            <strong>Asistente:</strong> maria@asistente.com / asistente123
+          </div>
+        </div>
       </div>
     </div>
   </div>

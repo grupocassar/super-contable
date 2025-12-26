@@ -70,6 +70,29 @@
       </div>
     </div>
 
+    <!-- FILTROS -->
+    <div class="filters-container">
+      <div class="filters-content">
+        <div class="filter-group">
+          <label class="filter-label">Estado:</label>
+          <select id="filterEstado" class="filter-select">
+            <option value="pending">📋 Pendientes</option>
+            <option value="lista">✅ Listas</option>
+            <option value="aprobada">✔️ Aprobadas</option>
+            <option value="rechazada">❌ Rechazadas</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label">Empresa:</label>
+          <select id="filterEmpresa" class="filter-select">
+            <option value="">🏢 Todas</option>
+            <!-- Se llenará dinámicamente -->
+          </select>
+        </div>
+      </div>
+    </div>
+
     <!-- SECCIONES POR NIVEL DE CONFIANZA -->
     <div class="content-section">
       <div class="section-header confidence-high">

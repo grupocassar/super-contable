@@ -16,6 +16,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);
   document.getElementById('createEmpresaBtn')?.addEventListener('click', showCreateEmpresaModal);
+  
+  // Aseguramos que el formulario tenga su listener
+  document.getElementById('empresaForm')?.addEventListener('submit', saveEmpresa);
 });
 
 async function loadDashboard() {
@@ -76,18 +79,20 @@ function displayEmpresas(empresas) {
     <tr>
       <td>
         <strong>${empresa.nombre}</strong><br>
-        ${empresa.codigo_corto ? `<small style="color: var(--text-secondary);">${empresa.codigo_corto}</small>` : ''}
+        <small class="text-muted" style="font-family: monospace; background: #f0f0f0; padding: 2px 4px; border-radius: 4px;">
+          ${empresa.codigo_corto || 'Generando...'}
+        </small>
       </td>
       <td>${empresa.rnc || '-'}</td>
-      <td>${empresa.stats?.total_facturas || 0}</td>
+      <td>${empresa.stats?.listas || 0}</td>
       <td>
-        <span class="badge ${empresa.activa ? 'badge-success' : 'badge-danger'}">
-          ${empresa.activa ? 'Activa' : 'Inactiva'}
+        <span class="badge ${empresa.activa !== false ? 'badge-success' : 'badge-danger'}">
+          ${empresa.activa !== false ? 'Activa' : 'Inactiva'}
         </span>
       </td>
       <td>
         <div class="actions">
-          <button class="btn btn-sm btn-primary" onclick="editEmpresa(${empresa.id})">
+          <button class="btn btn-sm btn-outline-primary" onclick="editEmpresa(${empresa.id})">
             Editar
           </button>
         </div>
@@ -138,6 +143,12 @@ function showCreateEmpresaModal() {
   form.reset();
   document.getElementById('modalTitle').textContent = 'Crear Empresa';
   document.getElementById('empresaId').value = '';
+  
+  // Ocultamos el campo de código corto ya que es automático
+  const codigoField = document.getElementById('empresaCodigo');
+  if (codigoField && codigoField.parentElement) {
+    codigoField.parentElement.style.display = 'none';
+  }
 
   modal.classList.add('show');
 }
@@ -153,29 +164,39 @@ async function saveEmpresa(e) {
   const id = document.getElementById('empresaId').value;
   const formData = {
     nombre: document.getElementById('empresaNombre').value,
-    rnc: document.getElementById('empresaRNC').value,
-    codigo_corto: document.getElementById('empresaCodigo').value
+    rnc: document.getElementById('empresaRNC').value
+    // Eliminado codigo_corto: se genera en el servidor
   };
 
   try {
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+
     if (id) {
       await fetchAPI(`/contable/empresas/${id}`, {
         method: 'PUT',
         body: JSON.stringify(formData)
       });
-      showToast('Empresa actualizada', 'success');
+      showToast('Empresa actualizada correctamente', 'success');
     } else {
       await fetchAPI('/contable/empresas', {
         method: 'POST',
         body: JSON.stringify(formData)
       });
-      showToast('Empresa creada', 'success');
+      showToast('Empresa creada con código automático', 'success');
     }
 
     closeModal();
     loadDashboard();
   } catch (error) {
     showToast('Error: ' + error.message, 'error');
+  } finally {
+    const btn = e.target.querySelector('button[type="submit"]');
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Guardar';
+    }
   }
 }
 
@@ -187,7 +208,16 @@ async function editEmpresa(id) {
   document.getElementById('empresaId').value = id;
   document.getElementById('empresaNombre').value = empresa.nombre;
   document.getElementById('empresaRNC').value = empresa.rnc || '';
-  document.getElementById('empresaCodigo').value = empresa.codigo_corto || '';
+  
+  // Al editar, si quieres ver el código pero no cambiarlo, puedes ponerlo readonly
+  const codigoField = document.getElementById('empresaCodigo');
+  if (codigoField) {
+    codigoField.value = empresa.codigo_corto || '';
+    codigoField.readOnly = true;
+    if (codigoField.parentElement) {
+        codigoField.parentElement.style.display = 'block';
+    }
+  }
 
   document.getElementById('empresaModal').classList.add('show');
 }
