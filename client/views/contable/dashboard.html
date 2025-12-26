@@ -3,32 +3,92 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel Contable - Super Contable</title>
+  <title>Dashboard - Super Contable</title>
   <link rel="stylesheet" href="/assets/css/global.css">
   <link rel="stylesheet" href="/assets/css/contable.css">
   <style>
-    /* Estilos para el modal de asignación */
-    .checkbox-list {
-      max-height: 250px;
-      overflow-y: auto;
-      border: 1px solid #eee;
-      padding: 10px;
-      border-radius: 8px;
+    /* Estilos para el Modal de Detalles y optimización de espacio */
+    .modal-detail-layout {
+      display: grid;
+      grid-template-columns: 1fr 350px;
+      gap: 20px;
+      min-height: 450px;
     }
-    .checkbox-item {
+    
+    .invoice-preview-full {
+      background: #f8fafc;
+      border-radius: 8px;
       display: flex;
       align-items: center;
-      padding: 8px;
-      border-bottom: 1px solid #f9f9f9;
-      cursor: pointer;
+      justify-content: center;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+      padding: 10px;
     }
-    .checkbox-item:hover { background: #f0f7ff; }
-    .checkbox-item input { margin-right: 12px; width: 18px; height: 18px; }
     
-    .actions {
-      display: flex;
-      gap: 5px;
+    .invoice-preview-full img {
+      max-width: 100%;
+      max-height: 600px;
+      height: auto;
+      object-fit: contain;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
+    
+    .detail-info-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      padding: 5px;
+    }
+    
+    .status-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    
+    .btn-approve { background: #10b981; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: 700; transition: opacity 0.2s; }
+    .btn-reject { background: #ef4444; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: 700; transition: opacity 0.2s; }
+    .btn-approve:hover, .btn-reject:hover { opacity: 0.9; }
+
+    .notes-area {
+      width: 100%;
+      min-height: 120px;
+      padding: 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 14px;
+      resize: vertical;
+      background: #fdfdfd;
+    }
+
+    .detail-label {
+      display: block; 
+      font-weight: 600; 
+      margin-bottom: 8px; 
+      font-size: 13px; 
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 0.025em;
+    }
+
+    /* Botón de inspección profesional (SVG) */
+    .btn-view-icon {
+      background: none;
+      border: none;
+      color: var(--primary-color);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s;
+    }
+    .btn-view-icon:hover { transform: scale(1.2); }
+
+    .text-right { text-align: right; }
+    .text-center { text-align: center; }
   </style>
 </head>
 <body>
@@ -46,9 +106,18 @@
       </div>
     </nav>
 
+    <div class="tabs-container">
+      <nav class="tabs">
+        <a href="dashboard.html" class="tab active">📊 Dashboard</a>
+        <a href="empresas.html" class="tab">🏢 Empresas</a>
+        <a href="asistentes.html" class="tab">👥 Asistentes</a>
+        <a href="facturas.html" class="tab">📋 Facturas</a>
+      </nav>
+    </div>
+
     <div class="dashboard-header">
-      <h1>Panel del Contable</h1>
-      <p>Gestión de empresas y supervisión de facturas</p>
+      <h1>Panel General</h1>
+      <p>Bienvenido. Aquí tienes el resumen de las operaciones de hoy.</p>
     </div>
 
     <div class="stats-grid">
@@ -64,159 +133,82 @@
       </div>
       <div class="stat-card">
         <div class="stat-icon">⏳</div>
-        <div class="stat-label">Facturas Pendientes</div>
+        <div class="stat-label">Pendientes</div>
         <div class="stat-value" id="facturasPendientes">0</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon">✅</div>
-        <div class="stat-label">Facturas Aprobadas</div>
+        <div class="stat-label">Aprobadas</div>
         <div class="stat-value" id="facturasAprobadas">0</div>
       </div>
     </div>
 
     <div class="content-section">
       <div class="section-header">
-        <h2 class="section-title">Empresas</h2>
-        <button class="btn btn-primary" id="createEmpresaBtn">+ Crear Empresa</button>
+        <h2 class="section-title">Actividad Reciente</h2>
+        <a href="facturas.html" class="btn btn-sm btn-outline">Ver Historial Completo →</a>
       </div>
       <div class="table-container">
         <table class="table">
           <thead>
             <tr>
+              <th class="text-center" style="width: 50px;">Ver</th>
+              <th style="width: 120px;">Fecha</th>
               <th>Empresa</th>
-              <th>RNC</th>
-              <th>Facturas</th>
-              <th>Estado</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="empresasTableBody">
-            <tr><td colspan="5" class="text-center">Cargando...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="content-section">
-      <div class="section-header">
-        <h2 class="section-title">Mis Asistentes</h2>
-        <button class="btn btn-primary" onclick="showCreateAsistenteModal()">+ Nuevo Asistente</button>
-      </div>
-      <div class="table-container">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Correo</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="asistentesTableBody">
-            <tr><td colspan="3" class="text-center">Cargando asistentes...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="content-section">
-      <div class="section-header"><h2 class="section-title">Facturas Recientes</h2></div>
-      <div class="table-container">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Empresa</th>
-              <th>NCF</th>
+              <th style="width: 110px;">RNC</th>
+              <th style="width: 140px;">NCF</th>
               <th>Proveedor</th>
-              <th>Total</th>
-              <th>Estado</th>
+              <th class="text-right" style="width: 120px;">ITBIS</th>
+              <th class="text-right" style="width: 120px;">Total</th>
+              <th class="text-center" style="width: 110px;">Estado</th>
             </tr>
           </thead>
           <tbody id="facturasTableBody">
-            <tr><td colspan="6" class="text-center">Cargando...</td></tr>
+            <tr><td colspan="9" class="text-center">Cargando actividad reciente...</td></tr>
           </tbody>
         </table>
       </div>
     </div>
   </div>
 
-  <div id="empresaModal" class="modal">
-    <div class="modal-content">
+  <div id="detailModal" class="modal">
+    <div class="modal-content" style="max-width: 1100px; width: 95%;">
       <div class="modal-header">
-        <h3 class="modal-title" id="modalTitle">Crear Empresa</h3>
-        <button class="modal-close" onclick="closeModal('empresaModal')">×</button>
-      </div>
-      <form id="empresaForm">
-        <div class="modal-body">
-          <input type="hidden" id="empresaId">
-          <div class="form-group">
-            <label for="empresaNombre" class="label">Nombre de la Empresa</label>
-            <input type="text" id="empresaNombre" class="input" required placeholder="Ej: Inversiones Pérez">
-          </div>
-          <div class="form-group">
-            <label for="empresaRNC" class="label">RNC</label>
-            <input type="text" id="empresaRNC" class="input" placeholder="123-45678-9">
-          </div>
-          <div class="form-group" id="codigoCortoContainer" style="display: none;">
-            <label for="empresaCodigo" class="label">Código Corto (Automático)</label>
-            <input type="text" id="empresaCodigo" class="input" readonly style="background-color: #f9f9f9;">
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline" onclick="closeModal('empresaModal')">Cancelar</button>
-          <button type="submit" class="btn btn-primary">Guardar</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <div id="assignModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 class="modal-title">Asignar Empresas</h3>
-        <button class="modal-close" onclick="closeModal('assignModal')">×</button>
+        <h3 class="modal-title">Inspección de Factura #<span id="detailFacturaId"></span></h3>
+        <button class="modal-close" onclick="closeModal('detailModal')">&times;</button>
       </div>
       <div class="modal-body">
-        <p id="assignModalSub" style="margin-bottom: 15px; color: #666;"></p>
-        <input type="hidden" id="assignAsistenteId">
-        <div class="checkbox-list" id="companiesCheckboxList"></div>
+        <div class="modal-detail-layout">
+          <div class="invoice-preview-full">
+            <img id="detailImage" src="" alt="Vista previa de factura">
+          </div>
+          
+          <div class="detail-info-panel">
+            <div>
+              <label class="detail-label">Empresa Cliente</label>
+              <div id="detailEmpresa" style="font-size: 18px; font-weight: 600; color: #1e293b;"></div>
+            </div>
+
+            <div>
+              <label class="detail-label">Comentarios Contables</label>
+              <textarea id="detailNotas" class="notes-area" placeholder="Ej: NCF reportado en periodo anterior..."></textarea>
+            </div>
+
+            <div>
+              <label class="detail-label">Acción Requerida</label>
+              <p style="font-size: 13px; color: #64748b; margin-bottom: 15px;">Valide la consistencia del RNC y el NCF antes de proceder.</p>
+              <div class="status-actions">
+                <button class="btn-approve" id="approveBtn">APROBAR</button>
+                <button class="btn-reject" id="rejectBtn">RECHAZAR</button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-outline" onclick="closeModal('assignModal')">Cancelar</button>
-        <button type="button" class="btn btn-primary" onclick="saveAsignaciones()">Guardar Cambios</button>
+        <button class="btn btn-outline" onclick="closeModal('detailModal')">Cerrar</button>
+        <button class="btn btn-primary" id="saveDetailBtn">Guardar Notas</button>
       </div>
-    </div>
-  </div>
-
-  <div id="asistenteModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 class="modal-title" id="asistenteModalTitle">Nuevo Asistente</h3>
-        <button class="modal-close" onclick="closeModal('asistenteModal')">×</button>
-      </div>
-      <form id="asistenteForm">
-        <div class="modal-body">
-          <input type="hidden" id="asistenteId">
-          
-          <div class="form-group">
-            <label for="asistenteNombre" class="label">Nombre Completo</label>
-            <input type="text" id="asistenteNombre" class="input" required placeholder="Ej: María Pérez">
-          </div>
-          <div class="form-group">
-            <label for="asistenteEmail" class="label">Correo Electrónico</label>
-            <input type="email" id="asistenteEmail" class="input" required placeholder="maria@asistente.com">
-          </div>
-          <div class="form-group">
-            <label for="asistentePassword" class="label">Contraseña</label>
-            <input type="password" id="asistentePassword" class="input" required placeholder="••••••••" autocomplete="new-password">
-            <small id="passHelp" class="text-muted"></small>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline" onclick="closeModal('asistenteModal')">Cancelar</button>
-          <button type="submit" class="btn btn-primary" id="btnSaveAsistente">Crear Asistente</button>
-        </div>
-      </form>
     </div>
   </div>
 
@@ -227,7 +219,6 @@
       const user = getUser();
       if (user) document.getElementById('userName').textContent = user.nombre_completo;
     });
-    function closeModal(id) { document.getElementById(id).classList.remove('show'); }
   </script>
 </body>
 </html>

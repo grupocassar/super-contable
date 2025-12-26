@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Facturas - Super Contable</title>
+  <link rel="stylesheet" href="/assets/css/global.css">
+  <link rel="stylesheet" href="/assets/css/contable.css">
+  <style>
+    .filters-bar {
+      display: flex;
+      gap: 15px;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      align-items: flex-end;
+      flex-wrap: wrap;
+    }
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      flex: 1;
+      min-width: 200px;
+    }
+    .filter-group.search-group {
+      flex: 2;
+    }
+    #filterSearch {
+      border: 1px solid var(--primary-color);
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%236366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>');
+      background-repeat: no-repeat;
+      background-position: 10px center;
+      padding-left: 35px;
+    }
+
+    /* Botón de inspección profesional */
+    .btn-view-icon {
+      background: none;
+      border: none;
+      color: var(--primary-color);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s;
+      margin: 0 auto;
+    }
+    .btn-view-icon:hover {
+      transform: scale(1.2);
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard">
+    <nav class="navbar">
+      <div class="navbar-content">
+        <div class="navbar-brand">📊 Super Contable</div>
+        <div class="navbar-user">
+          <div>
+            <div class="navbar-user-name" id="userName">Cargando...</div>
+            <span class="navbar-user-role">Contable</span>
+          </div>
+          <button class="btn btn-sm btn-outline" id="logoutBtn">Cerrar Sesión</button>
+        </div>
+      </div>
+    </nav>
+
+    <div class="tabs-container">
+      <nav class="tabs">
+        <a href="dashboard.html" class="tab">📊 Dashboard</a>
+        <a href="empresas.html" class="tab">🏢 Empresas</a>
+        <a href="asistentes.html" class="tab">👥 Asistentes</a>
+        <a href="facturas.html" class="tab active">📋 Facturas</a>
+      </nav>
+    </div>
+
+    <div class="dashboard-header">
+      <h1>Historial de Facturas</h1>
+      <p>Consulta, validación y edición de documentos fiscales.</p>
+    </div>
+
+    <div class="filters-bar">
+      <div class="filter-group search-group">
+        <label class="label">Búsqueda Inteligente</label>
+        <input type="text" id="filterSearch" class="input" placeholder="RNC, NCF, Proveedor o ID..." spellcheck="false" autocomplete="off">
+      </div>
+      
+      <div class="filter-group">
+        <label class="label">Filtrar por Empresa</label>
+        <select id="filterEmpresa" class="input">
+          <option value="">Todas las empresas</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label class="label">Estado</label>
+        <select id="filterEstado" class="input">
+          <option value="">Todos los estados</option>
+          <option value="pendiente">Pendientes</option>
+          <option value="aprobada">Aprobadas</option>
+          <option value="rechazada">Rechazadas</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="content-section">
+      <div class="table-container">
+        <table class="table table-editable">
+          <thead>
+            <tr>
+              <th width="50" class="text-center">Ver</th>
+              <th width="140">Fecha</th>
+              <th>Empresa</th>
+              <th width="120">RNC Emisor</th>
+              <th width="160">NCF</th>
+              <th>Proveedor</th>
+              <th width="115" class="text-right">ITBIS</th>
+              <th width="115" class="text-right">Total</th>
+              <th width="110" class="text-center">Estado</th>
+            </tr>
+          </thead>
+          <tbody id="facturasTableBody">
+            <tr>
+              <td colspan="9" class="text-center">Cargando historial de facturas...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="detailModal" class="modal">
+    <div class="modal-content" style="max-width: 1100px; width: 95%;">
+      <div class="modal-header">
+        <h3 class="modal-title">Detalle de Factura #<span id="detailFacturaId"></span></h3>
+        <button class="modal-close" onclick="closeModal('detailModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-detail-layout">
+          <div class="invoice-preview-full">
+            <img id="detailImage" src="" alt="Cargando documento...">
+          </div>
+          <div class="detail-info-panel">
+            <div>
+              <label class="detail-label">Cliente</label>
+              <div id="detailEmpresa" style="font-size: 18px; font-weight: 600; color: #1e293b;"></div>
+            </div>
+            <div>
+              <label class="detail-label">Observaciones Contables</label>
+              <textarea id="detailNotas" class="notes-area" placeholder="Notas para el cierre fiscal..."></textarea>
+            </div>
+            <div>
+              <label class="detail-label">Validación</label>
+              <div class="status-actions">
+                <button class="btn-approve" id="approveBtn">APROBAR</button>
+                <button class="btn-reject" id="rejectBtn">RECHAZAR</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal('detailModal')">Cerrar</button>
+        <button class="btn btn-primary" id="saveDetailBtn">Guardar Notas</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/assets/js/utils.js"></script>
+  <script src="/assets/js/contable.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const user = getUser();
+      if (user) document.getElementById('userName').textContent = user.nombre_completo;
+    });
+  </script>
+</body>
+</html>

@@ -88,7 +88,7 @@ class Factura {
       const db = getDatabase();
       db.get(
         `SELECT 
-          COUNT(CASE WHEN f.estado = 'pending' THEN 1 END) as pendientes,
+          COUNT(CASE WHEN f.estado IN ('pending', 'pendiente') THEN 1 END) as pendientes,
           COUNT(CASE WHEN f.estado = 'lista' THEN 1 END) as listas,
           COUNT(CASE WHEN f.estado = 'aprobada' THEN 1 END) as aprobadas
          FROM facturas f
@@ -104,7 +104,7 @@ class Factura {
     });
   }
 
-  // --- NUEVOS MÉTODOS PARA EL CONTABLE ---
+  // --- MÉTODOS PARA EL CONTABLE (PRESERVADOS) ---
 
   static findByContableId(contableId, filters = {}) {
     return new Promise((resolve, reject) => {
@@ -141,7 +141,7 @@ class Factura {
       const db = getDatabase();
       db.get(
         `SELECT 
-          COUNT(CASE WHEN f.estado = 'pending' THEN 1 END) as pendientes,
+          COUNT(CASE WHEN f.estado IN ('pending', 'pendiente') THEN 1 END) as pendientes,
           COUNT(CASE WHEN f.estado = 'lista' THEN 1 END) as listas,
           COUNT(CASE WHEN f.estado = 'aprobada' THEN 1 END) as aprobadas,
           COUNT(CASE WHEN f.estado = 'rechazada' THEN 1 END) as rechazadas
@@ -157,23 +157,14 @@ class Factura {
     });
   }
 
-  // --- MÉTODOS DE ESCRITURA ---
+  // --- MÉTODOS DE ESCRITURA (DINÁMICOS) ---
 
   static create(facturaData) {
     return new Promise((resolve, reject) => {
       const db = getDatabase();
       const {
-        empresa_id,
-        telegram_message_id,
-        fecha_factura,
-        ncf,
-        rnc,
-        proveedor,
-        itbis,
-        total_pagado,
-        confidence_score,
-        drive_url,
-        estado
+        empresa_id, telegram_message_id, fecha_factura, ncf, rnc,
+        proveedor, itbis, total_pagado, confidence_score, drive_url, estado
       } = facturaData;
 
       db.run(
@@ -192,7 +183,7 @@ class Factura {
           total_pagado || null,
           confidence_score || null,
           drive_url || null,
-          estado || 'pending'
+          estado || 'pendiente'
         ],
         function(err) {
           if (err) reject(err);

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Empresas - Super Contable</title>
+  <link rel="stylesheet" href="/assets/css/global.css">
+  <link rel="stylesheet" href="/assets/css/contable.css">
+</head>
+<body>
+  <div class="dashboard">
+    <nav class="navbar">
+      <div class="navbar-content">
+        <div class="navbar-brand">📊 Super Contable</div>
+        <div class="navbar-user">
+          <div>
+            <div class="navbar-user-name" id="userName">Cargando...</div>
+            <span class="navbar-user-role">Contable</span>
+          </div>
+          <button class="btn btn-sm btn-outline" id="logoutBtn">Cerrar Sesión</button>
+        </div>
+      </div>
+    </nav>
+
+    <div class="tabs-container">
+      <nav class="tabs">
+        <a href="dashboard.html" class="tab">📊 Dashboard</a>
+        <a href="empresas.html" class="tab active">🏢 Empresas</a>
+        <a href="asistentes.html" class="tab">👥 Asistentes</a>
+        <a href="facturas.html" class="tab">📋 Facturas</a>
+      </nav>
+    </div>
+
+    <div class="dashboard-header">
+      <h1>Gestión de Empresas</h1>
+      <p>Administra tus clientes y sus configuraciones de Telegram</p>
+    </div>
+
+    <div class="content-section">
+      <div class="section-header">
+        <h2 class="section-title">Listado de Empresas</h2>
+        <button class="btn btn-primary" id="createEmpresaBtn">+ Crear Nueva Empresa</button>
+      </div>
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Empresa</th>
+              <th>RNC</th>
+              <th>Facturas</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="empresasTableBody">
+            <tr><td colspan="5" class="text-center">Cargando empresas...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="empresaModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalTitle">Crear Empresa</h3>
+        <button class="modal-close" onclick="closeModal('empresaModal')">×</button>
+      </div>
+      <form id="empresaForm">
+        <div class="modal-body">
+          <input type="hidden" id="empresaId">
+          <div class="form-group">
+            <label for="empresaNombre" class="label">Nombre de la Empresa</label>
+            <input type="text" id="empresaNombre" class="input" required placeholder="Ej: Inversiones Pérez">
+          </div>
+          <div class="form-group">
+            <label for="empresaRNC" class="label">RNC</label>
+            <input type="text" id="empresaRNC" class="input" placeholder="123-45678-9">
+          </div>
+          <div class="form-group" id="codigoCortoContainer" style="display: none;">
+            <label for="empresaCodigo" class="label">Código Corto (Automático)</label>
+            <input type="text" id="empresaCodigo" class="input" readonly style="background-color: #f9f9f9;">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeModal('empresaModal')">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/assets/js/utils.js"></script>
+  <script src="/assets/js/contable.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const user = getUser();
+      if (user) document.getElementById('userName').textContent = user.nombre_completo;
+    });
+    function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+  </script>
+</body>
+</html>

@@ -1,3 +1,7 @@
+/* ESTILOS ORIGINALES DE NELSON - MANTENIDOS AL 100%
+   Se han añadido los estilos de "Google Sheets" para estados y el botón profesional.
+*/
+
 .dashboard {
   min-height: 100vh;
   background-color: var(--bg-secondary);
@@ -273,3 +277,165 @@
   margin-bottom: 1rem;
   opacity: 0.5;
 }
+/* --- SISTEMA DE PESTAÑAS (TABS) --- */
+
+.tabs-container {
+  max-width: 1200px;
+  margin: 0 auto 1.5rem;
+  padding: 0 1rem;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.tabs {
+  display: flex;
+  gap: 2rem;
+}
+
+.tab {
+  padding: 1rem 0.5rem;
+  text-decoration: none;
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 0.95rem;
+  position: relative;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tab:hover {
+  color: var(--primary-color);
+}
+
+.tab.active {
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px; 
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background-color: var(--primary-color);
+  border-radius: 3px 3px 0 0;
+}
+
+/* Estilos para los filtros en la pestaña de Facturas */
+.filters-bar {
+  display: flex;
+  gap: 15px;
+  background: var(--bg-primary);
+  padding: 1.5rem;
+  border-radius: var(--border-radius);
+  margin: 0 auto 2rem;
+  max-width: 1200px;
+  box-shadow: var(--shadow-sm);
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 200px;
+}
+
+/* Ajuste para acciones en tablas (botones juntos) */
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-start;
+}
+/* --- TABLA TIPO EXCEL (EDITABLE INLINE) --- */
+
+.table-editable td {
+  padding: 0 !important; 
+  border: 1px solid #e2e8f0;
+}
+
+.cell-input {
+  width: 100%;
+  height: 100%;
+  border: none;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  background: transparent;
+  transition: all 0.2s;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.cell-input:hover {
+  background-color: #f8fafc;
+}
+
+.cell-input:focus {
+  background-color: white;
+  box-shadow: inset 0 0 0 2px var(--primary-color);
+  z-index: 10;
+}
+
+/* Indicador de celda guardando */
+.cell-saving {
+  background-color: #f0fdf4 !important;
+  animation: pulse-green 1s infinite;
+}
+
+@keyframes pulse-green {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+/* Estilos para el trigger del ojo (Legacy Preview) */
+.preview-trigger {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0.5rem;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: transform 0.2s;
+}
+
+.preview-trigger:hover {
+  transform: scale(1.3);
+}
+
+/* -------------------------------------------------------
+   NUEVAS ADICIONES TAREA: ESTADOS GOOGLE SHEETS Y BTN VIEW
+   -------------------------------------------------------
+*/
+
+/* Estados con estilo Google Sheets / Excel */
+.badge-status {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-weight: 500;
+    font-size: 12px;
+    display: inline-block;
+}
+
+.bg-pendiente { background-color: #fef3c7; color: #92400e; } /* Amarillo pastel */
+.bg-aprobada { background-color: #d1fae5; color: #065f46; }  /* Verde pastel */
+.bg-rechazada { background-color: #fee2e2; color: #991b1b; } /* Rojo pastel */
+
+/* Botón de acción profesional */
+.btn-view {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #475569;
+    transition: background 0.2s;
+}
+
+.btn-view:hover { background: #e2e8f0; }

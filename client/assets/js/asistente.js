@@ -156,18 +156,17 @@ function mostrarAyudaAtajos() {
   document.body.appendChild(helpPanel);
 }
 
+// Nota: Las funciones guardarYSiguiente y guardarYCerrar ahora invocan 
+// la nueva lógica de marcarListaModal que ya maneja la navegación.
 async function guardarYSiguiente() {
   await marcarListaModal();
-  if (currentFacturaIndex < facturasActuales.length - 1) {
-    setTimeout(() => navegarFactura('siguiente'), 300);
-  } else {
-    setTimeout(() => closeSplitModal(), 300);
-  }
 }
 
 async function guardarYCerrar() {
+  // Para forzar el cierre aunque no sea la última, 
+  // la nueva marcarListaModal ya tiene lógica, pero para Ctrl+Enter 
+  // simplemente ejecutamos la función.
   await marcarListaModal();
-  setTimeout(() => closeSplitModal(), 300);
 }
 
 // ========== CONTADOR DE PROGRESO ==========
@@ -642,10 +641,15 @@ function mostrarFacturaEnModal(index) {
   document.getElementById('facturaCounter').textContent = `(${index + 1} de ${facturasActuales.length})`;
 
   document.getElementById('infoEmpresa').textContent = factura.empresa_nombre || '-';
-  document.getElementById('infoFecha').value = factura.fecha_factura || '';
+  
+  // ✅ AJUSTE: Formato de fecha YYYY-MM-DD para input type="date"
+  document.getElementById('infoFecha').value = factura.fecha_factura ? factura.fecha_factura.split('T')[0] : '';
+  
   document.getElementById('infoNCF').value = factura.ncf || '';
   document.getElementById('infoRNC').value = factura.rnc || '';
   document.getElementById('infoProveedor').value = factura.proveedor || '';
+  
+  // ✅ AJUSTE: Convertir a string para evitar problemas con decimales
   document.getElementById('infoITBIS').value = factura.itbis || '';
   document.getElementById('infoTotal').value = factura.total_pagado || '';
   document.getElementById('infoNotas').value = factura.notas || '';
@@ -708,7 +712,7 @@ function applyZoom() {
   img.style.transform = `scale(${currentZoom})`;
 }
 
-// ========== MARCAR COMO LISTA ==========
+// ========== MARCAR COMO LISTA (VERSIÓN CORREGIDA) ==========
 async function marcarListaModal() {
   const factura = facturasActuales[currentFacturaIndex];
   
@@ -717,8 +721,8 @@ async function marcarListaModal() {
     ncf: document.getElementById('infoNCF').value || null,
     rnc: document.getElementById('infoRNC').value || null,
     proveedor: document.getElementById('infoProveedor').value || null,
-    itbis: document.getElementById('infoITBIS').value ? parseFloat(document.getElementById('infoITBIS').value) : null,
-    total_pagado: document.getElementById('infoTotal').value ? parseFloat(document.getElementById('infoTotal').value) : null,
+    itbis: parseFloat(document.getElementById('infoITBIS').value) || 0,
+    total_pagado: parseFloat(document.getElementById('infoTotal').value) || 0,
     notas: document.getElementById('infoNotas').value || null,
     estado: 'lista'
   };
@@ -732,7 +736,22 @@ async function marcarListaModal() {
     showToast('✓ Factura marcada como lista', 'success');
     incrementarProgreso();
     mostrarBannerDeshacer(factura.id);
-    loadDashboard();
+    
+    // ✅ NAVEGAR O CERRAR AUTOMÁTICAMENTE
+    if (currentFacturaIndex < facturasActuales.length - 1) {
+      // Hay más facturas, ir a la siguiente
+      setTimeout(() => {
+        navegarFactura('siguiente');
+        loadDashboard();
+      }, 300);
+    } else {
+      // Era la última, cerrar modal
+      setTimeout(() => {
+        closeSplitModal();
+        loadDashboard();
+      }, 300);
+    }
+    
   } catch (error) {
     showToast('Error: ' + error.message, 'error');
   }

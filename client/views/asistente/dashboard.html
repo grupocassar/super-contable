@@ -24,13 +24,11 @@
 
     <div class="dashboard-header">
       <h1>Panel del Asistente</h1>
-      <p>Validación y aprobación de facturas</p>
+      <p>Validación y aprobación de facturas por niveles de confianza</p>
     </div>
 
-    <!-- CONTADOR DE PROGRESO -->
     <div id="progressContainer" style="display: none;"></div>
 
-    <!-- RESUMEN DE SESIÓN -->
     <div class="session-summary" id="sessionSummary" style="display: none;">
       <div class="summary-content">
         <div class="summary-icon">📋</div>
@@ -43,7 +41,6 @@
       </div>
     </div>
 
-    <!-- ESTADÍSTICAS -->
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-icon">🏢</div>
@@ -70,7 +67,6 @@
       </div>
     </div>
 
-    <!-- FILTROS -->
     <div class="filters-container">
       <div class="filters-content">
         <div class="filter-group">
@@ -87,13 +83,11 @@
           <label class="filter-label">Empresa:</label>
           <select id="filterEmpresa" class="filter-select">
             <option value="">🏢 Todas</option>
-            <!-- Se llenará dinámicamente -->
-          </select>
+            </select>
         </div>
       </div>
     </div>
 
-    <!-- SECCIONES POR NIVEL DE CONFIANZA -->
     <div class="content-section">
       <div class="section-header confidence-high">
         <div>
@@ -134,7 +128,6 @@
     </div>
   </div>
 
-  <!-- MODAL SPLIT VIEW -->
   <div id="validacionModal" class="modal-split">
     <div class="modal-split-content">
       <div class="modal-split-header">
@@ -146,14 +139,12 @@
       </div>
       
       <div class="modal-split-body">
-        <!-- LADO IZQUIERDO: IMAGEN -->
         <div class="split-view-left">
           <div class="image-container">
             <img id="facturaImage" src="" alt="Factura" class="factura-image">
             <div class="image-placeholder" id="imagePlaceholder">
               <div class="placeholder-icon">📄</div>
-              <div class="placeholder-text">Vista previa de factura</div>
-              <div class="placeholder-subtext">La imagen se cargará cuando esté disponible</div>
+              <div class="placeholder-text">Cargando imagen...</div>
             </div>
           </div>
           <div class="image-controls">
@@ -163,15 +154,12 @@
           </div>
         </div>
 
-        <!-- LADO DERECHO: DATOS -->
         <div class="split-view-right">
           <div class="factura-info">
-            <!-- Tooltip de atajos -->
             <div class="keyboard-hint">
-              ⌨️ Presiona <kbd>?</kbd> para ver atajos de teclado
+              ⌨️ <kbd>Alt</kbd> + <kbd>L</kbd> Lista | <kbd>Alt</kbd> + <kbd>R</kbd> Rechazar
             </div>
 
-            <!-- Alerta de Duplicados -->
             <div id="duplicadoAlert" style="display: none; margin-bottom: 1rem;"></div>
 
             <div class="confidence-badge" id="confidenceBadge">
@@ -180,46 +168,46 @@
 
             <div class="info-group">
               <label class="info-label">Empresa</label>
-              <div class="info-value" id="infoEmpresa">--</div>
+              <div class="info-value" id="infoEmpresa" style="font-weight: 700;">--</div>
+            </div>
+
+            <div class="info-row">
+              <div class="info-group">
+                <label class="info-label">Fecha Factura</label>
+                <input type="date" id="infoFecha" class="input-editable">
+              </div>
+              <div class="info-group">
+                <label class="info-label">RNC Emisor</label>
+                <input type="text" id="infoRNC" class="input-editable" placeholder="XXX-XXXXX-X">
+              </div>
             </div>
 
             <div class="info-group">
-              <label class="info-label">Fecha</label>
-              <input type="date" id="infoFecha" class="input-editable">
-            </div>
-
-            <div class="info-group">
-              <label class="info-label">NCF</label>
+              <label class="info-label">NCF (Comprobante)</label>
               <input type="text" id="infoNCF" class="input-editable" placeholder="B01XXXXXXXX">
             </div>
 
             <div class="info-group">
-              <label class="info-label">RNC del Proveedor</label>
-              <input type="text" id="infoRNC" class="input-editable" placeholder="XXX-XXXXX-X">
-            </div>
-
-            <div class="info-group">
-              <label class="info-label">Proveedor</label>
+              <label class="info-label">Nombre Proveedor</label>
               <input type="text" id="infoProveedor" class="input-editable">
             </div>
 
             <div class="info-row">
               <div class="info-group">
                 <label class="info-label">ITBIS</label>
-                <input type="number" id="infoITBIS" class="input-editable" step="0.01">
+                <input type="number" id="infoITBIS" class="input-editable text-right" step="0.01">
               </div>
 
               <div class="info-group">
                 <label class="info-label">Total Pagado</label>
-                <input type="number" id="infoTotal" class="input-editable" step="0.01">
+                <input type="number" id="infoTotal" class="input-editable text-right" step="0.01" style="font-weight: 700;">
               </div>
             </div>
 
-            <!-- Campo de Notas -->
             <div class="info-group">
-              <label class="info-label">💬 Nota para el contable (opcional)</label>
+              <label class="info-label">💬 Notas para el contable</label>
               <textarea id="infoNotas" class="input-editable notas-textarea" rows="3" 
-                placeholder="Ej: Esta factura parece duplicada, favor verificar"></textarea>
+                placeholder="Ej: El monto no cuadra con el ITBIS..."></textarea>
             </div>
 
             <div class="info-alert" id="validationAlert" style="display: none;">
@@ -230,32 +218,23 @@
       </div>
 
       <div class="modal-split-footer">
-        <button class="btn btn-danger" onclick="rechazarFactura()">
-          ❌ Rechazar
-        </button>
-        <button class="btn btn-outline" onclick="saltarFactura()">
-          ⏭️ Saltar
-        </button>
+        <button class="btn btn-danger" onclick="rechazarFactura()">❌ Rechazar</button>
+        <button class="btn btn-outline" onclick="saltarFactura()">⏭️ Saltar</button>
+        
         <div class="footer-center">
-          <button class="btn btn-outline" onclick="navegarFactura('anterior')" id="btnAnterior">
-            ← Anterior
-          </button>
-          <button class="btn btn-outline" onclick="navegarFactura('siguiente')" id="btnSiguiente">
-            Siguiente →
-          </button>
+          <button class="btn btn-outline" onclick="navegarFactura('anterior')" id="btnAnterior">← Ant.</button>
+          <button class="btn btn-outline" onclick="navegarFactura('siguiente')" id="btnSiguiente">Sig. →</button>
         </div>
-        <button class="btn btn-primary" onclick="marcarListaModal()">
-          ✓ Marcar Lista
-        </button>
+
+        <button class="btn btn-primary" onclick="marcarListaModal()">✓ Marcar Lista</button>
       </div>
     </div>
   </div>
 
-  <!-- MODAL CONFIRMACIÓN LOTE -->
   <div id="confirmacionLoteModal" class="modal">
     <div class="modal-content modal-large">
       <div class="modal-header">
-        <h3 class="modal-title">Confirmar Aprobación de Sesión</h3>
+        <h3 class="modal-title">Finalizar Sesión de Trabajo</h3>
         <button class="modal-close" onclick="cerrarConfirmacionLote()">×</button>
       </div>
       <div class="modal-body">
@@ -263,27 +242,19 @@
           <div class="resumen-header">
             <div class="resumen-icon">✅</div>
             <div>
-              <h4>Resumen de tu sesión</h4>
-              <p>Estás a punto de aprobar <strong id="totalFacturasLote">0</strong> facturas</p>
+              <h4>Aprobación por Lote</h4>
+              <p>Vas a enviar <strong id="totalFacturasLote">0</strong> facturas al contable.</p>
             </div>
           </div>
-
-          <div class="resumen-empresas" id="resumenEmpresas">
-            <!-- Se llenará dinámicamente -->
-          </div>
-
+          <div class="resumen-empresas" id="resumenEmpresas"></div>
           <div class="resumen-warning">
-            ⚠️ Una vez aprobadas, estas facturas pasarán a tu contable. Asegúrate de haber revisado todo correctamente.
+            ⚠️ Una vez enviadas, el contable procederá con el reporte fiscal.
           </div>
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-outline" onclick="cerrarConfirmacionLote()">
-          ← Revisar de nuevo
-        </button>
-        <button class="btn btn-success" onclick="confirmarAprobacionLote()">
-          ✅ CONFIRMAR Y APROBAR
-        </button>
+        <button class="btn btn-outline" onclick="cerrarConfirmacionLote()">Revisar de nuevo</button>
+        <button class="btn btn-success" onclick="confirmarAprobacionLote()">🚀 ENVIAR AL CONTABLE</button>
       </div>
     </div>
   </div>
@@ -293,9 +264,7 @@
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const user = getUser();
-      if (user) {
-        document.getElementById('userName').textContent = user.nombre_completo;
-      }
+      if (user) document.getElementById('userName').textContent = user.nombre_completo;
     });
   </script>
 </body>

@@ -81,6 +81,25 @@ const getFacturas = asyncHandler(async (req, res) => {
   res.json({ success: true, data: facturas });
 });
 
+// NUEVA FUNCIÓN: Para actualizar campos individuales de la factura (NCF, Proveedor, etc.)
+const updateFactura = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const updates = req.body;
+
+  const factura = await Factura.findById(id);
+  if (!factura) {
+    return res.status(404).json({ success: false, message: 'Factura no encontrada' });
+  }
+
+  await Factura.update(id, updates);
+
+  res.json({ 
+    success: true, 
+    message: 'Factura actualizada correctamente',
+    data: await Factura.findById(id)
+  });
+});
+
 // --- GESTIÓN DE ASISTENTES ---
 
 const createAsistente = asyncHandler(async (req, res) => {
@@ -190,6 +209,7 @@ module.exports = {
   createEmpresa,
   updateEmpresa,
   getFacturas,
+  updateFactura, // EXPORTADA
   createAsistente,
   getAsistentes,
   updateAsistente,
