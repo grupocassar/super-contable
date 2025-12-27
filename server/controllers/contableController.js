@@ -1,7 +1,7 @@
 const User = require('../models/User');
 const Empresa = require('../models/Empresa');
 const Factura = require('../models/Factura');
-const bcrypt = require('bcryptjs'); // IMPORTANTE: Para que el login funcione
+const bcrypt = require('bcryptjs'); 
 const { asyncHandler } = require('../middleware/errorHandler');
 const { getDatabase } = require('../config/database');
 
@@ -81,7 +81,6 @@ const getFacturas = asyncHandler(async (req, res) => {
   res.json({ success: true, data: facturas });
 });
 
-// NUEVA FUNCIÓN: Para actualizar campos individuales de la factura (NCF, Proveedor, etc.)
 const updateFactura = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const updates = req.body;
@@ -100,13 +99,11 @@ const updateFactura = asyncHandler(async (req, res) => {
   });
 });
 
-// NUEVA FUNCIÓN: Eliminar factura
 const deleteFactura = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const contableId = req.user.rol === 'contable' ? req.user.userId : req.user.contableId;
   const db = getDatabase();
 
-  // Verificar que la factura pertenece al contable
   const factura = db.prepare(`
     SELECT f.* FROM facturas f
     JOIN empresas e ON f.empresa_id = e.id
@@ -120,13 +117,67 @@ const deleteFactura = asyncHandler(async (req, res) => {
     });
   }
 
-  // Eliminar factura
   db.prepare('DELETE FROM facturas WHERE id = ?').run(id);
 
   res.json({
     success: true,
     message: 'Factura eliminada correctamente',
     data: { id: parseInt(id) }
+  });
+});
+
+const getSugerenciaGasto = asyncHandler(async (req, res) => {
+  const { proveedor } = req.query;
+  if (!proveedor) {
+    return res.status(400).json({ success: false, message: 'El nombre del proveedor es requerido' });
+  }
+
+  const db = getDatabase();
+  const sugerencia = db.prepare(`
+    SELECT tipo_gasto, COUNT(*) as veces 
+    FROM facturas 
+    WHERE proveedor = ? 
+      AND tipo_gasto IS NOT NULL 
+      AND tipo_gasto != ''
+    GROUP BY tipo_gasto 
+    ORDER BY veces DESC 
+    LIMIT 1
+  `).get(proveedor);
+
+  res.json({
+    success: true,
+    data: sugerencia || null
+  });
+});
+
+/**
+ * ✅ CORREGIDO: Procesar Lote de Facturas
+ * Cambia el estado a 'exportada' que sí es un estado válido en la BD.
+ */
+const procesarLoteFacturas = asyncHandler(async (req, res) => {
+  const { ids } = req.body; 
+  const db = getDatabase();
+
+  if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ success: false, message: 'Se requiere una lista de IDs' });
+  }
+
+  db.serialize(() => {
+    db.run('BEGIN TRANSACTION');
+    
+    // CORRECCIÓN: Usar estado 'exportada' en lugar de 'procesada'
+    const stmt = db.prepare("UPDATE facturas SET estado = 'exportada' WHERE id = ?");
+    
+    ids.forEach(id => {
+      stmt.run(id);
+    });
+    
+    stmt.finalize();
+    
+    db.run('COMMIT', (err) => {
+      if (err) return res.status(500).json({ success: false, message: 'Error al procesar lote' });
+      res.json({ success: true, message: `${ids.length} facturas marcadas como exportadas` });
+    });
   });
 });
 
@@ -143,7 +194,6 @@ const createAsistente = asyncHandler(async (req, res) => {
   const existingUser = await User.findByEmail(email);
   if (existingUser) return res.status(409).json({ success: false, message: 'El email ya existe' });
 
-  // ENCRIPTACIÓN DE CONTRASEÑA
   const salt = await bcrypt.genSalt(10);
   const password_hash = await bcrypt.hash(password, salt);
 
@@ -178,7 +228,6 @@ const updateAsistente = asyncHandler(async (req, res) => {
 
   const updates = { email, nombre_completo };
   
-  // SI SE ESCRIBIÓ UNA CONTRASEÑA, SE ENCRIPTA
   if (password && password.trim() !== '') {
     const salt = await bcrypt.genSalt(10);
     updates.password_hash = await bcrypt.hash(password, salt);
@@ -188,9 +237,6 @@ const updateAsistente = asyncHandler(async (req, res) => {
   res.json({ success: true, data: await User.findById(id) });
 });
 
-/**
- * Obtiene las IDs de las empresas asignadas a un asistente
- */
 const getAsistenteEmpresas = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const db = getDatabase();
@@ -205,9 +251,6 @@ const getAsistenteEmpresas = asyncHandler(async (req, res) => {
   );
 });
 
-/**
- * Asigna/Actualiza las empresas de un asistente
- */
 const assignEmpresasToAsistente = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { empresasIds } = req.body;
@@ -240,7 +283,9 @@ module.exports = {
   updateEmpresa,
   getFacturas,
   updateFactura,
-  deleteFactura, // ✅ AGREGADO
+  deleteFactura,
+  getSugerenciaGasto,
+  procesarLoteFacturas,
   createAsistente,
   getAsistentes,
   updateAsistente,

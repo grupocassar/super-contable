@@ -12,20 +12,26 @@ router.put('/empresas/:id', contableController.updateEmpresa);
 
 // Gestión de Facturas
 router.get('/facturas', contableController.getFacturas);
-// NUEVA RUTA: Actualizar campos de una factura (NCF, Proveedor, Total, etc.)
+
+// Memoria Contable (Sugerencia de gasto)
+router.get('/facturas/sugerencia-gasto', contableController.getSugerenciaGasto);
+
+// ✅ NUEVA RUTA (FASE 3): Procesar/Archivar lote de facturas
+router.post('/facturas/procesar-lote', contableController.procesarLoteFacturas);
+
+// Actualizar campos de una factura
 router.put('/facturas/:id', contableController.updateFactura);
-// NUEVA RUTA: Eliminar factura
+
+// Eliminar factura
 router.delete('/facturas/:id', contableController.deleteFactura);
 
-// Gestión de Asistentes (CRUD Básico)
+// Gestión de Asistentes
 router.get('/asistentes', contableController.getAsistentes);
 router.post('/asistentes', contableController.createAsistente);
 router.put('/asistentes/:id', contableController.updateAsistente);
 
 // Gestión de Asignaciones
-// Obtener qué empresas tiene un asistente
 router.get('/asistentes/:id/empresas', contableController.getAsistenteEmpresas);
-// Guardar/Actualizar asignaciones de empresas a un asistente
 router.post('/asistentes/:id/empresas', contableController.assignEmpresasToAsistente);
 
 module.exports = router;

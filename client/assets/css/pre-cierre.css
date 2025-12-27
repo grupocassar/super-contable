@@ -53,14 +53,17 @@
 /* TABLA TIPO EXCEL */
 .table-container-excel {
   width: 100%;
-  overflow-x: auto;
+  overflow-x: auto; /* CRÍTICO: Habilita el scroll horizontal */
   background: white;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  margin-bottom: 2rem; /* Espacio extra abajo para que la barra de scroll sea fácil de usar */
+  padding-bottom: 5px; /* Evita que la barra de scroll tape la última fila */
 }
 
 .table-excel {
   width: 100%;
+  min-width: 1500px; /* NUEVO: Fuerza ancho mínimo para evitar compresión y asegurar que todo quepa */
   border-collapse: collapse;
   font-size: 0.8rem;
 }
@@ -81,6 +84,29 @@
   text-transform: uppercase;
   letter-spacing: 0.025em;
   background: #f8fafc;
+  vertical-align: top;
+  white-space: nowrap; /* Evita que los títulos se partan feo */
+}
+
+/* ESTILO DE FILTROS EN HEADER (OPTIMIZADO) */
+.header-filter {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 2px 4px; /* Más compacto */
+  font-size: 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 3px;
+  color: #1e293b;
+  box-sizing: border-box;
+  font-weight: normal;
+  height: 26px; /* Altura fija controlada */
+  background-color: white;
+}
+
+.header-filter:focus {
+  outline: 1px solid var(--primary-color);
+  border-color: var(--primary-color);
 }
 
 .table-excel td {
@@ -187,6 +213,18 @@
   background-color: #f1f5f9 !important;
 }
 
+.anomalia-fuera-periodo {
+  background-color: #ffedd5 !important;
+}
+
+.anomalia-rnc-invalido {
+  background-color: #fff7ed !important;
+}
+
+.anomalia-sospechosa {
+  background-color: #fffbeb !important;
+}
+
 /* Barra de estado */
 .status-bar {
   position: fixed;
@@ -214,7 +252,7 @@
   color: #86efac;
 }
 
-.status-item.anomalia {
+.status-item.anomalia, .status-item.warning {
   color: #fbbf24;
 }
 
@@ -234,7 +272,7 @@
 }
 
 /* ============================================ */
-/* MODAL DE COMPARACIÓN DE DUPLICADOS - COMPACTO */
+/* MODAL DE COMPARACIÓN - COMPACTO */
 /* ============================================ */
 
 .modal-duplicados {
@@ -416,12 +454,55 @@
   transform: scale(1.3);
 }
 
-/* Anomalía: Sospechosa */
-.anomalia-sospechosa {
-  background-color: #fffbeb !important;
+/* ============================================ */
+/* MEMORIA CONTABLE (INTELIGENCIA) */
+/* ============================================ */
+
+.sugerencia-activa {
+  background-color: #eff6ff !important;
+  border-left: 3px solid #3b82f6 !important;
+  font-weight: 600;
+  color: #1d4ed8 !important;
+  transition: all 0.3s ease;
 }
 
-/* Contador de sospechosas en barra */
-.status-item.warning {
-  color: #fbbf24;
+.sugerencia-activa:focus {
+  border-left: 3px solid #2563eb !important;
+}
+
+/* ============================================ */
+/* MODAL DE EXPORTACIÓN (NUEVO) */
+/* ============================================ */
+
+.columns-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  background: #f8fafc;
+  padding: 1rem;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.columns-grid label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #334155;
+  cursor: pointer;
+  user-select: none;
+}
+
+.columns-grid label:hover {
+  color: var(--primary-color);
+}
+
+.columns-grid input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+  accent-color: var(--primary-color);
 }

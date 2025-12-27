@@ -40,6 +40,17 @@
     <div class="pre-cierre-header">
       <div class="header-left">
         <h1>Pre-Cierre Fiscal</h1>
+        
+        <!-- Selector de Vista (Pendientes vs Histórico) -->
+        <div class="view-selector" style="display: flex; background: #f1f5f9; padding: 4px; border-radius: 6px; margin-left: 1rem; border: 1px solid #e2e8f0;">
+          <button id="btnViewPendientes" class="btn-view active" onclick="cambiarVista('aprobada')" style="border:none; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; background: white; color: #0f172a; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+            📂 Pendientes
+          </button>
+          <button id="btnViewHistorico" class="btn-view" onclick="cambiarVista('exportada')" style="border:none; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem; font-weight: 600; cursor: pointer; color: #64748b; background: transparent; transition: all 0.2s;">
+            📜 Histórico
+          </button>
+        </div>
+
         <div class="periodo-selector">
           <label>Período:</label>
           <select id="periodoMes" class="input-inline">
@@ -64,8 +75,8 @@
         </div>
       </div>
       <div class="header-actions">
-        <button class="btn btn-outline" id="btnExportExcel">📊 Excel</button>
-        <button class="btn btn-primary" id="btnExport606">📥 Exportar 606</button>
+        <!-- ✅ CORREGIDO: Se agregó id="btnExportarMain" -->
+        <button class="btn btn-primary" id="btnExportarMain" onclick="abrirModalExportar()">📥 Exportar Datos</button>
       </div>
     </div>
 
@@ -76,13 +87,66 @@
           <tr>
             <th width="30" title="Anomalías"></th>
             <th width="100">Fecha</th>
-            <th width="150">Empresa</th>
-            <th width="110">RNC</th>
-            <th width="50">Tipo</th>
-            <th width="150">NCF</th>
-            <th width="200">Proveedor</th>
-            <th width="200">Tipo de Gasto</th>
-            <th width="140">Forma de Pago</th>
+            <th width="150">
+              Empresa
+              <select class="header-filter" id="filterEmpresa" onchange="aplicarFiltros()">
+                <option value="">Todas</option>
+              </select>
+            </th>
+            <th width="110">
+              RNC
+              <input type="text" class="header-filter" id="filterRNC" placeholder="Buscar..." onkeyup="aplicarFiltros()">
+            </th>
+            <th width="60">
+              Tipo
+              <select class="header-filter" id="filterTipo" onchange="aplicarFiltros()">
+                <option value="">Todos</option>
+                <option value="B01">B01</option>
+                <option value="B02">B02</option>
+                <option value="B11">B11</option>
+                <option value="B14">B14</option>
+                <option value="B15">B15</option>
+              </select>
+            </th>
+            <th width="150">
+              NCF
+              <input type="text" class="header-filter" id="filterNCF" placeholder="Buscar NCF..." onkeyup="aplicarFiltros()">
+            </th>
+            <th width="200">
+              Proveedor
+              <input type="text" class="header-filter" id="filterProveedor" placeholder="Buscar..." onkeyup="aplicarFiltros()">
+            </th>
+            <th width="200">
+              Tipo de Gasto
+              <select class="header-filter" id="filterGasto" onchange="aplicarFiltros()">
+                <option value="">Todos</option>
+                <option value="VACIO">⚠️ Sin Clasificar</option>
+                <option value="E01">E01 - Personal</option>
+                <option value="E02">E02 - Servicios</option>
+                <option value="E03">E03 - Arrendamientos</option>
+                <option value="E04">E04 - Activos Fijos</option>
+                <option value="E05">E05 - Representación</option>
+                <option value="E06">E06 - Deducciones</option>
+                <option value="E07">E07 - Financieros</option>
+                <option value="E08">E08 - Extraordinarios</option>
+                <option value="E09">E09 - Costo Venta</option>
+                <option value="E10">E10 - Adq. Activos</option>
+                <option value="E11">E11 - Seguros</option>
+              </select>
+            </th>
+            <th width="140">
+              Forma de Pago
+              <select class="header-filter" id="filterPago" onchange="aplicarFiltros()">
+                <option value="">Todas</option>
+                <option value="VACIO">⚠️ Sin Clasificar</option>
+                <option value="01">Efectivo</option>
+                <option value="02">Cheque</option>
+                <option value="03">Transferencia</option>
+                <option value="04">T. Crédito</option>
+                <option value="05">T. Débito</option>
+                <option value="06">Crédito</option>
+              </select>
+            </th>
             <th width="100" class="text-right">ITBIS</th>
             <th width="120" class="text-right">Total</th>
           </tr>
@@ -95,7 +159,7 @@
       </table>
     </div>
 
-    <!-- BARRA DE ESTADO ACTUALIZADA -->
+    <!-- BARRA DE ESTADO -->
     <div class="status-bar">
       <div class="status-item">
         <span id="statusTotal">0 facturas</span>
@@ -105,6 +169,12 @@
       </div>
       <div class="status-item warning" id="statusSospechosas" style="display: none;">
         🟡 <span id="countSospechosas">0</span> sospechosas
+      </div>
+      <div class="status-item warning" id="statusFueraPeriodo" style="display: none;">
+        🟠 <span id="countFueraPeriodo">0</span> fuera período
+      </div>
+      <div class="status-item warning" id="statusRNCInvalido" style="display: none;">
+        🔶 <span id="countRNCInvalido">0</span> RNC inválido
       </div>
       <div class="status-item warning" id="statusITBIS" style="display: none;">
         🧾 <span id="countITBIS">0</span> ITBIS=0
@@ -119,7 +189,54 @@
 
   </div>
 
-  <!-- MODAL DE COMPARACIÓN DE DUPLICADOS -->
+  <!-- MODAL DE EXPORTACIÓN -->
+  <div id="exportModal" class="modal-duplicados">
+    <div class="modal-duplicados-content" style="max-width: 500px;">
+      <div class="modal-duplicados-header">
+        <h3>📤 Exportar Datos</h3>
+        <button class="modal-close" onclick="cerrarModalExportar()">×</button>
+      </div>
+      <div class="modal-duplicados-body" style="display: block;">
+        
+        <!-- Selección de Empresa -->
+        <div style="margin-bottom: 1.5rem;">
+          <label style="display:block; font-weight:600; margin-bottom:0.5rem; color:#1e293b;">1. Selecciona la Empresa:</label>
+          <select id="exportEmpresaSelect" class="input-inline" style="width: 100%; padding: 0.6rem;">
+            <option value="TODAS">📦 Todas las Empresas (Archivo Unificado)</option>
+            <!-- Se llena dinámicamente con JS -->
+          </select>
+        </div>
+
+        <!-- Selección de Columnas -->
+        <div>
+          <label style="display:block; font-weight:600; margin-bottom:0.5rem; color:#1e293b;">2. Selecciona las columnas:</label>
+          <div class="columns-grid">
+            <!-- Se llenará dinámicamente con JS -->
+          </div>
+        </div>
+
+        <!-- Opciones de Cierre / Limpieza -->
+        <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #e2e8f0;">
+          <label style="display:flex; align-items:flex-start; gap:0.5rem; cursor:pointer; background: #fffbeb; padding: 0.75rem; border-radius: 6px; border: 1px solid #fef3c7;">
+            <input type="checkbox" id="checkArchivar" style="width:1.2rem; height:1.2rem; margin-top:0.2rem;" checked>
+            <div>
+              <span style="font-weight:700; color:#92400e; display:block;">🧹 Limpiar mesa de trabajo</span>
+              <span style="font-size:0.85rem; color:#b45309; display:block; margin-top:0.25rem;">
+                Marcar facturas exportadas como "Procesadas" y ocultarlas de esta lista.
+              </span>
+            </div>
+          </label>
+        </div>
+
+      </div>
+      <div class="modal-duplicados-footer">
+        <button class="btn btn-outline" onclick="cerrarModalExportar()">Cancelar</button>
+        <button class="btn btn-primary" onclick="ejecutarExportacion()">📥 Descargar y Procesar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE DUPLICADOS -->
   <div id="duplicadosModal" class="modal-duplicados">
     <div class="modal-duplicados-content">
       <div class="modal-duplicados-header">
@@ -127,7 +244,6 @@
         <div id="duplicadoNCF" style="font-family: monospace; color: #ef4444; font-weight: 600; margin-top: 0.5rem;"></div>
         <button class="modal-close" onclick="cerrarModalDuplicados()">×</button>
       </div>
-      
       <div class="modal-duplicados-body">
         <!-- FACTURA 1 -->
         <div class="factura-comparacion">
@@ -139,27 +255,14 @@
               <img id="factura1Imagen" src="" alt="Factura 1" style="width: 100%; border-radius: 4px;">
             </div>
             <div class="comparacion-datos">
-              <div class="dato-row">
-                <span class="dato-label">Fecha:</span>
-                <span id="factura1Fecha" class="dato-value">--</span>
-              </div>
-              <div class="dato-row">
-                <span class="dato-label">Empresa:</span>
-                <span id="factura1Empresa" class="dato-value">--</span>
-              </div>
-              <div class="dato-row">
-                <span class="dato-label">Proveedor:</span>
-                <span id="factura1Proveedor" class="dato-value">--</span>
-              </div>
-              <div class="dato-row">
-                <span class="dato-label">Total:</span>
-                <span id="factura1Total" class="dato-value" style="font-weight: 700;">--</span>
-              </div>
+              <div class="dato-row"><span class="dato-label">Fecha:</span><span id="factura1Fecha" class="dato-value">--</span></div>
+              <div class="dato-row"><span class="dato-label">Empresa:</span><span id="factura1Empresa" class="dato-value">--</span></div>
+              <div class="dato-row"><span class="dato-label">Proveedor:</span><span id="factura1Proveedor" class="dato-value">--</span></div>
+              <div class="dato-row"><span class="dato-label">Total:</span><span id="factura1Total" class="dato-value" style="font-weight: 700;">--</span></div>
             </div>
           </div>
           <button class="btn btn-danger btn-block" id="btnEliminar1">🗑️ Eliminar Esta</button>
         </div>
-
         <!-- FACTURA 2 -->
         <div class="factura-comparacion">
           <div class="factura-comparacion-header">
@@ -170,110 +273,56 @@
               <img id="factura2Imagen" src="" alt="Factura 2" style="width: 100%; border-radius: 4px;">
             </div>
             <div class="comparacion-datos">
-              <div class="dato-row">
-                <span class="dato-label">Fecha:</span>
-                <span id="factura2Fecha" class="dato-value">--</span>
-              </div>
-              <div class="dato-row">
-                <span class="dato-label">Empresa:</span>
-                <span id="factura2Empresa" class="dato-value">--</span>
-              </div>
-              <div class="dato-row">
-                <span class="dato-label">Proveedor:</span>
-                <span id="factura2Proveedor" class="dato-value">--</span>
-              </div>
-              <div class="dato-row">
-                <span class="dato-label">Total:</span>
-                <span id="factura2Total" class="dato-value" style="font-weight: 700;">--</span>
-              </div>
+              <div class="dato-row"><span class="dato-label">Fecha:</span><span id="factura2Fecha" class="dato-value">--</span></div>
+              <div class="dato-row"><span class="dato-label">Empresa:</span><span id="factura2Empresa" class="dato-value">--</span></div>
+              <div class="dato-row"><span class="dato-label">Proveedor:</span><span id="factura2Proveedor" class="dato-value">--</span></div>
+              <div class="dato-row"><span class="dato-label">Total:</span><span id="factura2Total" class="dato-value" style="font-weight: 700;">--</span></div>
             </div>
           </div>
           <button class="btn btn-danger btn-block" id="btnEliminar2">🗑️ Eliminar Esta</button>
         </div>
       </div>
-
       <div class="modal-duplicados-footer">
-        <button class="btn btn-primary btn-lg" onclick="cerrarModalDuplicados()">✅ Mantener Ambas (son diferentes)</button>
+        <button class="btn btn-primary btn-lg" onclick="mantenerAmbasDuplicadas()">✅ Mantener Ambas (son diferentes)</button>
       </div>
     </div>
   </div>
 
-  <!-- MODAL DE FACTURAS SOSPECHOSAS -->
+  <!-- MODAL SOSPECHOSAS -->
   <div id="sospechosasModal" class="modal-duplicados">
     <div class="modal-duplicados-content">
       <div class="modal-duplicados-header" style="background: linear-gradient(to bottom, #fffbeb, white); border-bottom: 2px solid #fef3c7;">
         <h3 style="color: #92400e;">🟡 FACTURAS SOSPECHOSAS DETECTADAS</h3>
-        <p style="margin: 0.5rem 0 0 0; font-size: 0.875rem; color: #78350f; font-weight: 400;">
-          Mismos datos pero NCF diferente. Verifica si son compras distintas o hay error de digitación.
-        </p>
+        <p style="margin: 0.5rem 0 0 0; font-size: 0.875rem; color: #78350f; font-weight: 400;">Mismos datos pero NCF diferente.</p>
         <button class="modal-close" onclick="cerrarModalSospechosas()">×</button>
       </div>
-            
       <div class="modal-duplicados-body">
         <!-- FACTURA 1 -->
         <div class="factura-comparacion">
-          <div class="factura-comparacion-header">
-            <h4 id="sospechosa1Title">FACTURA #--</h4>
-          </div>
+          <div class="factura-comparacion-header"><h4 id="sospechosa1Title">FACTURA #--</h4></div>
           <div class="factura-comparacion-content">
-            <div class="comparacion-imagen">
-              <img id="sospechosa1Imagen" src="" alt="Factura 1" style="width: 100%; border-radius: 4px;">
-            </div>
+            <div class="comparacion-imagen"><img id="sospechosa1Imagen" src="" alt="Factura 1" style="width: 100%; border-radius: 4px;"></div>
             <div class="comparacion-datos">
-              <div class="dato-row">
-                <span class="dato-label">NCF:</span>
-                <span id="sospechosa1NCF" class="dato-value" style="font-family: monospace; font-weight: 600;">--</span>
-              </div>
-              <div class="dato-row">
-                <span class="dato-label">Fecha:</span>
-                <span id="sospechosa1Fecha" class="dato-value">--</span>
-              </div>
-              <div class="dato-row">
-                <span class="dato-label">Empresa:</span>
-                <span id="sospechosa1Empresa" class="dato-value">--</span>
-              </div>
-              <div class="dato-row">
-                <span class="dato-label">Proveedor:</span>
-                <span id="sospechosa1Proveedor" class="dato-value">--</span>
-              </div>
-              <div class="dato-row">
-                <span class="dato-label">Total:</span>
-                <span id="sospechosa1Total" class="dato-value" style="font-weight: 700;">--</span>
-              </div>
+              <div class="dato-row"><span class="dato-label">NCF:</span><span id="sospechosa1NCF" class="dato-value" style="font-family: monospace; font-weight: 600;">--</span></div>
+              <div class="dato-row"><span class="dato-label">Fecha:</span><span id="sospechosa1Fecha" class="dato-value">--</span></div>
+              <div class="dato-row"><span class="dato-label">Empresa:</span><span id="sospechosa1Empresa" class="dato-value">--</span></div>
+              <div class="dato-row"><span class="dato-label">Proveedor:</span><span id="sospechosa1Proveedor" class="dato-value">--</span></div>
+              <div class="dato-row"><span class="dato-label">Total:</span><span id="sospechosa1Total" class="dato-value" style="font-weight: 700;">--</span></div>
             </div>
           </div>
           <button class="btn btn-danger btn-block" id="btnEliminarSosp1">🗑️ Eliminar Esta</button>
         </div>
         <!-- FACTURA 2 -->
         <div class="factura-comparacion">
-          <div class="factura-comparacion-header">
-            <h4 id="sospechosa2Title">FACTURA #--</h4>
-          </div>
+          <div class="factura-comparacion-header"><h4 id="sospechosa2Title">FACTURA #--</h4></div>
           <div class="factura-comparacion-content">
-            <div class="comparacion-imagen">
-              <img id="sospechosa2Imagen" src="" alt="Factura 2" style="width: 100%; border-radius: 4px;">
-            </div>
+            <div class="comparacion-imagen"><img id="sospechosa2Imagen" src="" alt="Factura 2" style="width: 100%; border-radius: 4px;"></div>
             <div class="comparacion-datos">
-              <div class="dato-row">
-                <span class="dato-label">NCF:</span>
-                <span id="sospechosa2NCF" class="dato-value" style="font-family: monospace; font-weight: 600;">--</span>
-              </div>
-              <div class="dato-row">
-                <span class="dato-label">Fecha:</span>
-                <span id="sospechosa2Fecha" class="dato-value">--</span>
-              </div>
-              <div class="dato-row">
-                <span class="dato-label">Empresa:</span>
-                <span id="sospechosa2Empresa" class="dato-value">--</span>
-              </div>
-              <div class="dato-row">
-                <span class="dato-label">Proveedor:</span>
-                <span id="sospechosa2Proveedor" class="dato-value">--</span>
-              </div>
-              <div class="dato-row">
-                <span class="dato-label">Total:</span>
-                <span id="sospechosa2Total" class="dato-value" style="font-weight: 700;">--</span>
-              </div>
+              <div class="dato-row"><span class="dato-label">NCF:</span><span id="sospechosa2NCF" class="dato-value" style="font-family: monospace; font-weight: 600;">--</span></div>
+              <div class="dato-row"><span class="dato-label">Fecha:</span><span id="sospechosa2Fecha" class="dato-value">--</span></div>
+              <div class="dato-row"><span class="dato-label">Empresa:</span><span id="sospechosa2Empresa" class="dato-value">--</span></div>
+              <div class="dato-row"><span class="dato-label">Proveedor:</span><span id="sospechosa2Proveedor" class="dato-value">--</span></div>
+              <div class="dato-row"><span class="dato-label">Total:</span><span id="sospechosa2Total" class="dato-value" style="font-weight: 700;">--</span></div>
             </div>
           </div>
           <button class="btn btn-danger btn-block" id="btnEliminarSosp2">🗑️ Eliminar Esta</button>
