@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pre-Cierre Fiscal - Super Contable</title>
+  <link rel="stylesheet" href="/assets/css/global.css">
+  <link rel="stylesheet" href="/assets/css/contable.css">
+  <link rel="stylesheet" href="/assets/css/pre-cierre.css">
+</head>
+<body>
+  <div class="dashboard">
+    
+    <!-- NAVBAR -->
+    <nav class="navbar">
+      <div class="navbar-content">
+        <div class="navbar-brand">📊 Super Contable - Pre-Cierre Fiscal</div>
+        <div class="navbar-user">
+          <div>
+            <div class="navbar-user-name" id="userName">Cargando...</div>
+            <span class="navbar-user-role">Contable</span>
+          </div>
+          <button class="btn btn-sm btn-outline" id="logoutBtn">Cerrar Sesión</button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- TABS -->
+    <div class="tabs-container">
+      <nav class="tabs">
+        <a href="dashboard.html" class="tab">📊 Dashboard</a>
+        <a href="empresas.html" class="tab">🏢 Empresas</a>
+        <a href="asistentes.html" class="tab">👥 Asistentes</a>
+        <a href="facturas.html" class="tab">📋 Facturas</a>
+        <a href="pre-cierre.html" class="tab active">🎯 Pre-Cierre</a>
+      </nav>
+    </div>
+
+    <!-- HEADER CON CONTROLES -->
+    <div class="pre-cierre-header">
+      <div class="header-left">
+        <h1>Pre-Cierre Fiscal</h1>
+        <div class="periodo-selector">
+          <label>Período:</label>
+          <select id="periodoMes" class="input-inline">
+            <option value="01">Enero</option>
+            <option value="02">Febrero</option>
+            <option value="03">Marzo</option>
+            <option value="04">Abril</option>
+            <option value="05">Mayo</option>
+            <option value="06">Junio</option>
+            <option value="07">Julio</option>
+            <option value="08">Agosto</option>
+            <option value="09">Septiembre</option>
+            <option value="10">Octubre</option>
+            <option value="11">Noviembre</option>
+            <option value="12" selected>Diciembre</option>
+          </select>
+          <select id="periodoAnio" class="input-inline">
+            <option value="2024">2024</option>
+            <option value="2025" selected>2025</option>
+            <option value="2026">2026</option>
+          </select>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-outline" id="btnExportExcel">📊 Excel</button>
+        <button class="btn btn-primary" id="btnExport606">📥 Exportar 606</button>
+      </div>
+    </div>
+
+    <!-- TABLA TIPO EXCEL -->
+    <div class="table-container-excel">
+      <table class="table-excel" id="preCierreTable">
+        <thead>
+          <tr>
+            <th width="30" title="Anomalías"></th>
+            <th width="100">Fecha</th>
+            <th width="150">Empresa</th>
+            <th width="110">RNC</th>
+            <th width="50">Tipo</th>
+            <th width="150">NCF</th>
+            <th width="200">Proveedor</th>
+            <th width="200">Tipo de Gasto</th>
+            <th width="140">Forma de Pago</th>
+            <th width="100" class="text-right">ITBIS</th>
+            <th width="120" class="text-right">Total</th>
+          </tr>
+        </thead>
+        <tbody id="preCierreTableBody">
+          <tr>
+            <td colspan="11" class="text-center">Cargando facturas aprobadas...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- BARRA DE ESTADO ACTUALIZADA -->
+    <div class="status-bar">
+      <div class="status-item">
+        <span id="statusTotal">0 facturas</span>
+      </div>
+      <div class="status-item anomalia" id="statusDuplicados" style="display: none;">
+        🔴 <span id="countDuplicados">0</span> duplicados
+      </div>
+      <div class="status-item warning" id="statusSospechosas" style="display: none;">
+        🟡 <span id="countSospechosas">0</span> sospechosas
+      </div>
+      <div class="status-item warning" id="statusITBIS" style="display: none;">
+        🧾 <span id="countITBIS">0</span> ITBIS=0
+      </div>
+      <div class="status-item warning" id="statusSinClasificar" style="display: none;">
+        ⚠️ <span id="countSinClasificar">0</span> sin clasificar
+      </div>
+      <div class="status-item success">
+        ✅ <span id="statusOK">0</span> OK
+      </div>
+    </div>
+
+  </div>
+
+  <!-- MODAL DE COMPARACIÓN DE DUPLICADOS -->
+  <div id="duplicadosModal" class="modal-duplicados">
+    <div class="modal-duplicados-content">
+      <div class="modal-duplicados-header">
+        <h3>⚠️ NCF DUPLICADO DETECTADO</h3>
+        <div id="duplicadoNCF" style="font-family: monospace; color: #ef4444; font-weight: 600; margin-top: 0.5rem;"></div>
+        <button class="modal-close" onclick="cerrarModalDuplicados()">×</button>
+      </div>
+      
+      <div class="modal-duplicados-body">
+        <!-- FACTURA 1 -->
+        <div class="factura-comparacion">
+          <div class="factura-comparacion-header">
+            <h4 id="factura1Title">FACTURA #--</h4>
+          </div>
+          <div class="factura-comparacion-content">
+            <div class="comparacion-imagen">
+              <img id="factura1Imagen" src="" alt="Factura 1" style="width: 100%; border-radius: 4px;">
+            </div>
+            <div class="comparacion-datos">
+              <div class="dato-row">
+                <span class="dato-label">Fecha:</span>
+                <span id="factura1Fecha" class="dato-value">--</span>
+              </div>
+              <div class="dato-row">
+                <span class="dato-label">Empresa:</span>
+                <span id="factura1Empresa" class="dato-value">--</span>
+              </div>
+              <div class="dato-row">
+                <span class="dato-label">Proveedor:</span>
+                <span id="factura1Proveedor" class="dato-value">--</span>
+              </div>
+              <div class="dato-row">
+                <span class="dato-label">Total:</span>
+                <span id="factura1Total" class="dato-value" style="font-weight: 700;">--</span>
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-danger btn-block" id="btnEliminar1">🗑️ Eliminar Esta</button>
+        </div>
+
+        <!-- FACTURA 2 -->
+        <div class="factura-comparacion">
+          <div class="factura-comparacion-header">
+            <h4 id="factura2Title">FACTURA #--</h4>
+          </div>
+          <div class="factura-comparacion-content">
+            <div class="comparacion-imagen">
+              <img id="factura2Imagen" src="" alt="Factura 2" style="width: 100%; border-radius: 4px;">
+            </div>
+            <div class="comparacion-datos">
+              <div class="dato-row">
+                <span class="dato-label">Fecha:</span>
+                <span id="factura2Fecha" class="dato-value">--</span>
+              </div>
+              <div class="dato-row">
+                <span class="dato-label">Empresa:</span>
+                <span id="factura2Empresa" class="dato-value">--</span>
+              </div>
+              <div class="dato-row">
+                <span class="dato-label">Proveedor:</span>
+                <span id="factura2Proveedor" class="dato-value">--</span>
+              </div>
+              <div class="dato-row">
+                <span class="dato-label">Total:</span>
+                <span id="factura2Total" class="dato-value" style="font-weight: 700;">--</span>
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-danger btn-block" id="btnEliminar2">🗑️ Eliminar Esta</button>
+        </div>
+      </div>
+
+      <div class="modal-duplicados-footer">
+        <button class="btn btn-primary btn-lg" onclick="cerrarModalDuplicados()">✅ Mantener Ambas (son diferentes)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE FACTURAS SOSPECHOSAS -->
+  <div id="sospechosasModal" class="modal-duplicados">
+    <div class="modal-duplicados-content">
+      <div class="modal-duplicados-header" style="background: linear-gradient(to bottom, #fffbeb, white); border-bottom: 2px solid #fef3c7;">
+        <h3 style="color: #92400e;">🟡 FACTURAS SOSPECHOSAS DETECTADAS</h3>
+        <p style="margin: 0.5rem 0 0 0; font-size: 0.875rem; color: #78350f; font-weight: 400;">
+          Mismos datos pero NCF diferente. Verifica si son compras distintas o hay error de digitación.
+        </p>
+        <button class="modal-close" onclick="cerrarModalSospechosas()">×</button>
+      </div>
+            
+      <div class="modal-duplicados-body">
+        <!-- FACTURA 1 -->
+        <div class="factura-comparacion">
+          <div class="factura-comparacion-header">
+            <h4 id="sospechosa1Title">FACTURA #--</h4>
+          </div>
+          <div class="factura-comparacion-content">
+            <div class="comparacion-imagen">
+              <img id="sospechosa1Imagen" src="" alt="Factura 1" style="width: 100%; border-radius: 4px;">
+            </div>
+            <div class="comparacion-datos">
+              <div class="dato-row">
+                <span class="dato-label">NCF:</span>
+                <span id="sospechosa1NCF" class="dato-value" style="font-family: monospace; font-weight: 600;">--</span>
+              </div>
+              <div class="dato-row">
+                <span class="dato-label">Fecha:</span>
+                <span id="sospechosa1Fecha" class="dato-value">--</span>
+              </div>
+              <div class="dato-row">
+                <span class="dato-label">Empresa:</span>
+                <span id="sospechosa1Empresa" class="dato-value">--</span>
+              </div>
+              <div class="dato-row">
+                <span class="dato-label">Proveedor:</span>
+                <span id="sospechosa1Proveedor" class="dato-value">--</span>
+              </div>
+              <div class="dato-row">
+                <span class="dato-label">Total:</span>
+                <span id="sospechosa1Total" class="dato-value" style="font-weight: 700;">--</span>
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-danger btn-block" id="btnEliminarSosp1">🗑️ Eliminar Esta</button>
+        </div>
+        <!-- FACTURA 2 -->
+        <div class="factura-comparacion">
+          <div class="factura-comparacion-header">
+            <h4 id="sospechosa2Title">FACTURA #--</h4>
+          </div>
+          <div class="factura-comparacion-content">
+            <div class="comparacion-imagen">
+              <img id="sospechosa2Imagen" src="" alt="Factura 2" style="width: 100%; border-radius: 4px;">
+            </div>
+            <div class="comparacion-datos">
+              <div class="dato-row">
+                <span class="dato-label">NCF:</span>
+                <span id="sospechosa2NCF" class="dato-value" style="font-family: monospace; font-weight: 600;">--</span>
+              </div>
+              <div class="dato-row">
+                <span class="dato-label">Fecha:</span>
+                <span id="sospechosa2Fecha" class="dato-value">--</span>
+              </div>
+              <div class="dato-row">
+                <span class="dato-label">Empresa:</span>
+                <span id="sospechosa2Empresa" class="dato-value">--</span>
+              </div>
+              <div class="dato-row">
+                <span class="dato-label">Proveedor:</span>
+                <span id="sospechosa2Proveedor" class="dato-value">--</span>
+              </div>
+              <div class="dato-row">
+                <span class="dato-label">Total:</span>
+                <span id="sospechosa2Total" class="dato-value" style="font-weight: 700;">--</span>
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-danger btn-block" id="btnEliminarSosp2">🗑️ Eliminar Esta</button>
+        </div>
+      </div>
+      <div class="modal-duplicados-footer">
+        <button class="btn btn-outline" onclick="marcarComoRevisadas()">✓ Marcar como Revisadas</button>
+        <button class="btn btn-primary btn-lg" onclick="mantenerAmbas()">✅ Son Compras Diferentes (Mantener)</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/assets/js/utils.js"></script>
+  <script src="/assets/js/pre-cierre.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const user = getUser();
+      if (user) document.getElementById('userName').textContent = user.nombre_completo;
+    });
+  </script>
+</body>
+</html>

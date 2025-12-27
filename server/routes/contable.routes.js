@@ -14,6 +14,8 @@ router.put('/empresas/:id', contableController.updateEmpresa);
 router.get('/facturas', contableController.getFacturas);
 // NUEVA RUTA: Actualizar campos de una factura (NCF, Proveedor, Total, etc.)
 router.put('/facturas/:id', contableController.updateFactura);
+// NUEVA RUTA: Eliminar factura
+router.delete('/facturas/:id', contableController.deleteFactura);
 
 // Gestión de Asistentes (CRUD Básico)
 router.get('/asistentes', contableController.getAsistentes);

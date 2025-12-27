@@ -100,6 +100,36 @@ const updateFactura = asyncHandler(async (req, res) => {
   });
 });
 
+// NUEVA FUNCIÓN: Eliminar factura
+const deleteFactura = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const contableId = req.user.rol === 'contable' ? req.user.userId : req.user.contableId;
+  const db = getDatabase();
+
+  // Verificar que la factura pertenece al contable
+  const factura = db.prepare(`
+    SELECT f.* FROM facturas f
+    JOIN empresas e ON f.empresa_id = e.id
+    WHERE f.id = ? AND e.contable_id = ?
+  `).get(id, contableId);
+
+  if (!factura) {
+    return res.status(404).json({ 
+      success: false, 
+      message: 'Factura no encontrada o no tienes permiso para eliminarla' 
+    });
+  }
+
+  // Eliminar factura
+  db.prepare('DELETE FROM facturas WHERE id = ?').run(id);
+
+  res.json({
+    success: true,
+    message: 'Factura eliminada correctamente',
+    data: { id: parseInt(id) }
+  });
+});
+
 // --- GESTIÓN DE ASISTENTES ---
 
 const createAsistente = asyncHandler(async (req, res) => {
@@ -209,7 +239,8 @@ module.exports = {
   createEmpresa,
   updateEmpresa,
   getFacturas,
-  updateFactura, // EXPORTADA
+  updateFactura,
+  deleteFactura, // ✅ AGREGADO
   createAsistente,
   getAsistentes,
   updateAsistente,
