@@ -5,7 +5,7 @@ let facturas = [];
 
 // Variables para modal unificado
 let currentZoomFactura = 1;
-let currentFacturaIdInModal = null; // ✅ NUEVA: ID actual en modal
+let currentFacturaIdInModal = null; 
 
 document.addEventListener('DOMContentLoaded', () => {
   if (!requireAuth()) return;
@@ -83,14 +83,31 @@ function populateCompanyFilter() {
 
 function applyDynamicFilters() {
   const empresaId = document.getElementById('filterEmpresa')?.value;
-  const estado = document.getElementById('filterEstado')?.value;
+  const estado = document.getElementById('filterEstado')?.value; // Obtiene "activas", "pendiente", etc.
   const searchText = document.getElementById('filterSearch')?.value?.toLowerCase();
 
   let filtradas = [...facturas];
 
+  // 1. Filtro de Empresa
   if (empresaId) filtradas = filtradas.filter(f => f.empresa_id == empresaId);
-  if (estado) filtradas = filtradas.filter(f => f.estado === estado);
+  
+  // 2. Filtro de Estado (CORREGIDO Y SIMPLIFICADO)
+  if (estado) {
+    if (estado === 'activas') {
+      // Mostrar TODO lo que NO sea 'exportada'
+      // Esto incluye: 'pendiente', 'aprobada', 'rechazada', 'lista', etc.
+      filtradas = filtradas.filter(f => f.estado !== 'exportada');
+    } else if (estado === 'exportada') {
+      // Solo histórico
+      filtradas = filtradas.filter(f => f.estado === 'exportada');
+    } else {
+      // Estado específico (pendiente, aprobada, rechazada)
+      filtradas = filtradas.filter(f => f.estado === estado);
+    }
+  }
+  // Si estado es "" (Auditoría), no filtramos nada, pasa todo.
 
+  // 3. Búsqueda de Texto
   if (searchText) {
     const term = searchText.trim().toLowerCase();
     filtradas = filtradas.filter(f => {
@@ -105,10 +122,6 @@ function applyDynamicFilters() {
   renderFacturasTable(filtradas);
 }
 
-// ============================================
-// RENDERIZADO DE TABLA CON COLUMNA DE NOTAS
-// ============================================
-
 function renderFacturasTable(lista) {
   const tbody = document.getElementById('facturasTableBody');
   if (!tbody) return;
@@ -121,7 +134,6 @@ function renderFacturasTable(lista) {
   tbody.innerHTML = lista.map(f => {
     const fechaFormatted = f.fecha_factura ? f.fecha_factura.split('T')[0] : '';
     
-    // Badge de nota - Solo si hay nota del asistente
     const notaColumn = f.notas && f.notas.trim() !== '' ? `
       <span class="nota-badge" 
             onclick="abrirModalFactura(${f.id})"
@@ -186,16 +198,11 @@ function abrirModalFactura(facturaId) {
   const factura = facturas.find(f => f.id === facturaId);
   if (!factura) return;
 
-  // ✅ Guardar ID para edición
   currentFacturaIdInModal = facturaId;
 
-  // Título
   document.getElementById('facturaModalTitle').textContent = `Factura #${factura.id}`;
-  
-  // Empresa (no editable)
   document.getElementById('facturaEmpresa').textContent = factura.empresa_nombre || 'Sin empresa';
   
-  // ✅ CAMPOS EDITABLES (inputs)
   const fechaFormatted = factura.fecha_factura ? factura.fecha_factura.split('T')[0] : '';
   document.getElementById('modalFechaInput').value = fechaFormatted;
   document.getElementById('modalRNCInput').value = factura.rnc || '';
@@ -204,7 +211,6 @@ function abrirModalFactura(facturaId) {
   document.getElementById('modalITBISInput').value = factura.itbis || 0;
   document.getElementById('modalTotalInput').value = factura.total_pagado || 0;
 
-  // Imagen
   const imgEl = document.getElementById('facturaImage');
   const placeholderEl = document.getElementById('facturaImagePlaceholder');
   if (imgEl && placeholderEl) {
@@ -213,7 +219,6 @@ function abrirModalFactura(facturaId) {
     placeholderEl.style.display = 'none';
   }
 
-  // Nota del asistente (si existe)
   const notaAsistenteContainer = document.getElementById('notaAsistenteContainer');
   const notaAsistenteContenido = document.getElementById('notaAsistenteContenido');
   
@@ -224,7 +229,6 @@ function abrirModalFactura(facturaId) {
     notaAsistenteContainer.style.display = 'none';
   }
 
-  // Configurar botones
   const btnAprobar = document.getElementById('btnAprobarFactura');
   const btnRechazar = document.getElementById('btnRechazarFactura');
 
@@ -236,10 +240,8 @@ function abrirModalFactura(facturaId) {
     btnRechazar.onclick = () => actualizarEstadoFactura(factura.id, 'rechazada');
   }
 
-  // Mostrar modal
   document.getElementById('facturaModal').classList.add('show');
   
-  // Reset zoom
   currentZoomFactura = 1;
   applyZoomFactura();
 }
@@ -250,12 +252,43 @@ function cerrarModalFactura() {
   currentFacturaIdInModal = null;
 }
 
-// ✅ NUEVA FUNCIÓN: Guardar desde el modal
+// ✅ NUEVA FUNCIÓN: ELIMINAR DESDE EL MODAL
+async function eliminarFacturaActual() {
+  if (!currentFacturaIdInModal) return;
+
+  if (!confirm('⚠️ ¿Estás seguro de eliminar esta factura permanentemente?\n\nEsta acción no se puede deshacer.')) {
+    return;
+  }
+
+  try {
+    const response = await fetchAPI(`/contable/facturas/${currentFacturaIdInModal}`, {
+      method: 'DELETE'
+    });
+
+    if (response.success) {
+      showToast('🗑️ Factura eliminada', 'success');
+      // Eliminar del array local para refresco inmediato
+      facturas = facturas.filter(f => f.id !== currentFacturaIdInModal);
+      cerrarModalFactura();
+      
+      // Si estamos en vista de facturas, refrescar filtros
+      if (window.location.pathname.includes('facturas.html')) {
+        applyDynamicFilters();
+      } else {
+        // Si estamos en dashboard, refrescar stats
+        loadDashboard();
+      }
+    }
+  } catch (error) {
+    showToast('Error al eliminar factura', 'error');
+  }
+}
+
 async function saveFieldFromModal(field, value) {
   if (!currentFacturaIdInModal) return;
   
   const factura = facturas.find(f => f.id === currentFacturaIdInModal);
-  if (factura && factura[field] == value) return; // Sin cambios
+  if (factura && factura[field] == value) return;
 
   try {
     const response = await fetchAPI(`/contable/facturas/${currentFacturaIdInModal}`, {
@@ -266,8 +299,12 @@ async function saveFieldFromModal(field, value) {
     if (response.success) {
       if (factura) factura[field] = value;
       showToast('✓ Guardado', 'success');
-      // Recargar tabla en background
-      loadDashboard();
+      
+      if (window.location.pathname.includes('facturas.html')) {
+         applyDynamicFilters(); // Refrescar lista de fondo
+      } else {
+         loadDashboard();
+      }
     }
   } catch (error) {
     showToast('Error al guardar', 'error');
@@ -283,15 +320,23 @@ async function actualizarEstadoFactura(facturaId, nuevoEstado) {
 
     if (response.success) {
       showToast(`Factura ${nuevoEstado}`, 'success');
+      
+      const f = facturas.find(x => x.id === facturaId);
+      if (f) f.estado = nuevoEstado;
+
       cerrarModalFactura();
-      loadDashboard(); // Recargar tabla
+      
+      if (window.location.pathname.includes('facturas.html')) {
+         applyDynamicFilters();
+      } else {
+         loadDashboard();
+      }
     }
   } catch (error) {
     showToast('Error al actualizar estado', 'error');
   }
 }
 
-// Funciones de zoom
 function zoomInFactura() {
   currentZoomFactura += 0.2;
   if (currentZoomFactura > 3) currentZoomFactura = 3;
@@ -314,10 +359,6 @@ function applyZoomFactura() {
   if (img) img.style.transform = `scale(${currentZoomFactura})`;
 }
 
-// ============================================
-// GUARDADO INLINE (EDICIÓN EN TABLA)
-// ============================================
-
 async function saveField(facturaId, field, value) {
   const factura = facturas.find(f => f.id === facturaId);
   if (factura && factura[field] == value) return; 
@@ -337,10 +378,6 @@ async function saveField(facturaId, field, value) {
     loadDashboard(); 
   }
 }
-
-// ============================================
-// PREVIEW AL HOVER (SE MANTIENE)
-// ============================================
 
 function showImagePreview(id, url) {
     if (!url || url === 'undefined' || url === 'null') return;
@@ -383,10 +420,7 @@ function showImagePreview(id, url) {
     }
 }
 
-// ============================================
 // RESTO DE FUNCIONES (EMPRESAS, ASISTENTES)
-// ============================================
-
 function displayStats(stats) {
   safeUpdate('totalEmpresas', stats.total_empresas || 0);
   safeUpdate('totalAsistentes', stats.total_asistentes || 0);

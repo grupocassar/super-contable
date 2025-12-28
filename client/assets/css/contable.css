@@ -715,3 +715,153 @@
     max-width: 90vw;
   }
 }
+/* =========================================
+   ESTILOS GENERALES DEL MÓDULO CONTABLE
+   ========================================= */
+
+.dashboard-header {
+  margin-bottom: 2rem;
+}
+
+.dashboard-header h1 {
+  font-size: 1.5rem;
+  color: #1e293b;
+  margin: 0 0 0.5rem 0;
+}
+
+.dashboard-header p {
+  color: #64748b;
+  margin: 0;
+}
+
+/* TABLA DE FACTURAS */
+.table-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  background: #f8fafc;
+  padding: 1rem;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.table td {
+  padding: 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+  font-size: 0.875rem;
+  vertical-align: middle;
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.table tr:hover {
+  background-color: #f8fafc;
+}
+
+/* BADGES DE ESTADO (SEMÁFORO) */
+.badge-status {
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  display: inline-block;
+  min-width: 80px;
+  text-align: center;
+}
+
+.bg-aprobada {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.bg-rechazada {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.bg-exportada {
+  background-color: #e0f2fe;
+  color: #075985; /* Azul oscuro para histórico */
+  border: 1px solid #bae6fd;
+}
+
+/* ✅ NUEVO: COLOR PARA PENDIENTE (AMARILLO/NARANJA) */
+.bg-pending, .bg-pendiente {
+  background-color: #fef3c7; /* Fondo Ámbar suave */
+  color: #b45309;           /* Texto Ámbar oscuro */
+  border: 1px solid #fde68a; /* Borde sutil */
+}
+
+/* OTROS ELEMENTOS DE LA TABLA */
+.nota-column {
+  cursor: help;
+}
+
+.nota-badge {
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: transform 0.2s;
+  display: inline-block;
+}
+
+.nota-badge:hover {
+  transform: scale(1.2);
+}
+
+.td-editable input {
+  width: 100%;
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.td-editable input:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.td-editable input:focus {
+  background: white;
+  border-color: var(--primary-color);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+}
+
+/* BOTONES PEQUEÑOS EN TABLA */
+.btn-view-icon {
+  background: transparent;
+  border: none;
+  color: #6366f1;
+  padding: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.btn-view-icon:hover {
+  background-color: #e0e7ff;
+  color: #4338ca;
+}

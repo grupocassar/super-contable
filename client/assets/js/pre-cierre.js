@@ -59,15 +59,15 @@ async function recargarDatos() {
 }
 
 // ============================================
-// GESTIÓN DE VISTAS (NUEVO)
+// GESTIÓN DE VISTAS
 // ============================================
 
 function cambiarVista(nuevoEstado) {
   estadoActual = nuevoEstado;
   
-  // Actualizar botones visualmente
   const btnPendientes = document.getElementById('btnViewPendientes');
   const btnHistorico = document.getElementById('btnViewHistorico');
+  const btnExportar = document.getElementById('btnExportarMain');
   
   if (estadoActual === 'aprobada') {
     btnPendientes.classList.add('active');
@@ -80,8 +80,7 @@ function cambiarVista(nuevoEstado) {
     btnHistorico.style.color = '#64748b';
     btnHistorico.style.boxShadow = 'none';
     
-    // Mostrar controles de exportación
-    document.getElementById('btnExportarMain').style.display = 'block';
+    if(btnExportar) btnExportar.style.display = 'block';
   } else {
     btnHistorico.classList.add('active');
     btnHistorico.style.background = 'white';
@@ -93,8 +92,7 @@ function cambiarVista(nuevoEstado) {
     btnPendientes.style.color = '#64748b';
     btnPendientes.style.boxShadow = 'none';
 
-    // Ocultar exportación principal en histórico (o cambiar texto)
-    document.getElementById('btnExportarMain').style.display = 'none';
+    if(btnExportar) btnExportar.style.display = 'none';
   }
 
   loadPreCierre();
@@ -108,7 +106,7 @@ async function loadPreCierre() {
   try {
     const [empresasData, facturasData] = await Promise.all([
       fetchAPI('/contable/empresas'),
-      fetchAPI(`/contable/facturas?estado=${estadoActual}`) // ✅ Carga según la vista
+      fetchAPI(`/contable/facturas?estado=${estadoActual}`)
     ]);
 
     if (empresasData.success) {
@@ -123,7 +121,6 @@ async function loadPreCierre() {
       aplicarFiltros(); 
       updateStatusBar();
       
-      // Solo aplicar inteligencia si estamos trabajando (pendientes)
       if (estadoActual === 'aprobada') {
         setTimeout(procesarSugerenciasMasivas, 1000);
       }
@@ -199,7 +196,6 @@ function renderTabla() {
     return;
   }
 
-  // ✅ MODO SOLO LECTURA: Si estamos en histórico, deshabilitamos inputs
   const isReadOnly = estadoActual === 'exportada';
   const disabledAttr = isReadOnly ? 'disabled' : '';
   const inputClass = isReadOnly ? 'cell-input readonly' : 'cell-input';
@@ -208,7 +204,6 @@ function renderTabla() {
     const fechaFormatted = formatDateDDMMYYYY(f.fecha_factura);
     const tipoNCF = getTipoNCF(f.ncf);
     
-    // Si es histórico, no calculamos anomalías (ya fueron procesadas)
     const anomalia = isReadOnly ? null : getAnomalia(f);
     const rowClass = anomalia ? `anomalia-${anomalia.tipo}` : (isReadOnly ? 'fila-historico' : '');
 
@@ -218,6 +213,8 @@ function renderTabla() {
         iconoHTML = `<span class="anomalia-clickeable" onclick="abrirComparacionDuplicados('${f.ncf}')" title="Ver duplicados">${anomalia.icono}</span>`;
       } else if (anomalia.tipo === 'sospechosa') {
         iconoHTML = `<span class="anomalia-clickeable" onclick="abrirComparacionSospechosas(${f.id})" title="Ver sospechosa">${anomalia.icono}</span>`;
+      } else if (anomalia.tipo === 'fuera-periodo') {
+        iconoHTML = `<span class="anomalia-clickeable" onclick="gestionarFueraDePeriodo(${f.id})" title="Sacar de este cierre">${anomalia.icono}</span>`;
       } else {
         iconoHTML = anomalia.icono;
       }
@@ -273,11 +270,39 @@ function renderTabla() {
 }
 
 // ============================================
+// GESTIÓN DE FECHAS (DEVOLVER A PENDIENTES)
+// ============================================
+
+async function gestionarFueraDePeriodo(id) {
+  const confirmacion = confirm(
+    "⚠️ Esta factura está fuera del período seleccionado.\n\n" +
+    "¿Deseas devolverla a 'Pendientes' para sacarla de este cierre?\n" +
+    "(Desaparecerá de esta tabla y volverá a la lista general)"
+  );
+
+  if (confirmacion) {
+    try {
+      const response = await fetchAPI(`/contable/facturas/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ estado: 'pending' })
+      });
+
+      if (response.success) {
+        facturas = facturas.filter(f => f.id !== id);
+        aplicarFiltros();
+        updateStatusBar();
+        showToast('↩️ Factura devuelta a Pendientes', 'success');
+      }
+    } catch (error) { showToast('Error al procesar', 'error'); }
+  }
+}
+
+// ============================================
 // MEMORIA CONTABLE
 // ============================================
 
 async function aplicarMemoriaContable(facturaId, proveedor) {
-  if (estadoActual === 'exportada') return; // No aplicar en histórico
+  if (estadoActual === 'exportada') return; 
   if (!proveedor || proveedor.trim() === '') return false;
   const select = document.querySelector(`.select-tipo-gasto[data-factura-id="${facturaId}"]`);
   if (!select || select.value !== '') return false;
@@ -290,6 +315,7 @@ async function aplicarMemoriaContable(facturaId, proveedor) {
         select.value = sugerencia;
         select.classList.add('sugerencia-activa');
         await saveField(facturaId, 'tipo_gasto', sugerencia, false);
+        showToast('✨ Sugerencia aplicada: ' + sugerencia, 'info');
         return true;
       }
     }
@@ -306,29 +332,21 @@ async function procesarSugerenciasMasivas() {
 }
 
 // ============================================
-// MODALES Y ACCIONES (IGUAL QUE ANTES)
+// MODALES (MISMOS QUE ANTES)
 // ============================================
 
 function abrirComparacionDuplicados(ncf) {
-  // Lógica de modal duplicados (Misma que antes)
   const duplicadas = facturas.filter(f => f.ncf === ncf && f.ncf && !f.revisada);
   if (duplicadas.length < 2) return;
   const f1 = duplicadas[0], f2 = duplicadas[1];
   
-  // ... Llenado de modal (copiar del archivo anterior si es necesario, o mantener lógica) ...
-  // Para brevedad en esta respuesta, asumo que mantienes las funciones de apertura de modales 
-  // exactamente como estaban en el archivo anterior. Si las necesitas completas aquí, avísame.
-  // Aquí pongo lo esencial para que funcione:
-  
   document.getElementById('duplicadoNCF').textContent = ncf;
   document.getElementById('factura1Title').textContent = `FACTURA #${f1.id}`;
-  // ... (llenar resto de campos) ...
   document.getElementById('factura1Fecha').textContent = formatDateDDMMYYYY(f1.fecha_factura);
   document.getElementById('factura1Empresa').textContent = f1.empresa_nombre || '-';
   document.getElementById('factura1Proveedor').textContent = f1.proveedor || '-';
   document.getElementById('factura1Total').textContent = formatCurrency(f1.total_pagado);
   document.getElementById('factura1Imagen').src = f1.archivo_url || f1.drive_url || '/assets/img/no-image.png';
-  
   document.getElementById('factura2Title').textContent = `FACTURA #${f2.id}`;
   document.getElementById('factura2Fecha').textContent = formatDateDDMMYYYY(f2.fecha_factura);
   document.getElementById('factura2Empresa').textContent = f2.empresa_nombre || '-';
@@ -340,11 +358,8 @@ function abrirComparacionDuplicados(ncf) {
   document.getElementById('btnEliminar2').onclick = () => eliminarFacturaDuplicada(f2.id);
   document.getElementById('duplicadosModal').classList.add('show');
 }
-
 function cerrarModalDuplicados() { document.getElementById('duplicadosModal').classList.remove('show'); }
-
 async function mantenerAmbasDuplicadas() {
-  // Lógica de mantener (Misma que antes)
   const id1 = document.getElementById('factura1Title').textContent.match(/#(\d+)/)[1];
   const id2 = document.getElementById('factura2Title').textContent.match(/#(\d+)/)[1];
   try {
@@ -360,9 +375,7 @@ async function mantenerAmbasDuplicadas() {
     updateStatusBar();
   } catch (e) { showToast('Error', 'error'); }
 }
-
 async function eliminarFacturaDuplicada(id) {
-  // Lógica eliminar (Misma que antes)
   if (!confirm('¿Eliminar esta factura?')) return;
   try {
     const res = await fetchAPI(`/contable/facturas/${id}`, { method: 'DELETE' });
@@ -375,23 +388,18 @@ async function eliminarFacturaDuplicada(id) {
     }
   } catch (e) { showToast('Error', 'error'); }
 }
-
 function abrirComparacionSospechosas(id) {
-  // Lógica sospechosas (Misma que antes)
   const f1 = facturas.find(f => f.id === id);
   if (!f1) return;
   const f2 = facturas.find(f => f.id !== f1.id && f.proveedor === f1.proveedor && f.total_pagado === f1.total_pagado && f.fecha_factura === f1.fecha_factura && f.ncf !== f1.ncf && !f.revisada);
   if (!f2) return;
-  
   document.getElementById('sospechosa1Title').textContent = `FACTURA #${f1.id}`;
-  // ... (llenar campos) ...
   document.getElementById('sospechosa1NCF').textContent = f1.ncf || '-';
   document.getElementById('sospechosa1Fecha').textContent = formatDateDDMMYYYY(f1.fecha_factura);
   document.getElementById('sospechosa1Empresa').textContent = f1.empresa_nombre || '-';
   document.getElementById('sospechosa1Proveedor').textContent = f1.proveedor || '-';
   document.getElementById('sospechosa1Total').textContent = formatCurrency(f1.total_pagado);
   document.getElementById('sospechosa1Imagen').src = f1.archivo_url || f1.drive_url || '/assets/img/no-image.png';
-
   document.getElementById('sospechosa2Title').textContent = `FACTURA #${f2.id}`;
   document.getElementById('sospechosa2NCF').textContent = f2.ncf || '-';
   document.getElementById('sospechosa2Fecha').textContent = formatDateDDMMYYYY(f2.fecha_factura);
@@ -399,15 +407,13 @@ function abrirComparacionSospechosas(id) {
   document.getElementById('sospechosa2Proveedor').textContent = f2.proveedor || '-';
   document.getElementById('sospechosa2Total').textContent = formatCurrency(f2.total_pagado);
   document.getElementById('sospechosa2Imagen').src = f2.archivo_url || f2.drive_url || '/assets/img/no-image.png';
-
   document.getElementById('btnEliminarSosp1').onclick = () => eliminarFacturaSospechosa(f1.id);
   document.getElementById('btnEliminarSosp2').onclick = () => eliminarFacturaSospechosa(f2.id);
   document.getElementById('sospechosasModal').classList.add('show');
 }
-
 function cerrarModalSospechosas() { document.getElementById('sospechosasModal').classList.remove('show'); }
 async function mantenerAmbas() { await marcarComoRevisadas(); }
-async function eliminarFacturaSospechosa(id) { 
+async function eliminarFacturaSospechosa(id) {
   if (!confirm('¿Eliminar esta factura?')) return;
   try {
     const res = await fetchAPI(`/contable/facturas/${id}`, { method: 'DELETE' });
@@ -458,7 +464,7 @@ async function saveDateField(id, val) {
 async function saveNCFField(id, val) { await saveField(id, 'ncf', val); }
 
 async function saveField(facturaId, field, value, refrescar = true) {
-  if (estadoActual === 'exportada') return; // Seguridad extra: no editar histórico
+  if (estadoActual === 'exportada') return; 
 
   try {
     const updates = { [field]: value };
@@ -487,7 +493,6 @@ async function saveField(facturaId, field, value, refrescar = true) {
   } catch (error) { showToast('Error al guardar', 'error'); }
 }
 
-// ... (getTipoNCF, validarRNC, getAnomalia MANTENER IGUAL) ...
 function getTipoNCF(ncf) {
   if (!ncf) return '--';
   const pre = ncf.substring(0, 3).toUpperCase();
@@ -523,29 +528,23 @@ function getAnomalia(f) {
 
 function updateStatusBar() {
   const total = facturas.length;
-  // Solo calcular anomalías si estamos en modo trabajo
   if (estadoActual === 'exportada') {
     document.getElementById('statusTotal').textContent = `${total} facturas archivadas`;
     document.getElementById('statusOK').textContent = 0;
-    // Ocultar resto
     ['countDuplicados', 'countSospechosas', 'countITBIS', 'countSinClasificar', 'countFueraPeriodo', 'countRNCInvalido'].forEach(id => {
        const p = document.getElementById(id).parentElement; if(p) p.style.display = 'none';
     });
     return;
   }
-
   const dups = new Set(facturas.filter(f => getAnomalia(f)?.tipo === 'duplicado').map(f => f.ncf)).size;
   const sosp = facturas.filter(f => getAnomalia(f)?.tipo === 'sospechosa').length;
   const itbis = facturas.filter(f => getAnomalia(f)?.tipo === 'itbis').length;
   const sin = facturas.filter(f => getAnomalia(f)?.tipo === 'sin-clasificar').length;
   const fuera = facturas.filter(f => getAnomalia(f)?.tipo === 'fuera-periodo').length;
   const rnc = facturas.filter(f => getAnomalia(f)?.tipo === 'rnc-invalido').length;
-
   const ok = total - (dups * 2) - sosp - itbis - sin - fuera - rnc;
-
   document.getElementById('statusTotal').textContent = `${total} facturas`;
   document.getElementById('statusOK').textContent = Math.max(0, ok);
-  
   const updateBarItem = (countId, statusId, count) => {
     const el = document.getElementById(statusId);
     if (el) {
@@ -553,7 +552,6 @@ function updateStatusBar() {
       else el.style.display = 'none';
     }
   };
-
   updateBarItem('countDuplicados', 'statusDuplicados', dups);
   updateBarItem('countSospechosas', 'statusSospechosas', sosp);
   updateBarItem('countITBIS', 'statusITBIS', itbis);
@@ -569,7 +567,6 @@ function updateStatusBar() {
 function abrirModalExportar() {
   const modal = document.getElementById('exportModal');
   const select = document.getElementById('exportEmpresaSelect');
-  
   select.innerHTML = '<option value="TODAS">📦 Todas las Empresas (Archivo Unificado)</option>';
   empresas.forEach(emp => {
     const opt = document.createElement('option');
@@ -590,37 +587,29 @@ function abrirModalExportar() {
     <label><input type="checkbox" checked value="forma_pago"> Forma Pago</label>
     <label><input type="checkbox" checked value="itbis"> ITBIS</label>
     <label><input type="checkbox" checked value="total_pagado"> Total</label>
+    <label><input type="checkbox" value="drive_url"> Link Factura</label> <!-- ✅ NUEVO: Checkbox para Link -->
   `;
-
   modal.classList.add('show');
 }
-
 function cerrarModalExportar() { document.getElementById('exportModal').classList.remove('show'); }
-
 async function ejecutarExportacion() {
   const empresaSeleccionada = document.getElementById('exportEmpresaSelect').value;
   const archivar = document.getElementById('checkArchivar').checked;
   const checkboxes = document.querySelectorAll('.columns-grid input[type="checkbox"]:checked');
   const columnasActivas = Array.from(checkboxes).map(cb => cb.value);
-
-  if (columnasActivas.length === 0) { showToast('Selecciona una columna', 'error'); return; }
-
+  if (columnasActivas.length === 0) { showToast('Selecciona al menos una columna', 'error'); return; }
   let datosAExportar = facturasFiltradas;
   if (empresaSeleccionada !== 'TODAS') {
     datosAExportar = facturas.filter(f => f.empresa_nombre === empresaSeleccionada);
   }
-
   if (datosAExportar.length === 0) { showToast('No hay datos', 'error'); return; }
-
   generarCSV(datosAExportar, columnasActivas, empresaSeleccionada);
-
   if (archivar) {
     const ids = datosAExportar.map(f => f.id);
     await archivarFacturas(ids);
   }
   cerrarModalExportar();
 }
-
 async function archivarFacturas(ids) {
   try {
     const response = await fetchAPI('/contable/facturas/procesar-lote', { method: 'POST', body: JSON.stringify({ ids }) });
@@ -630,12 +619,10 @@ async function archivarFacturas(ids) {
     }
   } catch (error) { showToast('Error al archivar', 'error'); }
 }
-
 function generarCSV(datos, columnas, nombreArchivoBase) {
-  const headerMap = { 'fecha_factura': 'Fecha', 'empresa_nombre': 'Empresa', 'rnc': 'RNC', 'ncf': 'NCF', 'tipo_ncf': 'Tipo', 'proveedor': 'Proveedor', 'tipo_gasto': 'Tipo Gasto', 'forma_pago': 'Forma Pago', 'itbis': 'ITBIS', 'total_pagado': 'Total' };
+  const headerMap = { 'fecha_factura': 'Fecha', 'empresa_nombre': 'Empresa', 'rnc': 'RNC', 'ncf': 'NCF', 'tipo_ncf': 'Tipo', 'proveedor': 'Proveedor', 'tipo_gasto': 'Tipo Gasto', 'forma_pago': 'Forma Pago', 'itbis': 'ITBIS', 'total_pagado': 'Total', 'drive_url': 'Link Factura' };
   const headerRow = columnas.map(col => headerMap[col] || col).join(',');
   let csvContent = headerRow + '\n';
-
   datos.forEach(f => {
     const row = columnas.map(col => {
       let val = f[col];
@@ -652,7 +639,6 @@ function generarCSV(datos, columnas, nombreArchivoBase) {
     }).join(',');
     csvContent += row + '\n';
   });
-
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -665,7 +651,6 @@ function generarCSV(datos, columnas, nombreArchivoBase) {
   document.body.removeChild(a);
   showToast(`✅ Exportadas ${datos.length} facturas`, 'success');
 }
-
 function handleLogout() { clearAuth(); window.location.href = '/'; }
 function exportar606() { abrirModalExportar(); }
 function exportarExcel() { abrirModalExportar(); }

@@ -326,12 +326,16 @@
       </div>
 
       <div class="filter-group">
-        <label class="label">Estado</label>
+        <label class="label">Vista / Estado</label>
         <select id="filterEstado" class="input">
-          <option value="">Todos los estados</option>
-          <option value="pendiente">Pendientes</option>
-          <option value="aprobada">Aprobadas</option>
-          <option value="rechazada">Rechazadas</option>
+          <!-- ✅ NUEVO: Filtro inteligente -->
+          <option value="activas" selected>📂 Mesa de Trabajo (Activas)</option>
+          <option value="exportada">📜 Histórico (Exportadas)</option>
+          <option disabled>──────────</option>
+          <option value="pendiente">Solo Pendientes</option>
+          <option value="aprobada">Solo Aprobadas</option>
+          <option value="rechazada">Solo Rechazadas</option>
+          <option value="">👁️ Ver Todo (Auditoría)</option>
         </select>
       </div>
     </div>
@@ -451,8 +455,16 @@
       </div>
 
       <div class="modal-split-footer">
-        <button class="btn btn-outline" onclick="cerrarModalFactura()">Cerrar</button>
+        <!-- LADO IZQUIERDO: Acciones destructivas/cierre -->
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn btn-outline" onclick="cerrarModalFactura()">Cerrar</button>
+          <!-- ✅ NUEVO BOTÓN: ELIMINAR DEFINITIVAMENTE -->
+          <button class="btn btn-outline" style="color: #ef4444; border-color: #fee2e2;" onclick="eliminarFacturaActual()" title="Eliminar factura permanentemente">
+            🗑️
+          </button>
+        </div>
         
+        <!-- LADO DERECHO: Flujo de trabajo -->
         <div class="footer-actions">
           <button class="btn-rechazar" id="btnRechazarFactura">❌ Rechazar</button>
           <button class="btn-aprobar" id="btnAprobarFactura">✅ Aprobar</button>
