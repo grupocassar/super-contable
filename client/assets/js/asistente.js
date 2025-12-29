@@ -51,7 +51,6 @@ function inicializarAtajosTeclado() {
 }
 
 function handleKeyboardShortcuts(e) {
-  // No interceptar si está escribiendo en un campo
   const target = e.target;
   const isTyping = target.tagName === 'TEXTAREA' || 
                    (target.tagName === 'INPUT' && target.type !== 'date');
@@ -156,16 +155,11 @@ function mostrarAyudaAtajos() {
   document.body.appendChild(helpPanel);
 }
 
-// Nota: Las funciones guardarYSiguiente y guardarYCerrar ahora invocan 
-// la nueva lógica de marcarListaModal que ya maneja la navegación.
 async function guardarYSiguiente() {
   await marcarListaModal();
 }
 
 async function guardarYCerrar() {
-  // Para forzar el cierre aunque no sea la última, 
-  // la nueva marcarListaModal ya tiene lógica, pero para Ctrl+Enter 
-  // simplemente ejecutamos la función.
   await marcarListaModal();
 }
 
@@ -387,12 +381,8 @@ async function loadDashboard() {
         listas: []
       };
 
-      // Poblar dropdown de empresas
       poblarFiltroEmpresas();
-      
-      // Inicializar listeners de filtros
       inicializarFiltros();
-
       mostrarResumenSesion();
       aplicarFiltros();
       actualizarContadorProgreso();
@@ -404,7 +394,6 @@ async function loadDashboard() {
 
 function displayStats(stats) {
   document.getElementById('totalEmpresas').textContent = stats.total_empresas || 0;
-
   const facturasStats = stats.facturas || {};
   document.getElementById('facturasPendientes').textContent = facturasStats.pendientes || 0;
   document.getElementById('facturasListas').textContent = facturasStats.listas || 0;
@@ -427,11 +416,7 @@ function mostrarResumenSesion() {
 function poblarFiltroEmpresas() {
   const select = document.getElementById('filterEmpresa');
   if (!select) return;
-
-  // Limpiar opciones excepto "Todas"
   select.innerHTML = '<option value="">🏢 Todas</option>';
-
-  // Agregar cada empresa
   empresas.forEach(empresa => {
     const option = document.createElement('option');
     option.value = empresa.id;
@@ -462,7 +447,6 @@ function inicializarFiltros() {
 }
 
 function aplicarFiltros() {
-  // Filtrar facturas por estado
   let facturasFiltradas = [];
   
   if (filtroEstado === 'pending') {
@@ -474,23 +458,18 @@ function aplicarFiltros() {
   } else if (filtroEstado === 'lista') {
     facturasFiltradas = facturasAgrupadas.listas || [];
   } else {
-    // Para aprobada/rechazada, buscar en todas las facturas
     facturasFiltradas = facturas.filter(f => f.estado === filtroEstado);
   }
 
-  // Filtrar por empresa si está seleccionada
   if (filtroEmpresa) {
     facturasFiltradas = facturasFiltradas.filter(f => f.empresa_id == filtroEmpresa);
   }
 
-  // Mostrar u ocultar secciones según el estado
   const secciones = document.querySelectorAll('.content-section');
   
   if (filtroEstado === 'pending') {
-    // Mostrar las 3 secciones de colores
     secciones.forEach(s => s.style.display = 'block');
     
-    // Reagrupar facturas filtradas
     const reagrupadas = {
       alta_confianza: facturasFiltradas.filter(f => (f.confidence_score || 0) >= 95),
       media_confianza: facturasFiltradas.filter(f => (f.confidence_score || 0) >= 80 && (f.confidence_score || 0) < 95),
@@ -501,17 +480,14 @@ function aplicarFiltros() {
     displayFacturasSeccion(reagrupadas.media_confianza, 'facturasMediaConfianza', 'countMediaConfianza', 'medium');
     displayFacturasSeccion(reagrupadas.baja_confianza, 'facturasBajaConfianza', 'countBajaConfianza', 'low');
   } else {
-    // Ocultar segunda y tercera sección, usar solo la primera para mostrar lista
     secciones[1].style.display = 'none';
     secciones[2].style.display = 'none';
     
-    // Cambiar el título de la primera sección
     const primeraSeccion = secciones[0];
     const titulo = primeraSeccion.querySelector('.section-title');
     const subtitulo = primeraSeccion.querySelector('.section-subtitle');
     const header = primeraSeccion.querySelector('.section-header');
     
-    // Remover clases de confianza
     header.classList.remove('confidence-high', 'confidence-medium', 'confidence-low');
     
     if (filtroEstado === 'lista') {
@@ -583,23 +559,21 @@ function displayFacturasSeccion(facturas, containerId, countId, confidenceLevel)
 
 // ========== MODAL SPLIT VIEW ==========
 function abrirValidacionSeccion(seccion, index) {
-  // Si estamos en modo filtrado (no pending), usar las facturas filtradas
   let facturasAUsar;
   
   if (filtroEstado === 'pending') {
     const seccionMap = {
       'high': facturasAgrupadas.alta_confianza,
       'medium': facturasAgrupadas.media_confianza,
-      'low': facturasAgrupadas.baja_confianza
+      'low': facturasAgrupadas.baja_confianza,
+      'neutral': facturas // Fallback
     };
     facturasAUsar = seccionMap[seccion] || [];
     
-    // Aplicar filtro de empresa si está activo
     if (filtroEmpresa) {
       facturasAUsar = facturasAUsar.filter(f => f.empresa_id == filtroEmpresa);
     }
   } else {
-    // En otros estados, todas las facturas están en la misma lista
     facturasAUsar = facturas.filter(f => f.estado === filtroEstado);
     if (filtroEmpresa) {
       facturasAUsar = facturasAUsar.filter(f => f.empresa_id == filtroEmpresa);
@@ -639,36 +613,69 @@ function mostrarFacturaEnModal(index) {
 
   document.getElementById('nivelConfianzaBadge').textContent = nivelLabel;
   document.getElementById('facturaCounter').textContent = `(${index + 1} de ${facturasActuales.length})`;
-
   document.getElementById('infoEmpresa').textContent = factura.empresa_nombre || '-';
   
-  // ✅ AJUSTE: Formato de fecha YYYY-MM-DD para input type="date"
-  document.getElementById('infoFecha').value = factura.fecha_factura ? factura.fecha_factura.split('T')[0] : '';
-  
-  document.getElementById('infoNCF').value = factura.ncf || '';
-  document.getElementById('infoRNC').value = factura.rnc || '';
-  document.getElementById('infoProveedor').value = factura.proveedor || '';
-  
-  // ✅ AJUSTE: Convertir a string para evitar problemas con decimales
-  document.getElementById('infoITBIS').value = factura.itbis || '';
-  document.getElementById('infoTotal').value = factura.total_pagado || '';
-  document.getElementById('infoNotas').value = factura.notas || '';
+  // Referencias a los inputs del modal
+  const inputFecha = document.getElementById('infoFecha');
+  const inputNCF = document.getElementById('infoNCF');
+  const inputRNC = document.getElementById('infoRNC');
+  const inputProveedor = document.getElementById('infoProveedor');
+  const inputITBIS = document.getElementById('infoITBIS');
+  const inputTotal = document.getElementById('infoTotal');
+  const inputNotas = document.getElementById('infoNotas');
+
+  // Cargamos los valores actuales
+  inputFecha.value = factura.fecha_factura ? factura.fecha_factura.split('T')[0] : '';
+  inputNCF.value = factura.ncf || '';
+  inputRNC.value = factura.rnc || '';
+  inputProveedor.value = factura.proveedor || '';
+  inputITBIS.value = factura.itbis || '';
+  inputTotal.value = factura.total_pagado || '';
+  inputNotas.value = factura.notas || '';
+
+  // ✅ VINCULAR AUTO-SAVE (ONBLUR) DINÁMICAMENTE
+  inputFecha.onblur = (e) => saveField(factura.id, 'fecha_factura', e.target.value);
+  inputNCF.onblur = (e) => {
+    saveField(factura.id, 'ncf', e.target.value);
+    checkDuplicado(e.target.value, factura.id);
+  };
+  inputRNC.onblur = (e) => saveField(factura.id, 'rnc', e.target.value);
+  inputProveedor.onblur = (e) => saveField(factura.id, 'proveedor', e.target.value);
+  inputITBIS.onblur = (e) => saveField(factura.id, 'itbis', parseFloat(e.target.value) || 0);
+  inputTotal.onblur = (e) => saveField(factura.id, 'total_pagado', parseFloat(e.target.value) || 0);
+  inputNotas.onblur = (e) => saveField(factura.id, 'notas', e.target.value);
 
   const badge = document.getElementById('confidenceBadge');
   document.getElementById('confidenceValue').textContent = confidence.toFixed(0);
   badge.className = 'confidence-badge ' + nivelClass;
 
-  document.getElementById('imagePlaceholder').style.display = 'flex';
-  document.getElementById('facturaImage').style.display = 'none';
+  // IMAGEN DE FACTURA - FIX GOOGLE DRIVE
+  const imgElement = document.getElementById('facturaImage');
+  const placeholder = document.getElementById('imagePlaceholder');
+  let facturaUrl = factura.archivo_url || factura.drive_url; 
+
+  // ✅ FIX: Si es URL de Drive, convertir a thumbnail para vista previa
+  if (facturaUrl && facturaUrl.includes('drive.google.com') && facturaUrl.includes('id=')) {
+      const fileId = facturaUrl.split('id=')[1];
+      // Usar sz=w1000 para buena calidad en la vista previa
+      facturaUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
+  }
+
+  if (facturaUrl) {
+      imgElement.src = facturaUrl;
+      imgElement.style.display = 'block';
+      placeholder.style.display = 'none';
+  } else {
+      imgElement.style.display = 'none';
+      placeholder.style.display = 'flex';
+  }
 
   resetZoom();
 
   document.getElementById('btnAnterior').disabled = index === 0;
   document.getElementById('btnSiguiente').disabled = index === facturasActuales.length - 1;
-
   document.getElementById('validationAlert').style.display = 'none';
 
-  // Check duplicados
   if (factura.ncf) {
     checkDuplicado(factura.ncf, factura.id);
   }
@@ -709,10 +716,35 @@ function resetZoom() {
 
 function applyZoom() {
   const img = document.getElementById('facturaImage');
-  img.style.transform = `scale(${currentZoom})`;
+  if (img) img.style.transform = `scale(${currentZoom})`;
 }
 
-// ========== MARCAR COMO LISTA (VERSIÓN CORREGIDA) ==========
+// ========== GUARDADO Y ACCIONES ==========
+
+// ✅ NUEVA FUNCIÓN: Guardado automático al salir del campo (Lógica Robusta)
+async function saveField(facturaId, field, value) {
+    const facturaGlobal = facturas.find(f => f.id === facturaId);
+    const facturaLocal = facturasActuales.find(f => f.id === facturaId);
+    
+    if (facturaGlobal && facturaGlobal[field] == value) return; 
+
+    try {
+        const response = await fetchAPI(`/asistente/facturas/${facturaId}`, {
+            method: 'PUT',
+            body: JSON.stringify({ [field]: value })
+        });
+
+        if (response.success) {
+            if (facturaGlobal) facturaGlobal[field] = value;
+            if (facturaLocal) facturaLocal[field] = value;
+            showToast('✓ Guardado', 'success');
+        }
+    } catch (error) {
+        console.error('Error en Auto-Save:', error);
+        showToast('Error al guardar cambio', 'error');
+    }
+}
+
 async function marcarListaModal() {
   const factura = facturasActuales[currentFacturaIndex];
   
@@ -737,15 +769,12 @@ async function marcarListaModal() {
     incrementarProgreso();
     mostrarBannerDeshacer(factura.id);
     
-    // ✅ NAVEGAR O CERRAR AUTOMÁTICAMENTE
     if (currentFacturaIndex < facturasActuales.length - 1) {
-      // Hay más facturas, ir a la siguiente
       setTimeout(() => {
         navegarFactura('siguiente');
         loadDashboard();
       }, 300);
     } else {
-      // Era la última, cerrar modal
       setTimeout(() => {
         closeSplitModal();
         loadDashboard();
@@ -759,17 +788,13 @@ async function marcarListaModal() {
 
 async function rechazarFactura() {
   const factura = facturasActuales[currentFacturaIndex];
-  
-  if (!confirm('¿Está seguro de rechazar esta factura?')) {
-    return;
-  }
+  if (!confirm('¿Está seguro de rechazar esta factura?')) return;
 
   try {
     await fetchAPI(`/asistente/facturas/${factura.id}`, {
       method: 'PUT',
       body: JSON.stringify({ estado: 'rechazada' })
     });
-
     showToast('Factura rechazada', 'success');
     
     if (currentFacturaIndex < facturasActuales.length - 1) {
@@ -777,7 +802,6 @@ async function rechazarFactura() {
     } else {
       closeSplitModal();
     }
-    
     loadDashboard();
   } catch (error) {
     showToast('Error: ' + error.message, 'error');
@@ -792,7 +816,6 @@ async function saltarFactura() {
       method: 'PUT',
       body: JSON.stringify({ saltada: true })
     });
-
     showToast('Factura saltada (se revisará después)', 'info');
     
     if (currentFacturaIndex < facturasActuales.length - 1) {
@@ -800,7 +823,6 @@ async function saltarFactura() {
     } else {
       closeSplitModal();
     }
-    
     loadDashboard();
   } catch (error) {
     showToast('Error: ' + error.message, 'error');
@@ -810,7 +832,6 @@ async function saltarFactura() {
 // ========== APROBACIÓN EN LOTE ==========
 function mostrarConfirmacionLote() {
   const listas = facturasAgrupadas.listas || [];
-  
   if (listas.length === 0) {
     showToast('No hay facturas listas para aprobar', 'warning');
     return;
@@ -827,7 +848,6 @@ function mostrarConfirmacionLote() {
   });
 
   document.getElementById('totalFacturasLote').textContent = listas.length;
-
   const resumenEmpresas = document.getElementById('resumenEmpresas');
   resumenEmpresas.innerHTML = Object.entries(porEmpresa)
     .map(([empresa, data]) => `
@@ -846,11 +866,7 @@ function cerrarConfirmacionLote() {
 
 async function confirmarAprobacionLote() {
   const listas = facturasAgrupadas.listas || [];
-  
-  if (listas.length === 0) {
-    showToast('No hay facturas para aprobar', 'error');
-    return;
-  }
+  if (listas.length === 0) return;
 
   const facturasIds = listas.map(f => f.id);
 
@@ -862,10 +878,7 @@ async function confirmarAprobacionLote() {
 
     if (response.success) {
       showToast(`✅ ${response.data.aprobadas} facturas aprobadas correctamente`, 'success');
-      
-      // Limpiar sesión
       localStorage.removeItem('sesion_procesadas');
-      
       cerrarConfirmacionLote();
       loadDashboard();
     }

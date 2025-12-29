@@ -32,9 +32,24 @@
       </nav>
     </div>
 
-    <div class="dashboard-header">
-      <h1>Panel General</h1>
-      <p>Bienvenido. Aquí tienes el resumen de las operaciones de hoy.</p>
+    <!-- HEADER CON BOTÓN DRIVE (NUEVO) -->
+    <div class="dashboard-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+      <div>
+        <h1>Panel General</h1>
+        <p>Bienvenido. Aquí tienes el resumen de las operaciones de hoy.</p>
+      </div>
+      <div>
+         <!-- Botón de Conexión -->
+         <button id="btnConnectDrive" class="btn btn-primary" onclick="initDriveConnection()" style="background-color: #4285F4; border-color: #4285F4; display: flex; align-items: center; gap: 8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="fill: white;"><path d="M12.01 1.996c-1.287 0-2.524.364-3.568 1.054L2.83 13.06l-.01.01c-.347.606-.525 1.282-.525 1.986 0 2.204 1.796 4 4 4h2.24l-3.32-5.75L10.74 3.96c.407-.235.867-.364 1.345-.364h7.032l-3.692 6.4h-5.69L5.84 16.74c.642.793 1.63 1.306 2.74 1.306h9.67c2.204 0 4-1.796 4-4 0-1.29-.61-2.434-1.553-3.174l-6.99-12.11c-.563-.482-1.28-.766-2.062-.766zM13.7 9.996h5.69l3.43 5.94c.33-.526.524-1.15.524-1.816 0-1.292-.72-2.408-1.785-3.004l-7.86-13.62L13.7 9.996z"/></svg>
+            Conectar Google Drive
+         </button>
+         <!-- Badge Conectado (Oculto por defecto) -->
+         <div id="driveConnectedBadge" style="display: none; align-items: center; gap: 6px; color: #16a34a; font-weight: 600; background: #dcfce7; padding: 0.5rem 1rem; border-radius: 6px; border: 1px solid #bbf7d0;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+            Drive Conectado
+         </div>
+      </div>
     </div>
 
     <!-- SOLO ESTADÍSTICAS -->
@@ -106,10 +121,70 @@
   <script src="/assets/js/utils.js"></script>
   <script src="/assets/js/contable.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const user = getUser();
-      if (user) document.getElementById('userName').textContent = user.nombre_completo;
+    document.addEventListener('DOMContentLoaded', async () => {
+      // 1. Carga inicial rápida (datos locales)
+      const localUser = getUser();
+      if (localUser) {
+         document.getElementById('userName').textContent = localUser.nombre_completo;
+         // Si localmente dice que está conectado, mostrarlo de una vez
+         if (localUser.drive_connected) toggleDriveStatus(true);
+      }
+
+      // 2. Verificación de estado real (datos frescos del servidor)
+      try {
+        const response = await fetchAPI('/auth/verify');
+        if (response.success && response.user) {
+            const freshUser = response.user;
+            
+            // Actualizar localStorage con el dato fresco
+            const updatedUser = { ...localUser, ...freshUser };
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+
+            // Actualizar UI
+            toggleDriveStatus(freshUser.drive_connected);
+        }
+      } catch (error) {
+        console.error("Error verificando estado de Drive:", error);
+      }
+
+      // 3. Manejar retorno de Google (Callback visual)
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('drive') === 'success') {
+          showToast('✅ Google Drive conectado correctamente', 'success');
+          // Limpiar URL para que no salga el mensaje al recargar
+          window.history.replaceState({}, document.title, window.location.pathname);
+          toggleDriveStatus(true);
+      } else if (urlParams.get('drive') && urlParams.get('drive').includes('error')) {
+          showToast('❌ Error al conectar Drive', 'error');
+      }
     });
+
+    async function initDriveConnection() {
+        try {
+            const response = await fetchAPI('/auth/google/connect');
+            if (response.success && response.url) {
+                // Redirigir a Google
+                window.location.href = response.url;
+            } else {
+                showToast('Error al iniciar conexión', 'error');
+            }
+        } catch (error) {
+            console.error(error);
+            showToast('Error de conexión', 'error');
+        }
+    }
+
+    function toggleDriveStatus(connected) {
+        const btn = document.getElementById('btnConnectDrive');
+        const badge = document.getElementById('driveConnectedBadge');
+        if (connected) {
+            if(btn) btn.style.display = 'none';
+            if(badge) badge.style.display = 'flex';
+        } else {
+            if(btn) btn.style.display = 'flex';
+            if(badge) badge.style.display = 'none';
+        }
+    }
   </script>
 </body>
 </html>

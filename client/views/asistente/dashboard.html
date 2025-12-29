@@ -27,8 +27,10 @@
       <p>Validación y aprobación de facturas por niveles de confianza</p>
     </div>
 
+    <!-- Contenedor de progreso de la sesión -->
     <div id="progressContainer" style="display: none;"></div>
 
+    <!-- Resumen de sesión flotante -->
     <div class="session-summary" id="sessionSummary" style="display: none;">
       <div class="summary-content">
         <div class="summary-icon">📋</div>
@@ -41,6 +43,7 @@
       </div>
     </div>
 
+    <!-- Estadísticas rápidas -->
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-icon">🏢</div>
@@ -67,6 +70,7 @@
       </div>
     </div>
 
+    <!-- Filtros de búsqueda -->
     <div class="filters-container">
       <div class="filters-content">
         <div class="filter-group">
@@ -83,11 +87,12 @@
           <label class="filter-label">Empresa:</label>
           <select id="filterEmpresa" class="filter-select">
             <option value="">🏢 Todas</option>
-            </select>
+          </select>
         </div>
       </div>
     </div>
 
+    <!-- SECCIONES DE CONFIANZA -->
     <div class="content-section">
       <div class="section-header confidence-high">
         <div>
@@ -128,6 +133,7 @@
     </div>
   </div>
 
+  <!-- MODAL DE VALIDACIÓN (SPLIT VIEW) -->
   <div id="validacionModal" class="modal-split">
     <div class="modal-split-content">
       <div class="modal-split-header">
@@ -139,6 +145,7 @@
       </div>
       
       <div class="modal-split-body">
+        <!-- Lado Izquierdo: Imagen -->
         <div class="split-view-left">
           <div class="image-container">
             <img id="facturaImage" src="" alt="Factura" class="factura-image">
@@ -154,6 +161,7 @@
           </div>
         </div>
 
+        <!-- Lado Derecho: Formulario -->
         <div class="split-view-right">
           <div class="factura-info">
             <div class="keyboard-hint">
@@ -174,39 +182,39 @@
             <div class="info-row">
               <div class="info-group">
                 <label class="info-label">Fecha Factura</label>
-                <input type="date" id="infoFecha" class="input-editable">
+                <input type="date" id="infoFecha" class="input-editable cell-input">
               </div>
               <div class="info-group">
                 <label class="info-label">RNC Emisor</label>
-                <input type="text" id="infoRNC" class="input-editable" placeholder="XXX-XXXXX-X">
+                <input type="text" id="infoRNC" class="input-editable cell-input" placeholder="XXX-XXXXX-X">
               </div>
             </div>
 
             <div class="info-group">
               <label class="info-label">NCF (Comprobante)</label>
-              <input type="text" id="infoNCF" class="input-editable" placeholder="B01XXXXXXXX">
+              <input type="text" id="infoNCF" class="input-editable cell-input" placeholder="B01XXXXXXXX">
             </div>
 
             <div class="info-group">
               <label class="info-label">Nombre Proveedor</label>
-              <input type="text" id="infoProveedor" class="input-editable">
+              <input type="text" id="infoProveedor" class="input-editable cell-input" placeholder="Escribe el proveedor...">
             </div>
 
             <div class="info-row">
               <div class="info-group">
                 <label class="info-label">ITBIS</label>
-                <input type="number" id="infoITBIS" class="input-editable text-right" step="0.01">
+                <input type="number" id="infoITBIS" class="input-editable cell-input text-right" step="0.01">
               </div>
 
               <div class="info-group">
                 <label class="info-label">Total Pagado</label>
-                <input type="number" id="infoTotal" class="input-editable text-right" step="0.01" style="font-weight: 700;">
+                <input type="number" id="infoTotal" class="input-editable cell-input text-right" step="0.01" style="font-weight: 700;">
               </div>
             </div>
 
             <div class="info-group">
               <label class="info-label">💬 Notas para el contable</label>
-              <textarea id="infoNotas" class="input-editable notas-textarea" rows="3" 
+              <textarea id="infoNotas" class="input-editable cell-input notas-textarea" rows="3" 
                 placeholder="Ej: El monto no cuadra con el ITBIS..."></textarea>
             </div>
 
@@ -231,6 +239,7 @@
     </div>
   </div>
 
+  <!-- MODAL DE CONFIRMACIÓN DE LOTE -->
   <div id="confirmacionLoteModal" class="modal">
     <div class="modal-content modal-large">
       <div class="modal-header">

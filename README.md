@@ -1,263 +1,419 @@
-# 📊 Super Contable - MVP Fase 1
+# 📊 Super Contable - Pre-Optimizador Fiscal Inteligente
 
-Plataforma SaaS multi-tenant de gestión contable automatizada con IA para República Dominicana.
+Plataforma SaaS multi-tenant diseñada para automatizar, limpiar y validar el flujo de facturas antes de que lleguen al software contable final.
 
-## 🎯 Descripción
+**Concepto:** No somos un ERP ni un software de declaración de impuestos. Somos el puente inteligente que transforma el caos de facturas físicas/digitales en datos limpios, auditados y listos para importar.
 
-Super Contable permite que firmas contables escalen su negocio automatizando la digitación de facturas mediante OCR (Mindee) + Telegram Bot. Transforma 8 horas de digitación manual en 2 horas de supervisión.
+---
+
+## 🚀 Estado Actual (Fase 2 Completada)
+
+El sistema ha evolucionado de un simple gestor de archivos a un **Auditor Fiscal Automatizado** con las siguientes capacidades:
+
+---
+
+## 1. 🎯 Módulo Pre-Cierre Fiscal (La Joya de la Corona)
+
+Mesa de trabajo tipo Excel para que el contable audite y limpie el mes en minutos.
+
+### Características:
+- **Edición Inline:** Modificación rápida de fechas, NCF, RNC y montos sin recargar.
+- **🧠 Memoria Contable (IA):** El sistema "aprende" del historial. Si clasificas a un proveedor una vez, la próxima vez te sugerirá automáticamente el Tipo de Gasto y Forma de Pago.
+- **Semáforo de Anomalías:** Detección automática de errores antes de exportar:
+  - 🔴 **Duplicados:** NCFs repetidos (con modal de comparación lado a lado).
+  - 🟡 **Sospechosas:** Mismo proveedor + fecha + monto, pero NCF distinto.
+  - 🟠 **Fuera de Período:** Facturas con fechas que no corresponden al mes de cierre seleccionado.
+  - 🔶 **RNC Inválido:** Validación de formato y longitud de documentos de identidad.
+  - 🧾 **ITBIS en Cero:** Alerta en facturas con valor fiscal (B01) sin impuestos reportados.
+  - ⚠️ **Sin Clasificar:** Facturas pendientes de asignación de gasto.
+- **Exportación Limpia:** Generación de CSV formateado para integración, con opción de limpieza automática ("Inbox Zero").
+- **Histórico Inmutable:** Las facturas procesadas se archivan y bloquean para proteger la integridad del cierre.
+
+---
+
+## 2. 🤖 Bot de Telegram (Recepción Automática)
+
+Flujo 100% automatizado desde el usuario final hasta el sistema.
+
+### Características:
+- **Recepción de Imágenes:** Los usuarios finales envían fotos de facturas directamente al bot.
+- **Enrutamiento Inteligente:** El bot identifica automáticamente a qué empresa pertenece cada factura según el remitente (Telegram ID).
+- **Integración Drive:** Las imágenes se suben automáticamente al Google Drive del contable correspondiente (OAuth 2.0).
+- **Persistencia:** URL de Drive se guarda en la base de datos para auditoría permanente.
+- **Estado Automático:** Facturas entran con estado `pending` listas para validación del asistente.
+
+**Tabla asociada:** `telegram_users` (mapeo Telegram ID → Empresa)
+
+---
+
+## 3. ☁️ OAuth 2.0 Google Drive (Almacenamiento por Contable)
+
+Cada contable conecta su propio Google Drive para almacenar las facturas de forma segura y auditable.
+
+### Características:
+- **Seguridad:** Sin Service Accounts genéricas. Cada contable autoriza la aplicación desde su panel.
+- **Responsabilidad Legal:** Las facturas quedan en el Drive del contable, no en un servidor centralizado.
+- **Organización Automática:** Carpeta `SuperContable/[Empresa]/[Año]/[Mes]/` creada automáticamente.
+- **Auditoría CSV:** Al exportar, el CSV incluye un enlace directo a la imagen en Drive.
+- **Escalabilidad:** Múltiples contables pueden trabajar simultáneamente sin conflictos.
+
+**Flujo OAuth:**
+1. Contable hace clic en "Conectar Drive" → Autoriza app en Google
+2. Sistema guarda `refresh_token` en BD
+3. Bot usa token del contable para subir archivos A NOMBRE del contable
+4. Facturas usan cuota del contable (no del sistema)
+
+---
+
+## 4. 🖥️ Módulo Asistente (Digitación Asistida)
+
+Interfaz optimizada para la digitación de alta velocidad.
+
+### Características:
+- **Vista Dividida (Split View):** Imagen de factura a la izquierda, formulario a la derecha.
+- **Zoom Inteligente:** Controles de visualización para detalles finos.
+- **Auto-Save:** Guardado automático al perder el foco (sin botones redundantes).
+- **Comunicación:** Sistema de notas integrado para alertar al contable sobre anomalías físicas (borroso, roto, etc.).
+- **Flujo de Aprobación:** 
+  - Aprobar → Pasa a Pre-Cierre
+  - Rechazar → Archiva
+  - Saltar → Marca para revisión posterior
+
+---
+
+## 5. 🛡️ Panel Administrativo & Seguridad
+
+- **Multi-Tenant:** Datos aislados por Contable y por Empresa.
+- **Roles Jerárquicos:** Super Admin > Contable > Asistente.
+- **Seguridad:** Encriptación de contraseñas (Bcrypt) y manejo de sesiones seguras (JWT).
+- **Auditoría:** Tabla `audit_log` registra todas las modificaciones.
+
+---
 
 ## 🏗️ Stack Tecnológico
 
-- **Backend:** Node.js + Express
-- **Database:** SQLite (migrar a PostgreSQL después)
-- **Frontend:** Vanilla JavaScript
-- **OCR:** Mindee (Fase 2)
-- **Storage:** Google Drive API (Fase 2)
-- **Input:** Telegram Bot (Fase 2)
-- **Auth:** JWT
+### Backend
+- **Runtime:** Node.js >= 18.0.0
+- **Framework:** Express.js
+- **Autenticación:** JWT (jsonwebtoken)
+- **Bot:** node-telegram-bot-api
+- **Google APIs:** googleapis (OAuth 2.0 + Drive v3)
+- **HTTP Client:** axios
 
-## 📦 Instalación
+### Base de Datos
+- **Motor:** SQLite3
+- **Optimizaciones:** Índices para consultas rápidas
+- **Migraciones:** Sistema de versionado controlado
+
+### Frontend
+- **JavaScript:** Vanilla (Sin frameworks pesados)
+- **Estilos:** CSS3 Moderno (Variables, Flexbox, Grid)
+- **Arquitectura:** MVC (Modelo-Vista-Controlador)
+
+### Seguridad
+- **Helmet:** Protección de headers HTTP
+- **CORS:** Configuración de orígenes permitidos
+- **Rate Limiting:** express-rate-limit
+- **Validación:** express-validator
+
+---
+
+## 📦 Instalación y Despliegue
 
 ### Prerrequisitos
-
 - Node.js >= 18.0.0
 - npm >= 9.0.0
+- Cuenta de Google (para OAuth Drive)
+- Bot de Telegram (obtener token en @BotFather)
 
 ### Pasos de Instalación
 
-1. **Clonar el repositorio**
+#### 1. Clonar el repositorio
 ```bash
 git clone <repository-url>
 cd super-contable
 ```
 
-2. **Instalar dependencias**
+#### 2. Instalar dependencias
 ```bash
 npm install
 ```
 
-3. **Configurar variables de entorno**
-```bash
-cp .env.example .env
-```
+#### 3. Configuración
 
-Editar el archivo `.env` y configurar las variables necesarias:
+Crea un archivo `.env` en la raíz:
+
 ```env
-# Server
 NODE_ENV=development
 PORT=3000
-
-# Database
 DB_PATH=./database/super-contable.db
+JWT_SECRET=tu_secreto_super_seguro_cambiar_en_produccion
 
-# JWT
-JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
-JWT_EXPIRES_IN=24h
+# Telegram Bot
+TELEGRAM_BOT_TOKEN=tu_token_de_botfather
 
-# (Otras variables para Fase 2)
+# Google OAuth (obtener en Google Cloud Console)
+GOOGLE_CLIENT_ID=tu_client_id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=tu_client_secret
+GOOGLE_REDIRECT_URI=http://localhost:3000/api/auth/google/callback
 ```
 
-4. **Inicializar la base de datos**
+#### 4. Base de Datos
+
+Inicializa las tablas y carga datos semilla para pruebas:
+
 ```bash
 npm run init-db
-```
-
-5. **Poblar con datos de prueba**
-```bash
 npm run seed
 ```
 
-6. **Iniciar el servidor**
+#### 5. Iniciar Servidor
+
 ```bash
 npm start
-```
-
-O en modo desarrollo con auto-reload:
-```bash
+# o para desarrollo con auto-reload:
 npm run dev
 ```
 
-El servidor estará disponible en: `http://localhost:3000`
+Accede a: **http://localhost:3000**
 
-## 👥 Cuentas de Prueba
+---
 
-Después de ejecutar `npm run seed`, puedes usar estas cuentas:
+## 👥 Cuentas de Prueba (Seed Data)
 
-| Rol | Email | Password |
-|-----|-------|----------|
-| Super Admin | admin@supercontable.com | admin123 |
-| Contable | juan@contable.com | contable123 |
-| Asistente | maria@asistente.com | asistente123 |
+| Rol | Email | Password | Alcance |
+|-----|-------|----------|---------|
+| Super Admin | admin@supercontable.com | admin123 | Control total del sistema |
+| Contable | juan@contable.com | contable123 | Gestión de Empresas y Pre-Cierre |
+| Asistente | maria@asistente.com | asistente123 | Digitación y Validación inicial |
 
-## 🎭 Roles y Permisos
+---
 
-### Super Admin
-- Gestión global del sistema
-- Crear/editar/eliminar contables
-- Ver métricas globales
-- Acceso completo
+## 🗄️ Esquema de Datos
 
-### Contable
-- Gestionar empresas clientes
-- Crear asistentes
-- Supervisar facturas de sus empresas
-- Ver reportes de su cartera
+### Tablas Principales
 
-### Asistente
-- Validar facturas de empresas asignadas
-- Editar información de facturas
-- Aprobar/rechazar facturas
-- Sin acceso a gestión de empresas
+#### `facturas` (Corazón del sistema)
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| id | INTEGER | Primary Key |
+| empresa_id | INTEGER | Foreign Key → empresas |
+| telegram_user_id | INTEGER | Foreign Key → telegram_users |
+| fecha_factura | DATE | Fecha del comprobante |
+| ncf | TEXT | Número de Comprobante Fiscal |
+| rnc | TEXT | Identificación del proveedor |
+| proveedor | TEXT | Nombre del proveedor |
+| itbis | DECIMAL(10,2) | Impuesto ITBIS |
+| total_pagado | DECIMAL(10,2) | Monto total |
+| drive_url | TEXT | **Enlace a Google Drive** |
+| estado | TEXT | `pending`, `lista`, `aprobada`, `exportada`, `rechazada` |
+| confidence_score | DECIMAL(5,2) | Score de confianza OCR (futuro) |
+| tipo_gasto | TEXT | **Categoría DGII (E01-E11)** |
+| forma_pago | TEXT | **Método de pago (01-06)** |
+| revisada | BOOLEAN | **Flag para anomalías verificadas** |
+| notas | TEXT | **Comentarios del asistente** |
+| saltada | BOOLEAN | **Marcada para revisión posterior** |
+| updated_by | INTEGER | Último usuario que modificó |
+| approved_at | DATETIME | Fecha de aprobación |
+| approved_by | INTEGER | Usuario que aprobó |
+
+#### `telegram_users` (Mapeo Telegram → Empresa)
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| id | INTEGER | Primary Key |
+| empresa_id | INTEGER | Foreign Key → empresas |
+| telegram_id | INTEGER | **ID único de Telegram** |
+| telegram_username | TEXT | @username de Telegram |
+| first_name | TEXT | Nombre del usuario |
+| last_name | TEXT | Apellido del usuario |
+| created_at | DATETIME | Fecha de registro |
+
+#### `exportaciones` (Histórico de Exports)
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| id | INTEGER | Primary Key |
+| contable_id | INTEGER | Foreign Key → contables |
+| periodo_mes | TEXT | Mes exportado (01-12) |
+| periodo_anio | TEXT | Año exportado |
+| total_facturas | INTEGER | Cantidad exportada |
+| created_at | DATETIME | Fecha del export |
+
+---
+
+## 🚀 Roadmap del Proyecto
+
+### ✅ Fase 1: Cimientos (Completada)
+- [x] Autenticación y Seguridad JWT
+- [x] CRUD de Usuarios y Empresas
+- [x] Estructura de Base de Datos Base
+
+### ✅ Fase 2: Lógica de Negocio & Automatización (Completada)
+- [x] Módulo de Asistente (Split View + Auto-Save)
+- [x] Módulo Contable (Dashboard + Pre-Cierre Fiscal)
+- [x] **Bot de Telegram (Recepción automática)**
+- [x] **OAuth 2.0 Google Drive (Almacenamiento por contable)**
+- [x] Motor de Anomalías: Duplicados, Fechas, RNC, ITBIS
+- [x] Memoria Contable: Sugerencias automáticas basadas en historial
+- [x] Ciclo de Cierre: Exportación CSV + Archivado (Limpieza)
+- [x] **Flujo End-to-End: Telegram → Drive → Dashboard → Export**
+
+### 📅 Fase 3: Inteligencia Artificial (Próximo)
+- [ ] **OCR Automático (Mindee/Google Vision)** ← PRÓXIMO PASO
+- [ ] Extracción automática: NCF, RNC, Fecha, Proveedor, Montos
+- [ ] Clasificación automática de Tipo de Gasto (Machine Learning)
+- [ ] Detección de fraude mediante patrones
+
+### 📅 Fase 4: Escalabilidad & Integraciones (Futuro)
+- [ ] Migración a PostgreSQL para producción masiva
+- [ ] API Pública para integración con ERPs
+- [ ] Webhooks para notificaciones en tiempo real
+- [ ] Panel de Analytics y Reportes avanzados
+
+---
+
+## 🔧 Scripts Disponibles
+
+```bash
+npm start       # Iniciar servidor en producción
+npm run dev     # Iniciar con auto-reload (nodemon)
+npm run init-db # Reiniciar base de datos (⚠️ borra datos)
+npm run migrate # Aplicar migraciones sin borrar datos
+npm run seed    # Cargar datos de prueba
+```
+
+---
 
 ## 📁 Estructura del Proyecto
 
 ```
 super-contable/
-├── client/                 # Frontend
+├── client/                    # Frontend
 │   ├── assets/
-│   │   ├── css/           # Estilos
-│   │   ├── js/            # JavaScript
-│   │   └── images/        # Imágenes
-│   └── views/             # HTML
-│       ├── auth/          # Login
-│       ├── admin/         # Panel Admin
-│       ├── contable/      # Panel Contable
-│       └── asistente/     # Panel Asistente
+│   │   ├── css/              # Estilos globales y por módulo
+│   │   ├── js/               # Lógica del cliente
+│   │   └── uploads/          # Almacenamiento temporal (fallback)
+│   └── views/
+│       ├── admin/            # Panel Super Admin
+│       ├── asistente/        # Panel Asistente
+│       ├── auth/             # Login
+│       └── contable/         # Panel Contable + Pre-Cierre
 │
-├── server/                # Backend
-│   ├── config/           # Configuración
-│   ├── database/         # SQL y migrations
-│   ├── middleware/       # Auth, roles, errors
-│   ├── models/          # User, Empresa, Factura
-│   ├── routes/          # Express routes
-│   ├── controllers/     # Lógica de negocio
-│   ├── services/        # Servicios externos
-│   └── server.js        # Punto de entrada
+├── server/
+│   ├── config/               # Configuraciones
+│   │   ├── database.js       # SQLite connection
+│   │   ├── drive-config.js   # Google Drive settings
+│   │   ├── jwt.js            # JWT config
+│   │   └── env.js            # Variables de entorno
+│   │
+│   ├── controllers/          # Lógica de negocio
+│   │   ├── adminController.js
+│   │   ├── asistenteController.js
+│   │   ├── authController.js
+│   │   ├── contableController.js
+│   │   └── googleAuthController.js  # OAuth Google
+│   │
+│   ├── services/             # Servicios externos
+│   │   ├── telegramService.js       # Bot de Telegram
+│   │   └── driveService.js          # Google Drive API
+│   │
+│   ├── routes/               # Definición de endpoints
+│   │   ├── admin.routes.js
+│   │   ├── asistente.routes.js
+│   │   ├── auth.routes.js
+│   │   └── contable.routes.js
+│   │
+│   ├── middleware/           # Middlewares
+│   │   ├── auth.js           # Verificación JWT
+│   │   ├── roles.js          # Control de permisos
+│   │   └── errorHandler.js   # Manejo de errores
+│   │
+│   ├── database/             # Gestión de BD
+│   │   ├── init-db.js        # Inicialización
+│   │   ├── migrate.js        # Sistema de migraciones
+│   │   ├── schema.sql        # Schema SQL
+│   │   └── seed.js           # Datos de prueba
+│   │
+│   └── server.js             # Punto de entrada
 │
-└── database/            # SQLite database
+├── database/
+│   └── super-contable.db     # Base de datos SQLite
+│
+├── package.json              # Dependencias
+├── .env                      # Variables de entorno (no incluido en repo)
+└── README.md                 # Este archivo
 ```
-
-## 🔌 API Endpoints
-
-### Autenticación
-```
-POST   /api/auth/login      # Iniciar sesión
-GET    /api/auth/verify     # Verificar token
-POST   /api/auth/logout     # Cerrar sesión
-```
-
-### Admin (Super Admin)
-```
-GET    /api/admin/dashboard           # Métricas globales
-GET    /api/admin/contables           # Listar contables
-POST   /api/admin/contables           # Crear contable
-PUT    /api/admin/contables/:id       # Editar contable
-DELETE /api/admin/contables/:id       # Eliminar contable
-```
-
-### Contable
-```
-GET    /api/contable/dashboard        # Dashboard del contable
-GET    /api/contable/empresas         # Listar empresas
-POST   /api/contable/empresas         # Crear empresa
-PUT    /api/contable/empresas/:id     # Editar empresa
-GET    /api/contable/facturas         # Listar facturas
-GET    /api/contable/asistentes       # Listar asistentes
-POST   /api/contable/asistentes       # Crear asistente
-```
-
-### Asistente
-```
-GET    /api/asistente/dashboard       # Dashboard del asistente
-GET    /api/asistente/facturas        # Listar facturas asignadas
-PUT    /api/asistente/facturas/:id    # Editar factura
-POST   /api/asistente/facturas/:id/aprobar   # Aprobar factura
-POST   /api/asistente/facturas/:id/rechazar  # Rechazar factura
-POST   /api/asistente/aprobar-lote    # Aprobar múltiples
-```
-
-## 🗄️ Base de Datos
-
-### Tablas Principales
-
-- **users** - Usuarios del sistema (Super Admin, Contable, Asistente)
-- **empresas** - Clientes del contable
-- **telegram_users** - Usuarios finales de Telegram
-- **facturas** - Facturas digitalizadas
-- **asistente_empresas** - Asignación empresas → asistentes
-- **audit_log** - Registro de auditoría
-- **exportaciones** - Historial de exportaciones
-
-## 🔐 Seguridad
-
-- Autenticación mediante JWT
-- Passwords hasheados con bcryptjs (10 rounds)
-- Middleware de autorización por roles
-- Validación de permisos multi-tenant
-- CORS configurado
-- Helmet para headers de seguridad
-- Rate limiting
-
-## 🧪 Testing
-
-Actualmente en desarrollo. Para probar manualmente:
-
-1. Iniciar servidor
-2. Abrir navegador en `http://localhost:3000`
-3. Login con cuentas de prueba
-4. Navegar por los diferentes dashboards
-
-## 📝 Scripts Disponibles
-
-```bash
-npm start          # Iniciar servidor
-npm run dev        # Modo desarrollo (con nodemon)
-npm run init-db    # Inicializar base de datos
-npm run seed       # Poblar con datos de prueba
-```
-
-## 🚀 Roadmap
-
-### ✅ Fase 1 - MVP Básico (COMPLETADA)
-- [x] Autenticación y autorización
-- [x] CRUD de usuarios (Admin, Contable, Asistente)
-- [x] CRUD de empresas
-- [x] CRUD de facturas
-- [x] Dashboards básicos
-- [x] Sistema multi-tenant
-
-### 🔄 Fase 2 - Automatización (Siguiente)
-- [ ] Integración con Mindee OCR
-- [ ] Bot de Telegram para recepción de facturas
-- [ ] Integración con Google Drive
-- [ ] Procesamiento automático de imágenes
-- [ ] Exportación a Excel
-
-### 📅 Fase 3 - Optimización
-- [ ] Migración a PostgreSQL
-- [ ] Sistema de reportes avanzados
-- [ ] Notificaciones en tiempo real
-- [ ] Panel de analytics
-- [ ] API pública
-
-## 🤝 Contribuir
-
-Este es un proyecto en desarrollo activo. Para contribuir:
-
-1. Fork el proyecto
-2. Crear rama de feature (`git checkout -b feature/AmazingFeature`)
-3. Commit cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abrir Pull Request
-
-## 📄 Licencia
-
-MIT License
-
-## 👨‍💻 Soporte
-
-Para soporte, contactar al equipo de desarrollo.
 
 ---
 
-**Super Contable** - Automatizando la contabilidad dominicana 🇩🇴
+## 🔐 Seguridad
+
+### Implementaciones Actuales:
+- **JWT:** Tokens con expiración de 24 horas
+- **Bcrypt:** Hash de contraseñas con salt rounds = 10
+- **Helmet:** Protección contra vulnerabilidades comunes
+- **CORS:** Lista blanca de orígenes permitidos
+- **Rate Limiting:** 100 requests por 15 minutos por IP
+- **Validación:** express-validator en todos los endpoints críticos
+- **OAuth 2.0:** Refresh tokens encriptados en BD
+
+### Recomendaciones para Producción:
+- [ ] Implementar HTTPS (Let's Encrypt)
+- [ ] Configurar firewall en servidor
+- [ ] Rotar JWT_SECRET periódicamente
+- [ ] Backup automático de base de datos
+- [ ] Monitoreo con herramientas como PM2 o Docker
+
+---
+
+## 🐛 Troubleshooting
+
+### Error: "SQLITE_LOCKED"
+**Causa:** Múltiples procesos intentando escribir simultáneamente.  
+**Solución:** Detener servidor con `Ctrl+C` antes de ejecutar comandos de BD.
+
+### Error: "Telegram bot not responding"
+**Causa:** Token inválido o bot no iniciado.  
+**Solución:** Verificar `TELEGRAM_BOT_TOKEN` en `.env` y reiniciar servidor.
+
+### Error: "Google OAuth failed"
+**Causa:** Credenciales incorrectas o URI de redirección no autorizada.  
+**Solución:** 
+1. Verificar `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` en `.env`
+2. En Google Cloud Console → Credenciales → Agregar URI de redirección autorizada
+
+### Imagen no carga en Dashboard
+**Causa:** URL de Drive incorrecta o permisos insuficientes.  
+**Solución:** Verificar que el archivo existe en Drive del contable y tiene permisos de lectura.
+
+---
+
+## 🤝 Contribuciones
+
+Este es un proyecto privado en desarrollo activo. Para contribuir:
+
+1. Fork el repositorio
+2. Crear rama feature (`git checkout -b feature/nueva-funcionalidad`)
+3. Commit cambios (`git commit -am 'Agregar nueva funcionalidad'`)
+4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
+5. Crear Pull Request
+
+---
+
+## 📄 Licencia
+
+Propiedad privada de Grupo Cassar. Todos los derechos reservados.
+
+---
+
+## 📞 Contacto
+
+**Grupo Cassar**  
+📧 administrador@grupo-cassar.com  
+🌐 República Dominicana
+
+---
+
+**Super Contable** - Transformando horas de digitación en minutos de supervisión. 🇩🇴

@@ -1,127 +1,151 @@
 const User = require('../models/User');
-const Empresa = require('../models/Empresa');
-const Factura = require('../models/Factura');
+const bcrypt = require('bcryptjs');
 const { asyncHandler } = require('../middleware/errorHandler');
+const { getDatabase } = require('../config/database');
 
-const getDashboard = asyncHandler(async (req, res) => {
-  const contables = await User.findAll({ rol: 'contable' });
-  const asistentes = await User.findAll({ rol: 'asistente' });
-  const empresas = await Empresa.findAll();
+/**
+ * Obtener estadísticas generales para el Dashboard del Admin
+ */
+const getAdminDashboard = asyncHandler(async (req, res) => {
+    const db = getDatabase();
+    
+    // Promesa auxiliar para consultas de conteo
+    const getCount = (query) => {
+        return new Promise((resolve, reject) => {
+            db.get(query, [], (err, row) => {
+                if (err) reject(err);
+                else resolve(row ? row.count : 0);
+            });
+        });
+    };
 
-  const facturaStats = await Factura.getStatsByContableId(null);
+    try {
+        const [totalContables, totalEmpresas, totalFacturas] = await Promise.all([
+            getCount("SELECT COUNT(*) as count FROM users WHERE rol = 'contable'"),
+            getCount("SELECT COUNT(*) as count FROM empresas"),
+            getCount("SELECT COUNT(*) as count FROM facturas")
+        ]);
 
-  res.json({
-    success: true,
-    data: {
-      stats: {
-        total_contables: contables.length,
-        total_asistentes: asistentes.length,
-        total_empresas: empresas.length,
-        facturas: facturaStats
-      },
-      contables,
-      recent_activity: []
+        res.json({
+            success: true,
+            data: {
+                stats: {
+                    total_contables: totalContables,
+                    total_empresas: totalEmpresas,
+                    total_facturas: totalFacturas
+                }
+            }
+        });
+    } catch (error) {
+        console.error("Error en dashboard admin:", error);
+        res.status(500).json({ success: false, message: "Error al cargar estadísticas" });
     }
-  });
 });
 
+/**
+ * Obtener lista de Contables con sus estadísticas (Empresas y Asistentes vinculados)
+ */
 const getContables = asyncHandler(async (req, res) => {
-  const contables = await User.findAll({ rol: 'contable' });
+    const db = getDatabase();
+    
+    // Consulta segura que cuenta sub-elementos directamente en SQL
+    // Esto evita el Error 500 por métodos faltantes en el modelo
+    const query = `
+        SELECT 
+            u.id, 
+            u.nombre_completo, 
+            u.email, 
+            u.created_at,
+            (SELECT COUNT(*) FROM empresas e WHERE e.contable_id = u.id) as total_empresas,
+            (SELECT COUNT(*) FROM users a WHERE a.contable_id = u.id AND a.rol = 'asistente') as total_asistentes
+        FROM users u
+        WHERE u.rol = 'contable'
+        ORDER BY u.created_at DESC
+    `;
 
-  const contablesWithStats = await Promise.all(
-    contables.map(async (contable) => {
-      const stats = await User.getContableStats(contable.id);
-      return {
-        ...contable,
-        stats
-      };
-    })
-  );
-
-  res.json({
-    success: true,
-    data: contablesWithStats
-  });
+    db.all(query, [], (err, rows) => {
+        if (err) {
+            console.error("Error obteniendo contables:", err);
+            return res.status(500).json({ success: false, message: "Error al consultar la base de datos" });
+        }
+        res.json({ success: true, data: rows });
+    });
 });
 
+/**
+ * Crear un nuevo Contable
+ */
 const createContable = asyncHandler(async (req, res) => {
-  const { email, password, nombre_completo } = req.body;
+    const { nombre_completo, email, password } = req.body;
 
-  if (!email || !password || !nombre_completo) {
-    return res.status(400).json({
-      success: false,
-      message: 'Email, password, and nombre_completo are required'
+    if (!nombre_completo || !email || !password) {
+        return res.status(400).json({ success: false, message: "Todos los campos son obligatorios" });
+    }
+
+    const existingUser = await User.findByEmail(email);
+    if (existingUser) {
+        return res.status(409).json({ success: false, message: "El email ya está registrado" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const password_hash = await bcrypt.hash(password, salt);
+
+    const result = await User.create({
+        nombre_completo,
+        email,
+        password_hash,
+        rol: 'contable'
     });
-  }
 
-  const existingUser = await User.findByEmail(email);
-  if (existingUser) {
-    return res.status(409).json({
-      success: false,
-      message: 'Email already exists'
-    });
-  }
-
-  const result = await User.create({
-    email,
-    password,
-    nombre_completo,
-    rol: 'contable'
-  });
-
-  const newUser = await User.findById(result.id);
-
-  res.status(201).json({
-    success: true,
-    data: newUser
-  });
+    res.status(201).json({ success: true, data: await User.findById(result.id) });
 });
 
+/**
+ * Actualizar datos de un Contable
+ */
 const updateContable = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const updates = req.body;
+    const { id } = req.params;
+    const { nombre_completo, email, password } = req.body;
 
-  const user = await User.findById(id);
-  if (!user || user.rol !== 'contable') {
-    return res.status(404).json({
-      success: false,
-      message: 'Contable not found'
-    });
-  }
+    const user = await User.findById(id);
+    if (!user) return res.status(404).json({ success: false, message: "Contable no encontrado" });
 
-  await User.update(id, updates);
+    const updates = { nombre_completo, email };
+    
+    if (password && password.trim() !== "") {
+        const salt = await bcrypt.genSalt(10);
+        updates.password_hash = await bcrypt.hash(password, salt);
+    }
 
-  const updatedUser = await User.findById(id);
-
-  res.json({
-    success: true,
-    data: updatedUser
-  });
+    await User.update(id, updates);
+    res.json({ success: true, data: await User.findById(id) });
 });
 
+/**
+ * Eliminar un Contable
+ */
 const deleteContable = asyncHandler(async (req, res) => {
-  const { id } = req.params;
+    const { id } = req.params;
+    const db = getDatabase();
+    
+    // Verificar si existe antes de borrar
+    db.get("SELECT id FROM users WHERE id = ? AND rol = 'contable'", [id], (err, row) => {
+        if (err) return res.status(500).json({ success: false, message: err.message });
+        if (!row) return res.status(404).json({ success: false, message: "Contable no encontrado" });
 
-  const user = await User.findById(id);
-  if (!user || user.rol !== 'contable') {
-    return res.status(404).json({
-      success: false,
-      message: 'Contable not found'
+        // Borrar (Las empresas y facturas se borran en cascada si está configurado así en la BD, 
+        // o quedan huérfanas. Para este MVP, asumimos borrado directo).
+        db.run("DELETE FROM users WHERE id = ?", [id], function(err) {
+            if (err) return res.status(500).json({ success: false, message: "Error al eliminar" });
+            res.json({ success: true, message: "Contable eliminado correctamente" });
+        });
     });
-  }
-
-  await User.delete(id);
-
-  res.json({
-    success: true,
-    message: 'Contable deleted successfully'
-  });
 });
 
 module.exports = {
-  getDashboard,
-  getContables,
-  createContable,
-  updateContable,
-  deleteContable
+    getAdminDashboard,
+    getContables,
+    createContable,
+    updateContable,
+    deleteContable
 };

@@ -7,6 +7,7 @@ const { validateEnv, config } = require('./config/env');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
 const { authenticateToken } = require('./middleware/auth');
 const { requireRole } = require('./middleware/roles');
+const { initTelegramBot } = require('./services/telegramService'); // ✅ IMPORTAR SERVICIO BOT
 
 // Routes
 const authRoutes = require('./routes/auth.routes');
@@ -46,6 +47,9 @@ async function startServer() {
     validateEnv();
     await initDatabase();
 
+    // ✅ INICIAR BOT DE TELEGRAM
+    initTelegramBot();
+
     const port = config.server.port;
 
     app.listen(port, () => {
@@ -84,6 +88,11 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 });
 
-startServer();
+// No llamar a startServer() aquí si se exporta app para tests, 
+// pero como es el punto de entrada principal, lo mantenemos.
+// Si usas nodemon, asegúrate de que este archivo sea el entry point.
+if (require.main === module) {
+    startServer();
+}
 
 module.exports = app;

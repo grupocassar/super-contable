@@ -83,31 +83,24 @@ function populateCompanyFilter() {
 
 function applyDynamicFilters() {
   const empresaId = document.getElementById('filterEmpresa')?.value;
-  const estado = document.getElementById('filterEstado')?.value; // Obtiene "activas", "pendiente", etc.
+  const estado = document.getElementById('filterEstado')?.value;
   const searchText = document.getElementById('filterSearch')?.value?.toLowerCase();
 
   let filtradas = [...facturas];
 
-  // 1. Filtro de Empresa
   if (empresaId) filtradas = filtradas.filter(f => f.empresa_id == empresaId);
   
-  // 2. Filtro de Estado (CORREGIDO Y SIMPLIFICADO)
+  // Filtro de Estado Inteligente (Igual que en pre-cierre)
   if (estado) {
     if (estado === 'activas') {
-      // Mostrar TODO lo que NO sea 'exportada'
-      // Esto incluye: 'pendiente', 'aprobada', 'rechazada', 'lista', etc.
       filtradas = filtradas.filter(f => f.estado !== 'exportada');
     } else if (estado === 'exportada') {
-      // Solo histórico
       filtradas = filtradas.filter(f => f.estado === 'exportada');
     } else {
-      // Estado específico (pendiente, aprobada, rechazada)
       filtradas = filtradas.filter(f => f.estado === estado);
     }
   }
-  // Si estado es "" (Auditoría), no filtramos nada, pasa todo.
 
-  // 3. Búsqueda de Texto
   if (searchText) {
     const term = searchText.trim().toLowerCase();
     filtradas = filtradas.filter(f => {
@@ -213,10 +206,23 @@ function abrirModalFactura(facturaId) {
 
   const imgEl = document.getElementById('facturaImage');
   const placeholderEl = document.getElementById('facturaImagePlaceholder');
+  
+  // ✅ FIX IMAGEN DRIVE: Convertir a thumbnail si es de Drive para que se vea en el modal
+  let facturaUrl = factura.archivo_url || factura.drive_url;
+  if (facturaUrl && facturaUrl.includes('drive.google.com') && facturaUrl.includes('id=')) {
+      const fileId = facturaUrl.split('id=')[1];
+      facturaUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
+  }
+
   if (imgEl && placeholderEl) {
-    imgEl.src = factura.archivo_url || factura.drive_url || '/assets/img/no-image.png';
-    imgEl.style.display = 'block';
-    placeholderEl.style.display = 'none';
+    if (facturaUrl) {
+        imgEl.src = facturaUrl;
+        imgEl.style.display = 'block';
+        placeholderEl.style.display = 'none';
+    } else {
+        imgEl.style.display = 'none';
+        placeholderEl.style.display = 'flex';
+    }
   }
 
   const notaAsistenteContainer = document.getElementById('notaAsistenteContainer');
@@ -252,7 +258,7 @@ function cerrarModalFactura() {
   currentFacturaIdInModal = null;
 }
 
-// ✅ NUEVA FUNCIÓN: ELIMINAR DESDE EL MODAL
+// ✅ ELIMINAR DESDE EL MODAL (Asegurando que esté presente)
 async function eliminarFacturaActual() {
   if (!currentFacturaIdInModal) return;
 
@@ -267,15 +273,12 @@ async function eliminarFacturaActual() {
 
     if (response.success) {
       showToast('🗑️ Factura eliminada', 'success');
-      // Eliminar del array local para refresco inmediato
       facturas = facturas.filter(f => f.id !== currentFacturaIdInModal);
       cerrarModalFactura();
       
-      // Si estamos en vista de facturas, refrescar filtros
       if (window.location.pathname.includes('facturas.html')) {
         applyDynamicFilters();
       } else {
-        // Si estamos en dashboard, refrescar stats
         loadDashboard();
       }
     }
@@ -301,7 +304,7 @@ async function saveFieldFromModal(field, value) {
       showToast('✓ Guardado', 'success');
       
       if (window.location.pathname.includes('facturas.html')) {
-         applyDynamicFilters(); // Refrescar lista de fondo
+         applyDynamicFilters(); 
       } else {
          loadDashboard();
       }
@@ -382,6 +385,12 @@ async function saveField(facturaId, field, value) {
 function showImagePreview(id, url) {
     if (!url || url === 'undefined' || url === 'null') return;
 
+    // ✅ FIX DRIVE URL TAMBIÉN PARA PREVIEW HOVER
+    if (url.includes('drive.google.com') && url.includes('id=')) {
+        const fileId = url.split('id=')[1];
+        url = `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
+    }
+
     let preview = document.getElementById('hover-preview-container');
     if (!preview) {
         preview = document.createElement('div');
@@ -420,7 +429,6 @@ function showImagePreview(id, url) {
     }
 }
 
-// RESTO DE FUNCIONES (EMPRESAS, ASISTENTES)
 function displayStats(stats) {
   safeUpdate('totalEmpresas', stats.total_empresas || 0);
   safeUpdate('totalAsistentes', stats.total_asistentes || 0);

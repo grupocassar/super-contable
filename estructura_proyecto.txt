@@ -1,0 +1,59 @@
+.
+├── ATAJOS_TECLADO.md
+├── README.md
+├── client
+│   ├── assets
+│   │   ├── css
+│   │   ├── js
+│   │   └── uploads
+│   └── views
+│       ├── admin
+│       ├── asistente
+│       ├── auth
+│       └── contable
+├── database
+│   └── super-contable.db
+├── estructura_proyecto.txt
+├── node
+├── package-lock.json
+├── package.json
+├── server
+│   ├── config
+│   │   ├── database.js
+│   │   ├── drive-config.js
+│   │   ├── env.js
+│   │   ├── jwt.js
+│   │   └── service-account.json
+│   ├── controllers
+│   │   ├── adminController.js
+│   │   ├── asistenteController.js
+│   │   ├── authController.js
+│   │   ├── contableController.js
+│   │   └── googleAuthController.js
+│   ├── database
+│   │   ├── init-db.js
+│   │   ├── migrate.js
+│   │   ├── migrations
+│   │   ├── schema.sql
+│   │   └── seed.js
+│   ├── middleware
+│   │   ├── auth.js
+│   │   ├── errorHandler.js
+│   │   └── roles.js
+│   ├── models
+│   │   ├── Empresa.js
+│   │   ├── Factura.js
+│   │   └── User.js
+│   ├── routes
+│   │   ├── admin.routes.js
+│   │   ├── asistente.routes.js
+│   │   ├── auth.routes.js
+│   │   └── contable.routes.js
+│   ├── server.js
+│   └── services
+│       ├── driveService.js
+│       └── telegramService.js
+├── service-account.json
+└── super-contable@1.0.0
+
+21 directories, 36 files
