@@ -2,11 +2,7 @@ let currentUser = null;
 let facturas = [];
 let facturasFiltradas = [];
 let empresas = [];
-let estadoActual = 'aprobada'; // 'aprobada' (Pendientes) o 'exportada' (Histórico)
-
-// ============================================
-// CONSTANTES Y CONFIGURACIÓN
-// ============================================
+let estadoActual = 'aprobada';
 
 const CATEGORIAS_GASTO = [
   { value: '', label: '-- Seleccionar Tipo de Gasto --' },
@@ -33,10 +29,6 @@ const FORMAS_PAGO = [
   { value: '06', label: 'Crédito' }
 ];
 
-// ============================================
-// INICIALIZACIÓN
-// ============================================
-
 document.addEventListener('DOMContentLoaded', () => {
   if (!requireAuth()) return;
 
@@ -52,22 +44,23 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);
   document.getElementById('periodoMes')?.addEventListener('change', recargarDatos);
   document.getElementById('periodoAnio')?.addEventListener('change', recargarDatos);
+  
+  // ✅ Listener para checkbox de confirmación
+  document.getElementById('checkConfirmTodas')?.addEventListener('change', function() {
+    document.getElementById('btnConfirmarTodas').disabled = !this.checked;
+  });
 });
 
 async function recargarDatos() {
   await loadPreCierre();
 }
 
-// ============================================
-// GESTIÓN DE VISTAS
-// ============================================
-
 function cambiarVista(nuevoEstado) {
   estadoActual = nuevoEstado;
   
   const btnPendientes = document.getElementById('btnViewPendientes');
   const btnHistorico = document.getElementById('btnViewHistorico');
-  const btnExportar = document.getElementById('btnExportarMain');
+  const divExportar = document.getElementById('exportButtonsContainer');
   
   if (estadoActual === 'aprobada') {
     btnPendientes.classList.add('active');
@@ -80,7 +73,7 @@ function cambiarVista(nuevoEstado) {
     btnHistorico.style.color = '#64748b';
     btnHistorico.style.boxShadow = 'none';
     
-    if(btnExportar) btnExportar.style.display = 'block';
+    if(divExportar) divExportar.style.display = 'flex';
   } else {
     btnHistorico.classList.add('active');
     btnHistorico.style.background = 'white';
@@ -92,15 +85,11 @@ function cambiarVista(nuevoEstado) {
     btnPendientes.style.color = '#64748b';
     btnPendientes.style.boxShadow = 'none';
 
-    if(btnExportar) btnExportar.style.display = 'none';
+    if(divExportar) divExportar.style.display = 'none';
   }
 
   loadPreCierre();
 }
-
-// ============================================
-// CARGA DE DATOS
-// ============================================
 
 async function loadPreCierre() {
   try {
@@ -130,10 +119,6 @@ async function loadPreCierre() {
     showToast('Error al cargar datos', 'error');
   }
 }
-
-// ============================================
-// LÓGICA DE FILTRADO
-// ============================================
 
 function llenarFiltroEmpresas() {
   const select = document.getElementById('filterEmpresa');
@@ -181,10 +166,6 @@ function aplicarFiltros() {
 
   renderTabla();
 }
-
-// ============================================
-// RENDERIZADO DE TABLA
-// ============================================
 
 function renderTabla() {
   const tbody = document.getElementById('preCierreTableBody');
@@ -261,17 +242,13 @@ function renderTabla() {
                  step="0.01" onblur="saveField(${f.id}, 'itbis', this.value)">
         </td>
         <td class="text-right">
-          <input type="number" class="${inputClass} text-right" value="${f.total_pagado || 0}" ${disabledAttr}
+          <input type="number" class="cell-input text-right" value="${f.total_pagado || 0}" ${disabledAttr}
                  step="0.01" style="font-weight: 600;" onblur="saveField(${f.id}, 'total_pagado', this.value)">
         </td>
       </tr>
     `;
   }).join('');
 }
-
-// ============================================
-// GESTIÓN DE FECHAS (DEVOLVER A PENDIENTES)
-// ============================================
 
 async function gestionarFueraDePeriodo(id) {
   const confirmacion = confirm(
@@ -296,10 +273,6 @@ async function gestionarFueraDePeriodo(id) {
     } catch (error) { showToast('Error al procesar', 'error'); }
   }
 }
-
-// ============================================
-// MEMORIA CONTABLE
-// ============================================
 
 async function aplicarMemoriaContable(facturaId, proveedor) {
   if (estadoActual === 'exportada') return; 
@@ -331,9 +304,6 @@ async function procesarSugerenciasMasivas() {
   }
 }
 
-// ============================================
-// AUXILIAR: URL VISIBLE DE IMAGEN
-// ============================================
 function getVisibleImageUrl(url) {
     if (!url) return '/assets/img/no-image.png';
     if (url.includes('drive.google.com') && url.includes('id=')) {
@@ -343,10 +313,6 @@ function getVisibleImageUrl(url) {
     return url;
 }
 
-// ============================================
-// MODALES (REDISEÑADOS)
-// ============================================
-
 function abrirComparacionDuplicados(ncf) {
   const duplicadas = facturas.filter(f => f.ncf === ncf && f.ncf && !f.revisada);
   if (duplicadas.length < 2) return;
@@ -355,14 +321,12 @@ function abrirComparacionDuplicados(ncf) {
   document.getElementById('duplicadoNCF').textContent = ncf;
   document.getElementById('factura1Title').textContent = `FACTURA #${f1.id}`;
   document.getElementById('factura1Fecha').textContent = formatDateDDMMYYYY(f1.fecha_factura);
-  // document.getElementById('factura1Empresa').textContent = f1.empresa_nombre || '-'; // ELIMINADO en nuevo diseño
   document.getElementById('factura1Proveedor').textContent = f1.proveedor || '-';
   document.getElementById('factura1Total').textContent = formatCurrency(f1.total_pagado);
   document.getElementById('factura1Imagen').src = getVisibleImageUrl(f1.archivo_url || f1.drive_url);
   
   document.getElementById('factura2Title').textContent = `FACTURA #${f2.id}`;
   document.getElementById('factura2Fecha').textContent = formatDateDDMMYYYY(f2.fecha_factura);
-  // document.getElementById('factura2Empresa').textContent = f2.empresa_nombre || '-'; // ELIMINADO en nuevo diseño
   document.getElementById('factura2Proveedor').textContent = f2.proveedor || '-';
   document.getElementById('factura2Total').textContent = formatCurrency(f2.total_pagado);
   document.getElementById('factura2Imagen').src = getVisibleImageUrl(f2.archivo_url || f2.drive_url);
@@ -465,10 +429,6 @@ async function marcarComoRevisadas() {
   } catch (e) { showToast('Error', 'error'); }
 }
 
-// ============================================
-// FUNCIONES DE GUARDADO
-// ============================================
-
 function formatDateDDMMYYYY(isoDate) {
   if (!isoDate) return '';
   const parts = isoDate.split('-');
@@ -507,9 +467,7 @@ async function saveField(facturaId, field, value, refrescar = true) {
         facturas[fIndex][field] = value;
         if (updates.revisada !== undefined) facturas[fIndex].revisada = 0;
       }
-
       if (field === 'proveedor') aplicarMemoriaContable(facturaId, value);
-
       if (refrescar) {
         showToast('✓ Guardado', 'success');
         aplicarFiltros();
@@ -561,6 +519,14 @@ function getAnomalia(f) {
 
 function updateStatusBar() {
   const total = facturas.length;
+  if (estadoActual === 'exportada') {
+    document.getElementById('statusTotal').textContent = `${total} facturas archivadas`;
+    document.getElementById('statusOK').textContent = 0;
+    ['countDuplicados', 'countSospechosas', 'countITBIS', 'countSinClasificar', 'countFueraPeriodo', 'countRNCInvalido'].forEach(id => {
+       const p = document.getElementById(id).parentElement; if(p) p.style.display = 'none';
+    });
+    return;
+  }
   const dups = new Set(facturas.filter(f => getAnomalia(f)?.tipo === 'duplicado').map(f => f.ncf)).size;
   const sosp = facturas.filter(f => getAnomalia(f)?.tipo === 'sospechosa').length;
   const itbis = facturas.filter(f => getAnomalia(f)?.tipo === 'itbis').length;
@@ -592,12 +558,25 @@ function updateStatusBar() {
 }
 
 // ============================================
-// EXPORTACIÓN (MODAL)
+// EXPORTACIÓN (MODAL UNIFICADO)
 // ============================================
 
-function abrirModalExportar() {
+function abrirModalExportar(modo = 'csv') {
   const modal = document.getElementById('exportModal');
   const select = document.getElementById('exportEmpresaSelect');
+  const btnCSV = document.getElementById('btnExportarCSV');
+  const btnSheets = document.getElementById('btnExportarSheets');
+  
+  btnCSV.style.display = 'none';
+  btnSheets.style.display = 'none';
+
+  if (modo === 'sheets') {
+    btnSheets.style.display = 'block';
+  } else {
+    btnCSV.style.display = 'block';
+  }
+  
+  const filtroEmpresaActivo = document.getElementById('filterEmpresa').value;
   
   select.innerHTML = '<option value="TODAS">📦 Todas las Empresas (Archivo Unificado)</option>';
   empresas.forEach(emp => {
@@ -606,6 +585,24 @@ function abrirModalExportar() {
     opt.textContent = emp.nombre;
     select.appendChild(opt);
   });
+  
+  if (filtroEmpresaActivo && filtroEmpresaActivo !== '') {
+    select.value = filtroEmpresaActivo;
+    
+    const opcionTodas = select.querySelector('option[value="TODAS"]');
+    if (opcionTodas) {
+      opcionTodas.disabled = true;
+      opcionTodas.textContent = '⚠️ Quita el filtro de tabla para exportar TODAS';
+      opcionTodas.style.color = '#94a3b8';
+    }
+  } else {
+    const opcionTodas = select.querySelector('option[value="TODAS"]');
+    if (opcionTodas) {
+      opcionTodas.disabled = false;
+      opcionTodas.textContent = '📦 Todas las Empresas (Archivo Unificado)';
+      opcionTodas.style.color = '';
+    }
+  }
   
   const grid = document.querySelector('.columns-grid');
   grid.innerHTML = `
@@ -629,37 +626,158 @@ function cerrarModalExportar() {
   document.getElementById('exportModal').classList.remove('show');
 }
 
-async function ejecutarExportacion() {
+function prepararDatosParaExportar() {
   const empresaSeleccionada = document.getElementById('exportEmpresaSelect').value;
-  const archivar = document.getElementById('checkArchivar').checked;
-  
   const checkboxes = document.querySelectorAll('.columns-grid input[type="checkbox"]:checked');
   const columnasActivas = Array.from(checkboxes).map(cb => cb.value);
 
   if (columnasActivas.length === 0) {
     showToast('Selecciona al menos una columna', 'error');
-    return;
+    return null;
   }
 
-  let datosAExportar = facturasFiltradas;
-  
+  let datos = facturasFiltradas;
   if (empresaSeleccionada !== 'TODAS') {
-    datosAExportar = facturas.filter(f => f.empresa_nombre === empresaSeleccionada);
+    datos = facturas.filter(f => f.empresa_nombre === empresaSeleccionada);
   }
 
-  if (datosAExportar.length === 0) {
+  if (datos.length === 0) {
     showToast('No hay datos para exportar con esta selección', 'error');
-    return;
+    return null;
   }
 
-  generarCSV(datosAExportar, columnasActivas, empresaSeleccionada);
+  const datosProcesados = datos.map(f => {
+    const filaProcesada = {};
+    columnasActivas.forEach(col => {
+      let val = f[col];
+      
+      if (col === 'tipo_ncf') val = getTipoNCF(f.ncf);
+      if (col === 'forma_pago') { const o = FORMAS_PAGO.find(p => p.value == val); if(o) val = o.value === '' ? '' : o.label; }
+      if (col === 'tipo_gasto') { const o = CATEGORIAS_GASTO.find(c => c.value == String(val).trim()); if(o) val = o.value === '' ? '' : o.label; }
+      if (col === 'rnc' && val) val = String(val).replace(/-/g, '');
+      if (col === 'fecha_factura') val = formatDateDDMMYYYY(val);
+      if (col === 'itbis' || col === 'total_pagado') { let num = parseFloat(val); if(isNaN(num)) num = 0; val = num.toFixed(2); }
+      if (col === 'drive_url' && val && val.startsWith('/')) { val = window.location.origin + val; }
+      
+      if (val === null || val === undefined) val = '';
+      filaProcesada[col] = String(val);
+    });
+    return filaProcesada;
+  });
+
+  return { 
+    datos: datosProcesados, 
+    columnas: columnasActivas, 
+    empresa: empresaSeleccionada,
+    periodoMes: document.getElementById('periodoMes').value,
+    periodoAnio: document.getElementById('periodoAnio').value
+  };
+}
+
+async function ejecutarExportacion() {
+  const paquete = prepararDatosParaExportar();
+  if (!paquete) return;
+
+  const archivar = document.getElementById('checkArchivar').checked;
+  
+  generarCSV(paquete.datos, paquete.columnas, paquete.empresa);
 
   if (archivar) {
-    const ids = datosAExportar.map(f => f.id);
+    let datosOriginales = facturasFiltradas;
+    if (paquete.empresa !== 'TODAS') {
+        datosOriginales = facturas.filter(f => f.empresa_nombre === paquete.empresa);
+    }
+    const ids = datosOriginales.map(f => f.id);
     await archivarFacturas(ids);
   }
 
   cerrarModalExportar();
+}
+
+// ✅ NUEVA FUNCIÓN: Detecta "TODAS" y muestra modal de confirmación
+async function ejecutarExportacionSheets() {
+  const paquete = prepararDatosParaExportar();
+  if (!paquete) return;
+  
+  // ✅ SI ES "TODAS" → Modal de confirmación
+  if (paquete.empresa === 'TODAS') {
+    mostrarModalConfirmTodas(paquete);
+  } else {
+    // Exportar directo
+    await realizarExportacionSheets(paquete);
+  }
+}
+
+// ✅ MOSTRAR MODAL DE CONFIRMACIÓN
+function mostrarModalConfirmTodas(paquete) {
+  const modal = document.getElementById('confirmTodasModal');
+  document.getElementById('todasFacturasCount').textContent = paquete.datos.length;
+  
+  // Guardar paquete para usar después
+  window.paqueteExportTodas = paquete;
+  
+  // Resetear checkbox y botón
+  document.getElementById('checkConfirmTodas').checked = false;
+  document.getElementById('btnConfirmarTodas').disabled = true;
+  
+  modal.style.display = 'flex';
+}
+
+// ✅ CERRAR MODAL DE CONFIRMACIÓN
+function cerrarModalConfirmTodas() {
+  document.getElementById('confirmTodasModal').style.display = 'none';
+}
+
+// ✅ CONFIRMAR Y EXPORTAR
+async function confirmarExportTodas() {
+  cerrarModalConfirmTodas();
+  await realizarExportacionSheets(window.paqueteExportTodas);
+}
+
+// ✅ EXPORTACIÓN REAL (REFACTORIZADA)
+async function realizarExportacionSheets(paquete) {
+  const archivar = document.getElementById('checkArchivar').checked;
+  
+  showToast('⏳ Exportando a Google Sheets...', 'info');
+
+  try {
+    const response = await fetchAPI('/contable/exportar-sheets', {
+      method: 'POST',
+      body: JSON.stringify({
+        empresa_nombre: paquete.empresa,
+        periodo_mes: paquete.periodoMes,
+        periodo_anio: paquete.periodoAnio,
+        columnas: paquete.columnas,
+        facturas: paquete.datos
+      })
+    });
+
+    if (response.success) {
+      showToast('✅ Exportado exitosamente', 'success');
+      if (response.data && response.data.spreadsheet_url) {
+        window.open(response.data.spreadsheet_url, '_blank');
+      }
+      
+      if (archivar) {
+        let datosOriginales = facturasFiltradas;
+        if (paquete.empresa !== 'TODAS') {
+            datosOriginales = facturas.filter(f => f.empresa_nombre === paquete.empresa);
+        }
+        const ids = datosOriginales.map(f => f.id);
+        await archivarFacturas(ids);
+      }
+      
+      cerrarModalExportar();
+    }
+  } catch (error) {
+    console.error(error);
+    if (error.message.includes('permisos') || error.message.includes('scope')) {
+        showToast('⚠️ Falta permiso de Sheets. Reconectando...', 'warning');
+        setTimeout(() => window.location.href = '/api/auth/google/connect', 1500);
+    } else {
+        showToast('Error al exportar a Sheets', 'error');
+    }
+  }
 }
 
 async function archivarFacturas(ids) {
@@ -679,7 +797,7 @@ async function archivarFacturas(ids) {
   }
 }
 
-function generarCSV(datos, columnas, nombreArchivoBase) {
+function generarCSV(datosProcesados, columnas, nombreArchivoBase) {
   const headerMap = {
     'fecha_factura': 'Fecha',
     'empresa_nombre': 'Empresa',
@@ -697,40 +815,9 @@ function generarCSV(datos, columnas, nombreArchivoBase) {
   const headerRow = columnas.map(col => headerMap[col] || col).join(',');
   let csvContent = headerRow + '\n';
 
-  datos.forEach(f => {
+  datosProcesados.forEach(f => {
     const row = columnas.map(col => {
       let val = f[col];
-      
-      if (col === 'tipo_ncf') val = getTipoNCF(f.ncf);
-
-      if (col === 'forma_pago') {
-        const fpObj = FORMAS_PAGO.find(p => p.value == val);
-        if (fpObj) val = fpObj.value === '' ? '' : fpObj.label;
-      }
-
-      if (col === 'tipo_gasto') {
-        const tgObj = CATEGORIAS_GASTO.find(c => c.value == String(val).trim());
-        if (tgObj) val = tgObj.value === '' ? '' : tgObj.label;
-      }
-
-      if (col === 'rnc' && val) val = String(val).replace(/-/g, '');
-
-      if (col === 'fecha_factura') val = formatDateDDMMYYYY(val);
-      
-      // ✅ FIX CRÍTICO: Conversión segura a número para evitar .toFixed error
-      if (col === 'itbis' || col === 'total_pagado') {
-          let num = parseFloat(val);
-          if (isNaN(num)) num = 0;
-          val = num.toFixed(2);
-      }
-      
-      // FIX para links locales vs nube
-      if (col === 'drive_url' && val && val.startsWith('/')) {
-         val = window.location.origin + val;
-      }
-      
-      if (val === null || val === undefined) val = '';
-      val = String(val);
       if (val.includes(',') || val.includes('"') || val.includes('\n')) {
         val = `"${val.replace(/"/g, '""')}"`;
       }
@@ -752,7 +839,7 @@ function generarCSV(datos, columnas, nombreArchivoBase) {
   a.click();
   document.body.removeChild(a);
   
-  showToast(`✅ Exportadas ${datos.length} facturas`, 'success');
+  showToast(`✅ Exportadas ${datosProcesados.length} facturas`, 'success');
 }
 
 function handleLogout() {
@@ -760,6 +847,5 @@ function handleLogout() {
   window.location.href = '/';
 }
 
-// Funciones de exportación (botones viejos si quedaran)
 function exportar606() { abrirModalExportar(); }
 function exportarExcel() { abrirModalExportar(); }

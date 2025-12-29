@@ -16,7 +16,10 @@ router.get('/facturas', contableController.getFacturas);
 // Memoria Contable (Sugerencia de gasto)
 router.get('/facturas/sugerencia-gasto', contableController.getSugerenciaGasto);
 
-// ✅ NUEVA RUTA (FASE 3): Procesar/Archivar lote de facturas
+// ✅ FASE 3 - Paso B: Exportación a Google Sheets
+router.post('/exportar-sheets', contableController.exportarASheets);
+
+// Procesar lote (Archivar/Limpiar mesa)
 router.post('/facturas/procesar-lote', contableController.procesarLoteFacturas);
 
 // Actualizar campos de una factura

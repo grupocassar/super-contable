@@ -74,8 +74,14 @@
           </select>
         </div>
       </div>
-      <div class="header-actions">
-        <button class="btn btn-primary" id="btnExportarMain" onclick="abrirModalExportar()">📥 Exportar Datos</button>
+      <div class="header-actions" id="exportButtonsContainer">
+        <!-- BOTONES DE EXPORTACIÓN (SHEETS Y EXCEL) -->
+        <button class="btn btn-success" onclick="abrirModalExportar('sheets')" style="background-color: #10b981; border-color: #10b981; display: flex; align-items: center; gap: 6px;">
+          📊 Sheets
+        </button>
+        <button class="btn btn-primary" onclick="abrirModalExportar('csv')" style="display: flex; align-items: center; gap: 6px;">
+          📥 Excel
+        </button>
       </div>
     </div>
 
@@ -213,7 +219,7 @@
           </div>
         </div>
 
-        <!-- Opciones de Cierre -->
+        <!-- Opciones de Cierre / Limpieza -->
         <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #e2e8f0;">
           <label style="display:flex; align-items:flex-start; gap:0.5rem; cursor:pointer; background: #fffbeb; padding: 0.75rem; border-radius: 6px; border: 1px solid #fef3c7;">
             <input type="checkbox" id="checkArchivar" style="width:1.2rem; height:1.2rem; margin-top:0.2rem;" checked>
@@ -229,12 +235,54 @@
       </div>
       <div class="modal-duplicados-footer">
         <button class="btn btn-outline" onclick="cerrarModalExportar()">Cancelar</button>
-        <button class="btn btn-primary" onclick="ejecutarExportacion()">📥 Descargar y Procesar</button>
+        <!-- BOTÓN EXCEL (Visible por defecto) -->
+        <button class="btn btn-primary" id="btnExportarCSV" onclick="ejecutarExportacion()">📥 Descargar y Procesar</button>
+        <!-- BOTÓN SHEETS (Oculto por defecto) -->
+        <button class="btn btn-success" id="btnExportarSheets" onclick="ejecutarExportacionSheets()" style="display: none; background-color: #10b981; border-color: #10b981;">📊 Exportar a Google Sheets</button>
       </div>
     </div>
   </div>
 
-  <!-- MODAL DE DUPLICADOS (ALINEADO CON CSS) -->
+  <!-- ✅ MODAL DE CONFIRMACIÓN PARA "TODAS" -->
+  <div id="confirmTodasModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content modal-warning">
+      <div class="modal-header-warning">
+        <span style="font-size: 2rem;">⚠️</span>
+        <h3>CONFIRMA EXPORTACIÓN A "TODAS"</h3>
+      </div>
+      
+      <div class="modal-body">
+        <div class="info-box">
+          <strong>📦 Archivo destino:</strong><br>
+          "Super Contable - TODAS"
+        </div>
+        
+        <div class="info-box">
+          <strong>📊 Facturas a exportar:</strong> <span id="todasFacturasCount">0</span>
+        </div>
+        
+        <div class="warning-box">
+          ⚠️ Este archivo es compartido y se actualizará en Google Drive
+        </div>
+        
+        <label class="checkbox-confirm">
+          <input type="checkbox" id="checkConfirmTodas">
+          <span>Confirmo que revisé el filtro y quiero exportar a TODAS</span>
+        </label>
+      </div>
+      
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="cerrarModalConfirmTodas()">
+          Cancelar
+        </button>
+        <button id="btnConfirmarTodas" class="btn-primary" disabled onclick="confirmarExportTodas()">
+          Exportar TODAS
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE DUPLICADOS -->
   <div id="duplicadosModal" class="modal-duplicados">
     <div class="modal-duplicados-content">
       <div class="modal-duplicados-header">
@@ -292,7 +340,7 @@
     </div>
   </div>
 
-  <!-- MODAL SOSPECHOSAS (ALINEADO CON CSS) -->
+  <!-- MODAL SOSPECHOSAS -->
   <div id="sospechosasModal" class="modal-duplicados">
     <div class="modal-duplicados-content">
       <div class="modal-duplicados-header" style="border-bottom: 2px solid #fcd34d;">
@@ -339,7 +387,6 @@
           </div>
           <button class="btn btn-danger btn-block" id="btnEliminarSosp2">🗑️ Eliminar</button>
         </div>
-
       </div>
 
       <div class="modal-duplicados-footer">
