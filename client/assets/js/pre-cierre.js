@@ -45,11 +45,33 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('periodoMes')?.addEventListener('change', recargarDatos);
   document.getElementById('periodoAnio')?.addEventListener('change', recargarDatos);
   
-  // ✅ Listener para checkbox de confirmación
   document.getElementById('checkConfirmTodas')?.addEventListener('change', function() {
     document.getElementById('btnConfirmarTodas').disabled = !this.checked;
   });
 });
+
+// --- FUNCIONES DE TOOLTIP (IDEA NELSON) ---
+function showCompanyTooltip(e, name) {
+    let tooltip = document.getElementById('company-name-tooltip');
+    if (!tooltip) {
+        tooltip = document.createElement('div');
+        tooltip.id = 'company-name-tooltip';
+        tooltip.className = 'company-tooltip';
+        document.body.appendChild(tooltip);
+    }
+    tooltip.textContent = `Empresa: ${name}`;
+    tooltip.classList.add('show');
+
+    const rect = e.target.getBoundingClientRect();
+    tooltip.style.left = `${rect.left + rect.width / 2}px`;
+    tooltip.style.top = `${rect.top - 35}px`;
+    tooltip.style.transform = 'translateX(-50%)';
+}
+
+function hideCompanyTooltip() {
+    const tooltip = document.getElementById('company-name-tooltip');
+    if (tooltip) tooltip.classList.remove('show');
+}
 
 async function recargarDatos() {
   await loadPreCierre();
@@ -124,7 +146,7 @@ function llenarFiltroEmpresas() {
   const select = document.getElementById('filterEmpresa');
   if (!select) return;
   const valorActual = select.value;
-  select.innerHTML = '<option value="">Todas</option>';
+  select.innerHTML = '<option value="">Todas las empresas</option>';
   empresas.forEach(emp => {
     const option = document.createElement('option');
     option.value = emp.nombre;
@@ -173,7 +195,7 @@ function renderTabla() {
 
   if (facturasFiltradas.length === 0) {
     const msg = estadoActual === 'aprobada' ? 'No hay facturas pendientes' : 'No hay facturas en el histórico';
-    tbody.innerHTML = `<tr><td colspan="11" class="text-center" style="padding: 2rem; color: #64748b;">${msg}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" class="text-center" style="padding: 2rem; color: #64748b;">${msg}</td></tr>`;
     return;
   }
 
@@ -184,7 +206,6 @@ function renderTabla() {
   tbody.innerHTML = facturasFiltradas.map(f => {
     const fechaFormatted = formatDateDDMMYYYY(f.fecha_factura);
     const tipoNCF = getTipoNCF(f.ncf);
-    
     const anomalia = isReadOnly ? null : getAnomalia(f);
     const rowClass = anomalia ? `anomalia-${anomalia.tipo}` : (isReadOnly ? 'fila-historico' : '');
 
@@ -210,8 +231,7 @@ function renderTabla() {
           <input type="text" class="${inputClass}" value="${fechaFormatted}" ${disabledAttr}
                  placeholder="DD/MM/YYYY" maxlength="10" onblur="saveDateField(${f.id}, this.value)">
         </td>
-        <td class="no-edit">${f.empresa_nombre || '-'}</td>
-        <td>
+        <td onmouseenter="showCompanyTooltip(event, '${f.empresa_nombre || 'N/A'}')" onmouseleave="hideCompanyTooltip()">
           <input type="text" class="${inputClass}" value="${f.rnc || ''}" ${disabledAttr}
                  placeholder="XXX-XXXXX-X" onblur="saveField(${f.id}, 'rnc', this.value)">
         </td>
@@ -607,7 +627,6 @@ function abrirModalExportar(modo = 'csv') {
   const grid = document.querySelector('.columns-grid');
   grid.innerHTML = `
     <label><input type="checkbox" checked value="fecha_factura"> Fecha</label>
-    <label><input type="checkbox" checked value="empresa_nombre"> Empresa</label>
     <label><input type="checkbox" checked value="rnc"> RNC</label>
     <label><input type="checkbox" checked value="ncf"> NCF</label>
     <label><input type="checkbox" checked value="tipo_ncf"> Tipo (B01)</label>
@@ -694,50 +713,37 @@ async function ejecutarExportacion() {
   cerrarModalExportar();
 }
 
-// ✅ NUEVA FUNCIÓN: Detecta "TODAS" y muestra modal de confirmación
 async function ejecutarExportacionSheets() {
   const paquete = prepararDatosParaExportar();
   if (!paquete) return;
   
-  // ✅ SI ES "TODAS" → Modal de confirmación
   if (paquete.empresa === 'TODAS') {
     mostrarModalConfirmTodas(paquete);
   } else {
-    // Exportar directo
     await realizarExportacionSheets(paquete);
   }
 }
 
-// ✅ MOSTRAR MODAL DE CONFIRMACIÓN
 function mostrarModalConfirmTodas(paquete) {
   const modal = document.getElementById('confirmTodasModal');
   document.getElementById('todasFacturasCount').textContent = paquete.datos.length;
-  
-  // Guardar paquete para usar después
   window.paqueteExportTodas = paquete;
-  
-  // Resetear checkbox y botón
   document.getElementById('checkConfirmTodas').checked = false;
   document.getElementById('btnConfirmarTodas').disabled = true;
-  
   modal.style.display = 'flex';
 }
 
-// ✅ CERRAR MODAL DE CONFIRMACIÓN
 function cerrarModalConfirmTodas() {
   document.getElementById('confirmTodasModal').style.display = 'none';
 }
 
-// ✅ CONFIRMAR Y EXPORTAR
 async function confirmarExportTodas() {
   cerrarModalConfirmTodas();
   await realizarExportacionSheets(window.paqueteExportTodas);
 }
 
-// ✅ EXPORTACIÓN REAL (REFACTORIZADA)
 async function realizarExportacionSheets(paquete) {
   const archivar = document.getElementById('checkArchivar').checked;
-  
   showToast('⏳ Exportando a Google Sheets...', 'info');
 
   try {
@@ -766,7 +772,6 @@ async function realizarExportacionSheets(paquete) {
         const ids = datosOriginales.map(f => f.id);
         await archivarFacturas(ids);
       }
-      
       cerrarModalExportar();
     }
   } catch (error) {
@@ -788,7 +793,7 @@ async function archivarFacturas(ids) {
     });
 
     if (response.success) {
-      showToast(`🧹 ${ids.length} facturas archivadas`, 'success');
+      showToast(`Sweep: ${ids.length} facturas archivadas`, 'success');
       setTimeout(() => loadPreCierre(), 1000); 
     }
   } catch (error) {

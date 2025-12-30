@@ -1,71 +1,192 @@
 /* ============================================ */
-/* PRE-CIERRE FISCAL - ESTILO TIPO EXCEL */
+/* PRE-CIERRE FISCAL - ESTILO TIPO EXCEL PRO */
 /* ============================================ */
 
+/* CONTENEDOR PRINCIPAL DEL HEADER - ESTRUCTURA DE DOS FILAS */
 .pre-cierre-header {
   max-width: 100%;
-  margin: 0 auto 1rem;
-  padding: 0.75rem 1.5rem;
+  margin: 0 auto 1.25rem;
+  padding: 1.25rem 1.5rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem; /* Controla la separación entre las dos filas del header */
+}
+
+/* FILA SUPERIOR: FILTROS Y EXPORTACIÓN */
+.header-top-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  width: 100%;
 }
 
-.header-left {
+.header-controls-left {
   display: flex;
   align-items: center;
-  gap: 2rem;
+  gap: 2.5rem; /* Separación entre Periodo y Empresa */
 }
 
-.pre-cierre-header h1 {
-  font-size: 1.5rem;
-  margin: 0;
-  font-weight: 600;
-}
-
-.periodo-selector {
+/* GRUPOS DE SELECTORES (Label + Input) */
+.selector-group {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
-.periodo-selector label {
-  font-size: 0.875rem;
-  font-weight: 500;
+.selector-group label {
+  font-size: 0.7rem;
+  font-weight: 700;
   color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
 }
 
 .input-inline {
-  padding: 0.4rem 0.75rem;
+  padding: 0.45rem 0.75rem;
   border: 1px solid #cbd5e1;
-  border-radius: 0.25rem;
-  font-size: 0.875rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  background-color: #f8fafc;
+  color: #1e293b;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
+.input-inline:focus {
+  outline: none;
+  border-color: #2563eb;
+  background-color: white;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* FILA INFERIOR: CONTEXTO DE TRABAJO (PENDIENTES/HISTÓRICO) */
+.header-bottom-row {
+  display: flex;
+  align-items: center;
+}
+
+.view-selector {
+  display: flex;
+  background: #f1f5f9;
+  padding: 3px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.btn-view-toggle {
+  border: none;
+  padding: 6px 18px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: transparent;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-view-toggle.active {
+  background: white;
+  color: #1e40af; /* Azul profesional */
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  border: 1px solid #dbeafe;
+}
+
+/* BOTONES DE ACCIÓN PROFESIONALES (ACCOUNTING PRO) */
 .header-actions {
   display: flex;
   gap: 0.75rem;
 }
 
-/* TABLA TIPO EXCEL */
+.btn-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.btn-export-sheets {
+  background-color: #f0fdf4;
+  color: #15803d;
+  border-color: #dcfce7;
+}
+
+.btn-export-sheets:hover {
+  background-color: #15803d;
+  color: white;
+}
+
+.btn-export-excel {
+  background-color: #eff6ff;
+  color: #1d4ed8;
+  border-color: #dbeafe;
+}
+
+.btn-export-excel:hover {
+  background-color: #1d4ed8;
+  color: white;
+}
+
+/* --- TOOLTIP PARA NOMBRE DE EMPRESA (IDEA NELSON) --- */
+.company-tooltip {
+    position: fixed;
+    background: #1e293b;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    pointer-events: none;
+    z-index: 10000;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+    display: none;
+    white-space: nowrap;
+    border: 1px solid #334155;
+}
+
+.company-tooltip.show {
+    display: block;
+    animation: fadeInTooltip 0.15s ease-out forwards;
+}
+
+@keyframes fadeInTooltip {
+    from { opacity: 0; transform: translate(-50%, 5px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* TABLA TIPO EXCEL - OPTIMIZACIÓN QUIRÚRGICA */
 .table-container-excel {
   width: 100%;
-  overflow-x: auto; /* CRÍTICO: Habilita el scroll horizontal */
+  overflow-x: auto;
   background: white;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-  margin-bottom: 2rem;
-  padding-bottom: 5px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  margin-bottom: 3rem;
 }
 
 .table-excel {
   width: 100%;
-  min-width: 1500px; /* Fuerza ancho mínimo */
+  min-width: 1155px; /* Suma exacta de columnas optimizadas */
   border-collapse: collapse;
   font-size: 0.8rem;
+  table-layout: fixed;
 }
 
 .table-excel thead {
@@ -76,112 +197,70 @@
 }
 
 .table-excel th {
-  padding: 0.5rem;
+  padding: 0.6rem 0.5rem;
   border: 1px solid #e2e8f0;
   font-weight: 600;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: #475569;
   text-transform: uppercase;
-  letter-spacing: 0.025em;
   background: #f8fafc;
   vertical-align: top;
-  white-space: nowrap;
+  overflow: hidden;
 }
 
-/* FILTROS EN HEADER */
 .header-filter {
   display: block;
   width: 100%;
-  margin-top: 4px;
-  padding: 2px 4px;
-  font-size: 0.75rem;
+  margin-top: 6px;
+  padding: 3px 5px;
+  font-size: 0.7rem;
   border: 1px solid #cbd5e1;
   border-radius: 3px;
   color: #1e293b;
-  box-sizing: border-box;
-  font-weight: normal;
-  height: 26px;
+  height: 24px;
   background-color: white;
-}
-
-.header-filter:focus {
-  outline: 1px solid var(--primary-color);
-  border-color: var(--primary-color);
 }
 
 .table-excel td {
   padding: 0;
   border: 1px solid #e2e8f0;
   background: white;
-}
-
-.table-excel td.no-edit {
-  padding: 0.4rem 0.5rem;
-  color: #64748b;
-  font-weight: 500;
-  font-size: 0.75rem;
+  overflow: hidden;
 }
 
 .cell-input {
   width: 100%;
   border: none;
-  padding: 0.4rem 0.5rem;
+  padding: 0.5rem;
   font-size: 0.8rem;
   background: transparent;
   color: #1e293b;
   outline: none;
-}
-
-.cell-input:hover {
-  background: #f8fafc;
+  box-sizing: border-box;
 }
 
 .cell-input:focus {
   background: white;
-  outline: 2px solid var(--primary-color);
-  outline-offset: -2px;
+  box-shadow: inset 0 0 0 2px #2563eb;
+  z-index: 2;
 }
 
-.td-select {
-  padding: 0 !important;
-}
-
-.cell-select {
-  width: 100%;
-  border: none;
-  padding: 0.4rem 0.5rem;
-  font-size: 0.8rem;
-  background: transparent;
-  color: #1e293b;
-  outline: none;
-  cursor: pointer;
-}
-
-.cell-select:hover {
-  background: #f8fafc;
-}
-
-.cell-select:focus {
-  background: white;
-  outline: 2px solid var(--primary-color);
-  outline-offset: -2px;
-}
-
+/* --- BADGES NCF (RESTABLECIDO SOMBREO AZUL) --- */
 .badge-ncf {
   display: inline-block;
-  padding: 0.2rem 0.4rem;
-  border-radius: 0.25rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
   font-size: 0.7rem;
-  font-weight: 600;
+  font-weight: 700;
   text-align: center;
 }
 
-.badge-b01 { background: #dbeafe; color: #1e40af; }
-.badge-b02 { background: #fef3c7; color: #92400e; }
-.badge-b11 { background: #d1fae5; color: #065f46; }
-.badge-b14 { background: #e0e7ff; color: #4338ca; }
+.badge-b01 { background: #dbeafe !important; color: #1e40af !important; } 
+.badge-b02 { background: #fef3c7 !important; color: #92400e !important; }
+.badge-b11 { background: #d1fae5 !important; color: #065f46 !important; }
+.badge-b14 { background: #e0e7ff !important; color: #4338ca !important; }
 
-/* Anomalías */
+/* ANOMALÍAS */
 .anomalia-duplicado { background-color: #fee2e2 !important; }
 .anomalia-itbis { background-color: #fef3c7 !important; }
 .anomalia-sin-clasificar { background-color: #f1f5f9 !important; }
@@ -189,21 +268,21 @@
 .anomalia-rnc-invalido { background-color: #fff7ed !important; }
 .anomalia-sospechosa { background-color: #fffbeb !important; }
 
-/* Barra de estado */
+/* BARRA DE ESTADO INFERIOR */
 .status-bar {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  background: #1e293b;
+  background: #0f172a;
   color: white;
-  padding: 0.75rem 1.5rem;
+  padding: 0.7rem 1.5rem;
   display: flex;
   gap: 2rem;
   align-items: center;
-  font-size: 0.875rem;
-  box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+  font-size: 0.8rem;
   z-index: 100;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
 }
 
 .status-item {
@@ -212,225 +291,16 @@
   gap: 0.5rem;
 }
 
-.status-item.success { color: #86efac; }
-.status-item.anomalia, .status-item.warning { color: #fbbf24; }
+.status-item.success { color: #86efac; font-weight: 600; }
 
 /* ============================================ */
-/* MODAL DE COMPARACIÓN - DISEÑO ROBUSTO */
+/* MODALES ESTRUCTURA (CORREGIDO GRID DE COLUMNAS) */
 /* ============================================ */
 
-.modal-duplicados {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.75);
-  z-index: 3000;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal-duplicados.show {
-  display: flex;
-}
-
-.modal-duplicados-content {
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
-  width: 90%;
-  max-width: 1100px;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.modal-duplicados-header {
-  padding: 0.75rem 1rem;
-  border-bottom: 2px solid #fee2e2;
-  background: linear-gradient(to bottom, #fef2f2, white);
-  position: relative;
-  flex-shrink: 0;
-}
-
-.modal-duplicados-header h3 {
-  margin: 0;
-  color: #991b1b;
-  font-size: 1.1rem;
-  font-weight: 700;
-}
-
-.modal-duplicados-header p {
-  margin: 0.25rem 0 0 0;
-  font-size: 0.8rem;
-  color: #64748b;
-}
-
-.modal-duplicados-body {
-  padding: 1rem;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-  overflow-y: auto;
-  flex: 1;
-}
-
-.factura-comparacion {
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  background: white;
-  height: 100%;
-}
-
-.factura-comparacion-header {
-  background: #f1f5f9;
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid #cbd5e1;
-  flex-shrink: 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: #1e293b;
-}
-
-.factura-comparacion-content {
-  padding: 0.75rem;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  overflow-y: auto;
-}
-
-/* IMAGEN: AJUSTE PERFECTO */
-.comparacion-imagen {
-  border: 1px solid #e2e8f0;
-  border-radius: 4px;
-  overflow: hidden;
-  height: 300px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #0f172a; /* Fondo oscuro */
-  flex-shrink: 0;
-}
-
-.comparacion-imagen img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain; /* La clave: ajusta sin cortar ni deformar */
-  display: block;
-}
-
-/* DATOS */
-.comparacion-datos {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.dato-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 0.4rem;
-  background: #f8fafc;
-  border-radius: 4px;
-  border-bottom: 1px dashed #e2e8f0;
-}
-
-.dato-label {
-  font-size: 0.8rem;
-  color: #64748b;
-  font-weight: 600;
-}
-
-.dato-value {
-  font-size: 0.85rem;
-  color: #1e293b;
-  font-weight: 500;
-  text-align: right;
-}
-
-.highlight-danger {
-  color: #ef4444;
-  background: #fef2f2;
-  padding: 0 4px;
-  border-radius: 2px;
-  font-weight: 700;
-}
-
-.btn-block {
-  width: 100%;
-  margin: 0;
-}
-
-.btn-danger {
-  background: #ef4444;
-  color: white;
-  border: none;
-  padding: 0.3rem 0.8rem;
-  border-radius: 4px;
-  font-weight: 600;
-  font-size: 0.75rem;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.btn-danger:hover {
-  background: #dc2626;
-}
-
-.modal-duplicados-footer {
-  padding: 0.75rem 1rem;
-  border-top: 1px solid #e2e8f0;
-  background: #f8fafc;
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  flex-shrink: 0;
-  align-items: center;
-}
-
-.btn-lg {
-  padding: 0.75rem 1.75rem;
-  font-size: 0.95rem;
-}
-
-/* Anomalía clickeable */
-.anomalia-clickeable {
-  cursor: pointer;
-  transition: transform 0.2s;
-}
-
-.anomalia-clickeable:hover {
-  transform: scale(1.3);
-}
-
-/* Memoria Contable */
-.sugerencia-activa {
-  background-color: #eff6ff !important;
-  border-left: 3px solid #3b82f6 !important;
-  font-weight: 600;
-  color: #1d4ed8 !important;
-  transition: all 0.3s ease;
-}
-
-.sugerencia-activa:focus {
-  border-left: 3px solid #2563eb !important;
-}
-
-/* Modal Exportación */
+/* ZONA DE SELECCIÓN DE COLUMNAS - GRID DE 2 COLUMNAS (RESTAURADO) */
 .columns-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr; /* Fuerza las dos columnas */
   gap: 0.75rem;
   background: #f8fafc;
   padding: 1rem;
@@ -451,19 +321,15 @@
 }
 
 .columns-grid label:hover {
-  color: var(--primary-color);
+  color: #2563eb;
 }
 
 .columns-grid input[type="checkbox"] {
   width: 1rem;
   height: 1rem;
   cursor: pointer;
-  accent-color: var(--primary-color);
+  accent-color: #2563eb;
 }
-
-/* ============================================ */
-/* ✅ MODAL DE CONFIRMACIÓN "TODAS" (CORREGIDO) */
-/* ============================================ */
 
 .modal-overlay {
   position: fixed;
@@ -478,150 +344,112 @@
   justify-content: center;
 }
 
-.modal-content {
+.modal-duplicados {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.75);
+  z-index: 3000;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-duplicados.show { display: flex; }
+
+.modal-duplicados-content {
   background-color: white;
   border-radius: 8px;
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
-  width: 90%;
-  max-width: 500px;
-  max-height: 85vh; /* ✅ FIX */
+  width: 95%;
+  max-width: 1100px;
+  max-height: 90vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-.modal-warning {
-  border: 3px solid #f59e0b;
-  box-shadow: 0 10px 40px rgba(245, 158, 11, 0.3);
-}
-
-.modal-header-warning {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  padding: 1.5rem;
-  text-align: center;
-  border-bottom: 2px solid #f59e0b;
-  flex-shrink: 0; /* ✅ Header no se encoge */
-}
-
-.modal-header-warning h3 {
-  margin: 0.5rem 0 0 0;
-  color: #92400e;
-  font-weight: 700;
-  font-size: 1.1rem;
-}
-
-.modal-body {
-  padding: 1.5rem;
+.modal-duplicados-header {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
   display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  overflow-y: auto; /* ✅ FIX */
-  flex: 1; /* ✅ FIX */
-}
-
-.info-box {
-  background: #f3f4f6;
-  padding: 1rem;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  color: #1e293b;
-}
-
-.info-box strong {
-  display: block;
-  margin-bottom: 0.25rem;
-  color: #0f172a;
-}
-
-.warning-box {
-  background: #fef3c7;
-  border: 2px solid #fbbf24;
-  padding: 1rem;
-  border-radius: 8px;
-  color: #92400e;
-  font-weight: 600;
-  font-size: 0.9rem;
-  text-align: center;
-}
-
-.checkbox-confirm {
-  display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 0.75rem;
+}
+
+.modal-duplicados-body {
   padding: 1rem;
-  background: white;
-  border: 2px solid #d1d5db;
-  border-radius: 8px;
-  cursor: pointer;
-  user-select: none;
-  transition: border-color 0.2s;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
 }
 
-.checkbox-confirm:hover {
-  border-color: #f59e0b;
-}
-
-.checkbox-confirm input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
-  cursor: pointer;
-  accent-color: #f59e0b;
-}
-
-.checkbox-confirm span {
-  font-weight: 600;
-  color: #1f2937;
-  font-size: 0.9rem;
-}
-
-.modal-footer {
+.modal-duplicados-footer {
   padding: 1rem 1.5rem;
   border-top: 1px solid #e2e8f0;
   background: #f8fafc;
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
-  flex-shrink: 0; /* ✅ CRÍTICO: Footer siempre visible */
 }
 
-.btn-secondary {
-  background: #e5e7eb;
-  color: #374151;
-  border: none;
-  padding: 0.6rem 1.2rem;
+.factura-comparacion {
+  border: 1px solid #e2e8f0;
   border-radius: 6px;
+  overflow: hidden;
+  background: white;
+  display: flex;
+  flex-direction: column;
+}
+
+.factura-comparacion-header {
+  background: #f1f5f9;
+  padding: 0.5rem 1rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.comparacion-imagen {
+  height: 300px;
+  background: #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.comparacion-imagen img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.comparacion-datos {
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.dato-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+/* MEMORIA CONTABLE */
+.sugerencia-activa {
+  background-color: #eff6ff !important;
+  border-left: 3px solid #3b82f6 !important;
   font-weight: 600;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: background 0.2s;
+  color: #1d4ed8 !important;
+  transition: all 0.3s ease;
 }
 
-.btn-secondary:hover {
-  background: #d1d5db;
-}
-
-.btn-primary {
-  background: #f59e0b;
-  color: white;
-  border: none;
-  padding: 0.6rem 1.5rem;
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.btn-primary:hover {
-  background: #d97706;
-}
-
-.btn-primary:disabled {
-  background: #d1d5db;
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-.btn-primary:disabled:hover {
-  background: #d1d5db;
-}
+/* BOTONES GENERALES MODALES */
+.btn-primary { background: #f59e0b; color: white; border: none; padding: 0.6rem 1.5rem; border-radius: 6px; font-weight: 600; cursor: pointer; }
+.btn-secondary { background: #e5e7eb; color: #374151; border: none; padding: 0.6rem 1.2rem; border-radius: 6px; font-weight: 600; cursor: pointer; }
+.btn-danger { background: #ef4444; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; font-weight: 600; cursor: pointer; }

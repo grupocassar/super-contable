@@ -11,7 +11,7 @@
 <body>
   <div class="dashboard">
     
-    <!-- NAVBAR -->
+    <!-- NAVBAR (Título oficial centralizado) -->
     <nav class="navbar">
       <div class="navbar-content">
         <div class="navbar-brand">📊 Super Contable - Pre-Cierre Fiscal</div>
@@ -25,7 +25,7 @@
       </div>
     </nav>
 
-    <!-- TABS -->
+    <!-- PESTAÑAS -->
     <div class="tabs-container">
       <nav class="tabs">
         <a href="dashboard.html" class="tab">📊 Dashboard</a>
@@ -36,98 +36,94 @@
       </nav>
     </div>
 
-    <!-- HEADER CON CONTROLES -->
+    <!-- CABECERA DE CONTROL (Rediseñada para flujo lógico) -->
     <div class="pre-cierre-header">
-      <div class="header-left">
-        <h1>Pre-Cierre Fiscal</h1>
-        
-        <!-- Selector de Vista -->
-        <div class="view-selector" style="display: flex; background: #f1f5f9; padding: 4px; border-radius: 6px; margin-left: 1rem; border: 1px solid #e2e8f0;">
-          <button id="btnViewPendientes" class="btn-view active" onclick="cambiarVista('aprobada')" style="border:none; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; background: white; color: #0f172a; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+      <!-- Fila Superior: Configuración y Acciones -->
+      <div class="header-top-row">
+        <div class="header-controls-left">
+          <!-- 1. Período -->
+          <div class="selector-group">
+            <label>Período:</label>
+            <select id="periodoMes" class="input-inline">
+              <option value="01">Enero</option><option value="02">Febrero</option>
+              <option value="03">Marzo</option><option value="04">Abril</option>
+              <option value="05">Mayo</option><option value="06">Junio</option>
+              <option value="07">Julio</option><option value="08">Agosto</option>
+              <option value="09">Septiembre</option><option value="10">Octubre</option>
+              <option value="11">Noviembre</option><option value="12" selected>Diciembre</option>
+            </select>
+            <select id="periodoAnio" class="input-inline">
+              <option value="2024">2024</option><option value="2025" selected>2025</option><option value="2026">2026</option>
+            </select>
+          </div>
+
+          <!-- 2. Empresa -->
+          <div class="selector-group">
+            <label>Empresa:</label>
+            <select id="filterEmpresa" class="input-inline" onchange="aplicarFiltros()" style="min-width: 250px;">
+              <option value="">Todas las empresas</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Acciones Profesionales -->
+        <div class="header-actions" id="exportButtonsContainer">
+          <button class="btn-export btn-export-sheets" onclick="abrirModalExportar('sheets')">
+            <span>📊</span> Google Sheets
+          </button>
+          <button class="btn-export btn-export-excel" onclick="abrirModalExportar('csv')">
+            <span>📥</span> Reporte Excel
+          </button>
+        </div>
+      </div>
+
+      <!-- Fila Inferior: Contexto de Trabajo (Estado) -->
+      <div class="header-bottom-row">
+        <div class="view-selector">
+          <button id="btnViewPendientes" class="btn-view-toggle active" onclick="cambiarVista('aprobada')">
             📂 Pendientes
           </button>
-          <button id="btnViewHistorico" class="btn-view" onclick="cambiarVista('exportada')" style="border:none; padding: 6px 12px; border-radius: 4px; font-size: 0.85rem; font-weight: 600; cursor: pointer; color: #64748b; background: transparent; transition: all 0.2s;">
+          <button id="btnViewHistorico" class="btn-view-toggle" onclick="cambiarVista('exportada')">
             📜 Histórico
           </button>
         </div>
-
-        <div class="periodo-selector">
-          <label>Período:</label>
-          <select id="periodoMes" class="input-inline">
-            <option value="01">Enero</option>
-            <option value="02">Febrero</option>
-            <option value="03">Marzo</option>
-            <option value="04">Abril</option>
-            <option value="05">Mayo</option>
-            <option value="06">Junio</option>
-            <option value="07">Julio</option>
-            <option value="08">Agosto</option>
-            <option value="09">Septiembre</option>
-            <option value="10">Octubre</option>
-            <option value="11">Noviembre</option>
-            <option value="12" selected>Diciembre</option>
-          </select>
-          <select id="periodoAnio" class="input-inline">
-            <option value="2024">2024</option>
-            <option value="2025" selected>2025</option>
-            <option value="2026">2026</option>
-          </select>
-        </div>
-      </div>
-      <div class="header-actions" id="exportButtonsContainer">
-        <!-- BOTONES DE EXPORTACIÓN (SHEETS Y EXCEL) -->
-        <button class="btn btn-success" onclick="abrirModalExportar('sheets')" style="background-color: #10b981; border-color: #10b981; display: flex; align-items: center; gap: 6px;">
-          📊 Sheets
-        </button>
-        <button class="btn btn-primary" onclick="abrirModalExportar('csv')" style="display: flex; align-items: center; gap: 6px;">
-          📥 Excel
-        </button>
       </div>
     </div>
 
-    <!-- TABLA TIPO EXCEL -->
+    <!-- TABLA TIPO EXCEL (Anchos exactos de Evaluación Nelson) -->
     <div class="table-container-excel">
       <table class="table-excel" id="preCierreTable">
         <thead>
           <tr>
-            <th width="30" title="Anomalías"></th>
-            <th width="100">Fecha</th>
-            <th width="150">
-              Empresa
-              <select class="header-filter" id="filterEmpresa" onchange="aplicarFiltros()">
-                <option value="">Todas</option>
-              </select>
-            </th>
-            <th width="110">
+            <th width="40" title="Anomalías"></th>
+            <th width="90">Fecha</th>
+            <th width="100">
               RNC
-              <input type="text" class="header-filter" id="filterRNC" placeholder="Buscar..." onkeyup="aplicarFiltros()">
+              <input type="text" class="header-filter" id="filterRNC" placeholder="Filtro..." onkeyup="aplicarFiltros()">
             </th>
-            <th width="60">
+            <th width="55">
               Tipo
               <select class="header-filter" id="filterTipo" onchange="aplicarFiltros()">
-                <option value="">Todos</option>
-                <option value="B01">B01</option>
-                <option value="B02">B02</option>
-                <option value="B11">B11</option>
-                <option value="B14">B14</option>
-                <option value="B15">B15</option>
+                <option value="">--</option>
+                <option value="B01">01</option><option value="B02">02</option>
+                <option value="B11">11</option><option value="B14">14</option>
               </select>
             </th>
-            <th width="150">
+            <th width="100"> <!-- NCF Ajustado: -15px para eliminar "xxxx" -->
               NCF
-              <input type="text" class="header-filter" id="filterNCF" placeholder="Buscar NCF..." onkeyup="aplicarFiltros()">
+              <input type="text" class="header-filter" id="filterNCF" placeholder="NCF..." onkeyup="aplicarFiltros()">
             </th>
-            <th width="200">
+            <th width="180">
               Proveedor
               <input type="text" class="header-filter" id="filterProveedor" placeholder="Buscar..." onkeyup="aplicarFiltros()">
             </th>
-            <th width="200">
+            <th width="280">
               Tipo de Gasto
               <select class="header-filter" id="filterGasto" onchange="aplicarFiltros()">
-                <option value="">Todos</option>
+                <option value="">-- Todos los Gastos --</option>
                 <option value="VACIO">⚠️ Sin Clasificar</option>
                 <option value="E01">E01 - Personal</option>
-                <option value="E02">E02 - Servicios</option>
+                <option value="E02">E02 - Suministros</option>
                 <option value="E03">E03 - Arrendamientos</option>
                 <option value="E04">E04 - Activos Fijos</option>
                 <option value="E05">E05 - Representación</option>
@@ -139,260 +135,184 @@
                 <option value="E11">E11 - Seguros</option>
               </select>
             </th>
-            <th width="140">
-              Forma de Pago
+            <th width="110"> <!-- Pago Ajustado: +10px para evitar cortes -->
+              Pago
               <select class="header-filter" id="filterPago" onchange="aplicarFiltros()">
-                <option value="">Todas</option>
-                <option value="VACIO">⚠️ Sin Clasificar</option>
-                <option value="01">Efectivo</option>
-                <option value="02">Cheque</option>
-                <option value="03">Transferencia</option>
-                <option value="04">T. Crédito</option>
-                <option value="05">T. Débito</option>
-                <option value="06">Crédito</option>
+                <option value="">--</option><option value="VACIO">⚠️</option>
+                <option value="01">01</option><option value="02">02</option>
+                <option value="03">03</option><option value="04">04</option>
+                <option value="05">05</option><option value="06">06</option>
               </select>
             </th>
-            <th width="100" class="text-right">ITBIS</th>
-            <th width="120" class="text-right">Total</th>
+            <th width="85" class="text-right">ITBIS</th>
+            <th width="115" class="text-right">Total</th>
           </tr>
         </thead>
         <tbody id="preCierreTableBody">
-          <tr>
-            <td colspan="11" class="text-center">Cargando facturas aprobadas...</td>
-          </tr>
+          <tr><td colspan="10" class="text-center" style="padding: 3rem; color: #64748b;">Cargando facturas aprobadas...</td></tr>
         </tbody>
       </table>
     </div>
 
     <!-- BARRA DE ESTADO -->
     <div class="status-bar">
-      <div class="status-item">
-        <span id="statusTotal">0 facturas</span>
-      </div>
-      <div class="status-item anomalia" id="statusDuplicados" style="display: none;">
-        🔴 <span id="countDuplicados">0</span> duplicados
-      </div>
-      <div class="status-item warning" id="statusSospechosas" style="display: none;">
-        🟡 <span id="countSospechosas">0</span> sospechosas
-      </div>
-      <div class="status-item warning" id="statusFueraPeriodo" style="display: none;">
-        🟠 <span id="countFueraPeriodo">0</span> fuera período
-      </div>
-      <div class="status-item warning" id="statusRNCInvalido" style="display: none;">
-        🔶 <span id="countRNCInvalido">0</span> RNC inválido
-      </div>
-      <div class="status-item warning" id="statusITBIS" style="display: none;">
-        🧾 <span id="countITBIS">0</span> ITBIS=0
-      </div>
-      <div class="status-item warning" id="statusSinClasificar" style="display: none;">
-        ⚠️ <span id="countSinClasificar">0</span> sin clasificar
-      </div>
-      <div class="status-item success">
-        ✅ <span id="statusOK">0</span> OK
-      </div>
+      <div class="status-item"><span id="statusTotal">0 facturas</span></div>
+      <div class="status-item anomalia" id="statusDuplicados" style="display: none;">🔴 <span id="countDuplicados">0</span> duplicados</div>
+      <div class="status-item warning" id="statusSospechosas" style="display: none;">🟡 <span id="countSospechosas">0</span> sospechosas</div>
+      <div class="status-item warning" id="statusFueraPeriodo" style="display: none;">🟠 <span id="countFueraPeriodo">0</span> fuera período</div>
+      <div class="status-item warning" id="statusRNCInvalido" style="display: none;">🔶 <span id="countRNCInvalido">0</span> RNC inválido</div>
+      <div class="status-item warning" id="statusITBIS" style="display: none;">🧾 <span id="countITBIS">0</span> ITBIS=0</div>
+      <div class="status-item warning" id="statusSinClasificar" style="display: none;">⚠️ <span id="countSinClasificar">0</span> sin clasificar</div>
+      <div class="status-item success">✅ <span id="statusOK">0</span> OK</div>
     </div>
 
   </div>
 
-  <!-- MODAL DE EXPORTACIÓN -->
+  <!-- MODAL DE EXPORTACIÓN (RESTAURADO COMPLETO) -->
   <div id="exportModal" class="modal-duplicados">
     <div class="modal-duplicados-content" style="max-width: 500px;">
       <div class="modal-duplicados-header">
-        <h3>📤 Exportar Datos</h3>
+        <h3>📤 Exportar Datos Fiscales</h3>
         <button class="modal-close" onclick="cerrarModalExportar()">×</button>
       </div>
-      <div class="modal-duplicados-body" style="display: block;">
-        
-        <!-- Selección de Empresa -->
+      <div class="modal-duplicados-body" style="display: block; padding: 1.5rem;">
         <div style="margin-bottom: 1.5rem;">
           <label style="display:block; font-weight:600; margin-bottom:0.5rem; color:#1e293b;">1. Selecciona la Empresa:</label>
           <select id="exportEmpresaSelect" class="input-inline" style="width: 100%; padding: 0.6rem;">
             <option value="TODAS">📦 Todas las Empresas (Archivo Unificado)</option>
           </select>
         </div>
-
-        <!-- Selección de Columnas -->
         <div>
           <label style="display:block; font-weight:600; margin-bottom:0.5rem; color:#1e293b;">2. Selecciona las columnas:</label>
           <div class="columns-grid">
-            <!-- Se llena dinámicamente con JS -->
+            <!-- Dinámico vía pre-cierre.js -->
           </div>
         </div>
-
-        <!-- Opciones de Cierre / Limpieza -->
         <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #e2e8f0;">
           <label style="display:flex; align-items:flex-start; gap:0.5rem; cursor:pointer; background: #fffbeb; padding: 0.75rem; border-radius: 6px; border: 1px solid #fef3c7;">
             <input type="checkbox" id="checkArchivar" style="width:1.2rem; height:1.2rem; margin-top:0.2rem;" checked>
             <div>
               <span style="font-weight:700; color:#92400e; display:block;">🧹 Limpiar mesa de trabajo</span>
               <span style="font-size:0.85rem; color:#b45309; display:block; margin-top:0.25rem;">
-                Marcar facturas exportadas como "Procesadas" y ocultarlas de esta lista.
+                Marca facturas como "Procesadas" para que no aparezcan en el próximo cierre.
               </span>
             </div>
           </label>
         </div>
-
       </div>
       <div class="modal-duplicados-footer">
         <button class="btn btn-outline" onclick="cerrarModalExportar()">Cancelar</button>
-        <!-- BOTÓN EXCEL (Visible por defecto) -->
-        <button class="btn btn-primary" id="btnExportarCSV" onclick="ejecutarExportacion()">📥 Descargar y Procesar</button>
-        <!-- BOTÓN SHEETS (Oculto por defecto) -->
-        <button class="btn btn-success" id="btnExportarSheets" onclick="ejecutarExportacionSheets()" style="display: none; background-color: #10b981; border-color: #10b981;">📊 Exportar a Google Sheets</button>
+        <button class="btn btn-primary" id="btnExportarCSV" onclick="ejecutarExportacion()">📥 Descargar CSV</button>
+        <button class="btn btn-success" id="btnExportarSheets" onclick="ejecutarExportacionSheets()" style="display: none; background-color: #10b981;">📊 Exportar a Sheets</button>
       </div>
     </div>
   </div>
 
-  <!-- ✅ MODAL DE CONFIRMACIÓN PARA "TODAS" -->
+  <!-- MODAL DE CONFIRMACIÓN PARA "TODAS" -->
   <div id="confirmTodasModal" class="modal-overlay" style="display: none;">
     <div class="modal-content modal-warning">
       <div class="modal-header-warning">
         <span style="font-size: 2rem;">⚠️</span>
-        <h3>CONFIRMA EXPORTACIÓN A "TODAS"</h3>
+        <h3>CONFIRMA EXPORTACIÓN MASIVA</h3>
       </div>
-      
-      <div class="modal-body">
-        <div class="info-box">
-          <strong>📦 Archivo destino:</strong><br>
-          "Super Contable - TODAS"
+      <div class="modal-body" style="padding: 1.5rem;">
+        <div class="info-box" style="background:#f3f4f6; padding:1rem; border-radius:8px; margin-bottom:1rem;">
+          <strong>📦 Archivo destino:</strong> "Super Contable - TODAS"
         </div>
-        
-        <div class="info-box">
-          <strong>📊 Facturas a exportar:</strong> <span id="todasFacturasCount">0</span>
+        <div class="info-box" style="background:#f3f4f6; padding:1rem; border-radius:8px; margin-bottom:1rem;">
+          <strong>📊 Facturas detectadas:</strong> <span id="todasFacturasCount">0</span>
         </div>
-        
-        <div class="warning-box">
-          ⚠️ Este archivo es compartido y se actualizará en Google Drive
+        <div class="warning-box" style="background:#fef3c7; border:2px solid #fbbf24; padding:1rem; border-radius:8px; color:#92400e; font-weight:600; text-align:center; margin-bottom:1rem;">
+          ⚠️ Este proceso consolidará múltiples empresas en una sola hoja compartida.
         </div>
-        
-        <label class="checkbox-confirm">
-          <input type="checkbox" id="checkConfirmTodas">
-          <span>Confirmo que revisé el filtro y quiero exportar a TODAS</span>
+        <label class="checkbox-confirm" style="display:flex; align-items:center; gap:0.75rem; cursor:pointer; padding:0.5rem;">
+          <input type="checkbox" id="checkConfirmTodas" style="width:20px; height:20px;">
+          <span style="font-weight:600;">Confirmo que quiero exportar a TODAS</span>
         </label>
       </div>
-      
       <div class="modal-footer">
-        <button class="btn-secondary" onclick="cerrarModalConfirmTodas()">
-          Cancelar
-        </button>
-        <button id="btnConfirmarTodas" class="btn-primary" disabled onclick="confirmarExportTodas()">
-          Exportar TODAS
-        </button>
+        <button class="btn btn-secondary" onclick="cerrarModalConfirmTodas()">Cancelar</button>
+        <button id="btnConfirmarTodas" class="btn-primary" disabled onclick="confirmarExportTodas()">Exportar TODAS</button>
       </div>
     </div>
   </div>
 
-  <!-- MODAL DE DUPLICADOS -->
+  <!-- MODAL DE DUPLICADOS (RESTAURADO COMPLETO) -->
   <div id="duplicadosModal" class="modal-duplicados">
     <div class="modal-duplicados-content">
       <div class="modal-duplicados-header">
-        <h3>⚠️ COMPARACIÓN DE DUPLICADOS</h3>
+        <h3>⚠️ COMPARACIÓN DE DUPLICADOS (NCF: <span id="duplicadoNCF"></span>)</h3>
         <button class="modal-close" onclick="cerrarModalDuplicados()">×</button>
       </div>
-      
-      <div class="modal-duplicados-body">
-        
-        <!-- FACTURA 1 -->
+      <div class="modal-duplicados-body" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; padding: 1rem;">
         <div class="factura-comparacion">
-          <div class="factura-comparacion-header">
-            <h4 id="factura1Title">FACTURA A</h4>
-          </div>
+          <div class="factura-comparacion-header"><h4>FACTURA A</h4></div>
           <div class="factura-comparacion-content">
-            <div class="comparacion-imagen">
-              <img id="factura1Imagen" src="" alt="Factura A">
-            </div>
+            <div class="comparacion-imagen"><img id="factura1Imagen" src="" alt="Factura A"></div>
             <div class="comparacion-datos">
-              <div class="dato-row"><span class="dato-label">Fecha:</span><span id="factura1Fecha" class="dato-value">--</span></div>
-              <div class="dato-row"><span class="dato-label">NCF:</span><span id="factura1NCF" class="dato-value highlight-danger">--</span></div>
-              <div class="dato-row"><span class="dato-label">Monto:</span><span id="factura1Total" class="dato-value">--</span></div>
-              <div class="dato-row"><span class="dato-label">Proveedor:</span><span id="factura1Proveedor" class="dato-value">--</span></div>
+              <div class="dato-row"><span class="dato-label">Fecha:</span><span id="factura1Fecha" class="dato-value"></span></div>
+              <div class="dato-row"><span class="dato-label">NCF:</span><span id="factura1NCF" class="dato-value highlight-danger"></span></div>
+              <div class="dato-row"><span class="dato-label">Monto:</span><span id="factura1Total" class="dato-value"></span></div>
+              <div class="dato-row"><span class="dato-label">Proveedor:</span><span id="factura1Proveedor" class="dato-value"></span></div>
             </div>
           </div>
-          <button class="btn btn-danger btn-block" id="btnEliminar1">🗑️ Eliminar</button>
+          <button class="btn btn-danger btn-block" id="btnEliminar1" style="width:100%;">🗑️ Eliminar esta</button>
         </div>
-
-        <!-- FACTURA 2 -->
         <div class="factura-comparacion">
-          <div class="factura-comparacion-header">
-            <h4 id="factura2Title">FACTURA B</h4>
-          </div>
+          <div class="factura-comparacion-header"><h4>FACTURA B</h4></div>
           <div class="factura-comparacion-content">
-            <div class="comparacion-imagen">
-              <img id="factura2Imagen" src="" alt="Factura B">
-            </div>
+            <div class="comparacion-imagen"><img id="factura2Imagen" src="" alt="Factura B"></div>
             <div class="comparacion-datos">
-              <div class="dato-row"><span class="dato-label">Fecha:</span><span id="factura2Fecha" class="dato-value">--</span></div>
-              <div class="dato-row"><span class="dato-label">NCF:</span><span id="factura2NCF" class="dato-value highlight-danger">--</span></div>
-              <div class="dato-row"><span class="dato-label">Monto:</span><span id="factura2Total" class="detail-value">--</span></div>
-              <div class="dato-row"><span class="dato-label">Proveedor:</span><span id="factura2Proveedor" class="dato-value">--</span></div>
+              <div class="dato-row"><span class="dato-label">Fecha:</span><span id="factura2Fecha" class="dato-value"></span></div>
+              <div class="dato-row"><span class="dato-label">NCF:</span><span id="factura2NCF" class="dato-value highlight-danger"></span></div>
+              <div class="dato-row"><span class="dato-label">Monto:</span><span id="factura2Total" class="dato-value"></span></div>
+              <div class="dato-row"><span class="dato-label">Proveedor:</span><span id="factura2Proveedor" class="dato-value"></span></div>
             </div>
           </div>
-          <button class="btn btn-danger btn-block" id="btnEliminar2">🗑️ Eliminar</button>
+          <button class="btn btn-danger btn-block" id="btnEliminar2" style="width:100%;">🗑️ Eliminar esta</button>
         </div>
-
       </div>
-
       <div class="modal-duplicados-footer">
-        <span style="margin-right:auto; color:#64748b; font-size:0.85rem;">🔴 El sistema detectó el mismo NCF en ambas.</span>
         <button class="btn btn-outline" onclick="cerrarModalDuplicados()">Cancelar</button>
-        <button class="btn btn-primary" onclick="mantenerAmbasDuplicadas()">✅ Ignorar y Mantener Ambas</button>
+        <button class="btn btn-primary" onclick="mantenerAmbasDuplicadas()">✅ Mantener Ambas</button>
       </div>
     </div>
   </div>
 
-  <!-- MODAL SOSPECHOSAS -->
+  <!-- MODAL SOSPECHOSAS (RESTAURADO COMPLETO) -->
   <div id="sospechosasModal" class="modal-duplicados">
     <div class="modal-duplicados-content">
       <div class="modal-duplicados-header" style="border-bottom: 2px solid #fcd34d;">
         <h3 style="color: #b45309;">🟡 COMPARACIÓN DE SOSPECHOSAS</h3>
         <button class="modal-close" onclick="cerrarModalSospechosas()">×</button>
       </div>
-      
-      <div class="modal-duplicados-body">
-        
-        <!-- FACTURA 1 -->
+      <div class="modal-duplicados-body" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; padding: 1rem;">
         <div class="factura-comparacion">
-          <div class="factura-comparacion-header">
-            <h4 id="sospechosa1Title">FACTURA A</h4>
-          </div>
+          <div class="factura-comparacion-header"><h4>FACTURA A</h4></div>
           <div class="factura-comparacion-content">
-            <div class="comparacion-imagen">
-              <img id="sospechosa1Imagen" src="" alt="Factura A">
-            </div>
+            <div class="comparacion-imagen"><img id="sospechosa1Imagen" src=""></div>
             <div class="comparacion-datos">
-              <div class="dato-row"><span class="dato-label">Fecha:</span><span id="sospechosa1Fecha" class="dato-value">--</span></div>
-              <div class="dato-row"><span class="dato-label">NCF:</span><span id="sospechosa1NCF" class="dato-value">--</span></div>
-              <div class="dato-row"><span class="dato-label">Monto:</span><span id="sospechosa1Total" class="dato-value highlight-danger">--</span></div>
-              <div class="dato-row"><span class="dato-label">Proveedor:</span><span id="sospechosa1Proveedor" class="dato-value">--</span></div>
+              <div class="dato-row"><span class="dato-label">NCF:</span><span id="sospechosa1NCF" class="dato-value"></span></div>
+              <div class="dato-row"><span class="dato-label">Monto:</span><span id="sospechosa1Total" class="dato-value"></span></div>
             </div>
           </div>
-          <button class="btn btn-danger btn-block" id="btnEliminarSosp1">🗑️ Eliminar</button>
+          <button class="btn btn-danger btn-block" id="btnEliminarSosp1" style="width:100%;">🗑️ Eliminar</button>
         </div>
-
-        <!-- FACTURA 2 -->
         <div class="factura-comparacion">
-          <div class="factura-comparacion-header">
-            <h4 id="sospechosa2Title">FACTURA B</h4>
-          </div>
+          <div class="factura-comparacion-header"><h4>FACTURA B</h4></div>
           <div class="factura-comparacion-content">
-            <div class="comparacion-imagen">
-              <img id="sospechosa2Imagen" src="" alt="Factura B">
-            </div>
+            <div class="comparacion-imagen"><img id="sospechosa2Imagen" src=""></div>
             <div class="comparacion-datos">
-              <div class="dato-row"><span class="dato-label">Fecha:</span><span id="sospechosa2Fecha" class="dato-value">--</span></div>
-              <div class="dato-row"><span class="dato-label">NCF:</span><span id="sospechosa2NCF" class="dato-value">--</span></div>
-              <div class="dato-row"><span class="dato-label">Monto:</span><span id="sospechosa2Total" class="dato-value highlight-danger">--</span></div>
-              <div class="dato-row"><span class="dato-label">Proveedor:</span><span id="sospechosa2Proveedor" class="dato-value">--</span></div>
+              <div class="dato-row"><span class="dato-label">NCF:</span><span id="sospechosa2NCF" class="dato-value"></span></div>
+              <div class="dato-row"><span class="dato-label">Monto:</span><span id="sospechosa2Total" class="dato-value"></span></div>
             </div>
           </div>
-          <button class="btn btn-danger btn-block" id="btnEliminarSosp2">🗑️ Eliminar</button>
+          <button class="btn btn-danger btn-block" id="btnEliminarSosp2" style="width:100%;">🗑️ Eliminar</button>
         </div>
       </div>
-
       <div class="modal-duplicados-footer">
-        <span style="margin-right:auto; color:#b45309; font-size:0.85rem;">🟡 Mismo proveedor, fecha y monto. ¿Doble cobro?</span>
-        <button class="btn btn-outline" onclick="marcarComoRevisadas()">✓ Marcar como Revisadas</button>
-        <button class="btn btn-primary" onclick="mantenerAmbas()">✅ Son Compras Diferentes</button>
+        <button class="btn btn-outline" onclick="cerrarModalSospechosas()">Cancelar</button>
+        <button class="btn btn-primary" onclick="mantenerAmbas()">✅ Son Diferentes</button>
       </div>
     </div>
   </div>
