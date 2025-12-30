@@ -578,7 +578,7 @@ function updateStatusBar() {
 }
 
 // ============================================
-// EXPORTACIÓN (MODAL UNIFICADO)
+// EXPORTACIÓN (MODAL UNIFICADO - LÓGICA POKA-YOKE)
 // ============================================
 
 function abrirModalExportar(modo = 'csv') {
@@ -589,6 +589,9 @@ function abrirModalExportar(modo = 'csv') {
   
   btnCSV.style.display = 'none';
   btnSheets.style.display = 'none';
+
+  // Lógica: Sheets -> Rígido | CSV -> Flexible
+  const checkAttr = (modo === 'sheets') ? 'checked disabled' : 'checked';
 
   if (modo === 'sheets') {
     btnSheets.style.display = 'block';
@@ -608,7 +611,6 @@ function abrirModalExportar(modo = 'csv') {
   
   if (filtroEmpresaActivo && filtroEmpresaActivo !== '') {
     select.value = filtroEmpresaActivo;
-    
     const opcionTodas = select.querySelector('option[value="TODAS"]');
     if (opcionTodas) {
       opcionTodas.disabled = true;
@@ -625,17 +627,18 @@ function abrirModalExportar(modo = 'csv') {
   }
   
   const grid = document.querySelector('.columns-grid');
+  // Se eliminó 'empresa_nombre' para limpiar la data
   grid.innerHTML = `
-    <label><input type="checkbox" checked value="fecha_factura"> Fecha</label>
-    <label><input type="checkbox" checked value="rnc"> RNC</label>
-    <label><input type="checkbox" checked value="ncf"> NCF</label>
-    <label><input type="checkbox" checked value="tipo_ncf"> Tipo (B01)</label>
-    <label><input type="checkbox" checked value="proveedor"> Proveedor</label>
-    <label><input type="checkbox" checked value="tipo_gasto"> Tipo Gasto</label>
-    <label><input type="checkbox" checked value="forma_pago"> Forma Pago</label>
-    <label><input type="checkbox" checked value="itbis"> ITBIS</label>
-    <label><input type="checkbox" checked value="total_pagado"> Total</label>
-    <label><input type="checkbox" value="drive_url"> Link Factura</label>
+    <label><input type="checkbox" ${checkAttr} value="fecha_factura"> Fecha</label>
+    <label><input type="checkbox" ${checkAttr} value="rnc"> RNC</label>
+    <label><input type="checkbox" ${checkAttr} value="ncf"> NCF</label>
+    <label><input type="checkbox" ${checkAttr} value="tipo_ncf"> Tipo (B01)</label>
+    <label><input type="checkbox" ${checkAttr} value="proveedor"> Proveedor</label>
+    <label><input type="checkbox" ${checkAttr} value="tipo_gasto"> Tipo Gasto</label>
+    <label><input type="checkbox" ${checkAttr} value="forma_pago"> Forma Pago</label>
+    <label><input type="checkbox" ${checkAttr} value="itbis"> ITBIS</label>
+    <label><input type="checkbox" ${checkAttr} value="total_pagado"> Total</label>
+    <label><input type="checkbox" ${checkAttr} value="drive_url"> Link Factura</label>
   `;
 
   modal.classList.add('show');
