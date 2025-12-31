@@ -35,9 +35,10 @@ class User {
       let query = 'SELECT * FROM users WHERE 1=1';
       const params = [];
 
-      if (filters.rol) {
-        query += ' AND rol = ?';
-        params.push(filters.rol);
+      // Sincronización: Usamos 'role' para coincidir con el Schema
+      if (filters.role || filters.rol) {
+        query += ' AND role = ?';
+        params.push(filters.role || filters.rol);
       }
 
       if (filters.contable_id) {
@@ -55,20 +56,21 @@ class User {
   static create(userData) {
     return new Promise((resolve, reject) => {
       const db = getDatabase();
-      // Ajuste quirúrgico: Extraemos 'password' por si viene del controlador
-      // y lo asignamos a 'password_hash' que es lo que pide la DB
-      const { email, password, password_hash, nombre_completo, rol, contable_id } = userData;
       
-      const finalPassword = password_hash || password;
+      // Sincronización con Schema: email, password, role, contable_id
+      const { email, password, password_hash, role, rol, contable_id } = userData;
+      
+      const finalPassword = password || password_hash;
+      const finalRole = role || rol || 'contable';
 
       if (!finalPassword) {
         return reject(new Error('La contraseña es obligatoria'));
       }
 
       db.run(
-        `INSERT INTO users (email, password_hash, nombre_completo, rol, contable_id)
-         VALUES (?, ?, ?, ?, ?)`,
-        [email, finalPassword, nombre_completo, rol, contable_id || null],
+        `INSERT INTO users (email, password, role, contable_id)
+          VALUES (?, ?, ?, ?)`,
+        [email, finalPassword, finalRole, contable_id || null],
         function(err) {
           if (err) reject(err);
           else resolve({ id: this.lastID, ...userData });
@@ -85,7 +87,9 @@ class User {
 
       Object.keys(updates).forEach(key => {
         if (updates[key] !== undefined) {
-          fields.push(`${key} = ?`);
+          // Mapeo automático de rol -> role si viene del frontend viejo
+          const dbKey = key === 'rol' ? 'role' : key;
+          fields.push(`${dbKey} = ?`);
           values.push(updates[key]);
         }
       });

@@ -23,9 +23,11 @@ function generarCodigoAutomatico(nombre) {
 }
 
 const getDashboard = asyncHandler(async (req, res) => {
-  const contableId = req.user.rol === 'contable' ? req.user.userId : req.user.contableId;
+  // Sincronización: req.user.role
+  const contableId = req.user.role === 'contable' ? req.user.userId : req.user.contableId;
   const empresas = await Empresa.findByContableId(contableId);
-  const asistentes = await User.findAll({ contable_id: contableId, rol: 'asistente' });
+  // Sincronización: role: 'asistente'
+  const asistentes = await User.findAll({ contable_id: contableId, role: 'asistente' });
   const facturaStats = await Factura.getStatsByContableId(contableId);
 
   res.json({
@@ -43,7 +45,7 @@ const getDashboard = asyncHandler(async (req, res) => {
 });
 
 const getEmpresas = asyncHandler(async (req, res) => {
-  const contableId = req.user.rol === 'contable' ? req.user.userId : req.user.contableId;
+  const contableId = req.user.role === 'contable' ? req.user.userId : req.user.contableId;
   const empresas = await Empresa.findByContableId(contableId);
   const empresasWithStats = await Promise.all(
     empresas.map(async (empresa) => {
@@ -55,7 +57,7 @@ const getEmpresas = asyncHandler(async (req, res) => {
 });
 
 const createEmpresa = asyncHandler(async (req, res) => {
-  const contableId = req.user.rol === 'contable' ? req.user.userId : req.user.contableId;
+  const contableId = req.user.role === 'contable' ? req.user.userId : req.user.contableId;
   const { nombre, rnc } = req.body;
   if (!nombre) return res.status(400).json({ success: false, message: 'El nombre es obligatorio' });
   const codigo_corto = generarCodigoAutomatico(nombre);
@@ -66,10 +68,10 @@ const createEmpresa = asyncHandler(async (req, res) => {
 
 const updateEmpresa = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const contableId = req.user.rol === 'contable' ? req.user.userId : req.user.contableId;
+  const contableId = req.user.role === 'contable' ? req.user.userId : req.user.contableId;
   const empresa = await Empresa.findById(id);
   if (!empresa) return res.status(404).json({ success: false, message: 'Empresa no encontrada' });
-  if (empresa.contable_id !== contableId && req.user.rol !== 'super_admin') {
+  if (empresa.contable_id !== contableId && req.user.role !== 'super_admin') {
     return res.status(403).json({ success: false, message: 'Acceso denegado' });
   }
   await Empresa.update(id, req.body);
@@ -77,7 +79,7 @@ const updateEmpresa = asyncHandler(async (req, res) => {
 });
 
 const getFacturas = asyncHandler(async (req, res) => {
-  const contableId = req.user.rol === 'contable' ? req.user.userId : req.user.contableId;
+  const contableId = req.user.role === 'contable' ? req.user.userId : req.user.contableId;
   const { estado, empresa_id } = req.query;
   const facturas = await Factura.findByContableId(contableId, { estado, empresa_id: empresa_id ? parseInt(empresa_id) : undefined });
   res.json({ success: true, data: facturas });
@@ -103,28 +105,29 @@ const updateFactura = asyncHandler(async (req, res) => {
 
 const deleteFactura = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const contableId = req.user.rol === 'contable' ? req.user.userId : req.user.contableId;
+  const contableId = req.user.role === 'contable' ? req.user.userId : req.user.contableId;
   const db = getDatabase();
 
-  const factura = db.prepare(`
-    SELECT f.* FROM facturas f
+  // Cambiado a callback de DB para evitar problemas de sincronización en delete directo
+  db.get(`
+    SELECT f.id FROM facturas f
     JOIN empresas e ON f.empresa_id = e.id
     WHERE f.id = ? AND e.contable_id = ?
-  `).get(id, contableId);
-
-  if (!factura) {
-    return res.status(404).json({ 
-      success: false, 
-      message: 'Factura no encontrada o no tienes permiso para eliminarla' 
+  `, [id, contableId], (err, factura) => {
+    if (!factura) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'Factura no encontrada o no tienes permiso para eliminarla' 
+        });
+    }
+    db.run('DELETE FROM facturas WHERE id = ?', [id], (err) => {
+        if (err) return res.status(500).json({ success: false, message: 'Error al eliminar' });
+        res.json({
+            success: true,
+            message: 'Factura eliminada correctamente',
+            data: { id: parseInt(id) }
+        });
     });
-  }
-
-  db.prepare('DELETE FROM facturas WHERE id = ?').run(id);
-
-  res.json({
-    success: true,
-    message: 'Factura eliminada correctamente',
-    data: { id: parseInt(id) }
   });
 });
 
@@ -135,7 +138,7 @@ const getSugerenciaGasto = asyncHandler(async (req, res) => {
   }
 
   const db = getDatabase();
-  const sugerencia = db.prepare(`
+  db.get(`
     SELECT tipo_gasto, COUNT(*) as veces 
     FROM facturas 
     WHERE proveedor = ? 
@@ -144,11 +147,11 @@ const getSugerenciaGasto = asyncHandler(async (req, res) => {
     GROUP BY tipo_gasto 
     ORDER BY veces DESC 
     LIMIT 1
-  `).get(proveedor);
-
-  res.json({
-    success: true,
-    data: sugerencia || null
+  `, [proveedor], (err, sugerencia) => {
+      res.json({
+        success: true,
+        data: sugerencia || null
+      });
   });
 });
 
@@ -172,9 +175,6 @@ const procesarLoteFacturas = asyncHandler(async (req, res) => {
   });
 });
 
-/**
- * ✅ FUNCIÓN AGREGADA: Exportar a Google Sheets
- */
 const exportarASheets = asyncHandler(async (req, res) => {
     const { empresa_nombre, periodo_mes, periodo_anio, columnas, facturas } = req.body;
     const userId = req.user.userId;
@@ -183,7 +183,6 @@ const exportarASheets = asyncHandler(async (req, res) => {
         return res.status(400).json({ success: false, message: 'No hay datos para exportar' });
     }
 
-    // 1. Obtener credenciales del usuario
     const user = await User.findById(userId);
     if (!user || !user.drive_refresh_token) {
         return res.status(401).json({ 
@@ -194,7 +193,6 @@ const exportarASheets = asyncHandler(async (req, res) => {
     }
 
     try {
-        // 2. Configurar cliente OAuth
         const oauth2Client = new google.auth.OAuth2(
             process.env.GOOGLE_CLIENT_ID,
             process.env.GOOGLE_CLIENT_SECRET,
@@ -206,27 +204,13 @@ const exportarASheets = asyncHandler(async (req, res) => {
             access_token: user.drive_access_token
         });
 
-        // Refrescar token si es necesario
         await oauth2Client.getAccessToken();
 
-        // 3. Preparar nombres
         const spreadsheetName = `Super Contable - ${empresa_nombre || 'Todas las Empresas'}`;
-        
-        // ✅ DEBUG: Ver qué nombre está llegando
-        console.log('🔍 NOMBRE SPREADSHEET:', spreadsheetName);
-        console.log('🔍 EMPRESA RECIBIDA:', empresa_nombre);
-        
-        // Formato Pestaña: "Dic 2025"
         const mesNombre = new Date(2000, parseInt(periodo_mes) - 1, 1).toLocaleString('es', { month: 'short' });
-        // Capitalizar primera letra: dic -> Dic
         const mesCapitalizado = mesNombre.charAt(0).toUpperCase() + mesNombre.slice(1);
         const sheetName = `${mesCapitalizado} ${periodo_anio}`;
 
-        // 4. Preparar Datos (Array de Arrays para Sheets)
-        // El frontend ya envía los datos formateados (fechas, montos, traducciones) dentro de 'facturas'
-        // 'columnas' son las claves (keys) que queremos extraer en orden.
-        
-        // Mapeo de encabezados bonitos (Header Row)
         const headerMap = {
             'fecha_factura': 'Fecha',
             'empresa_nombre': 'Empresa',
@@ -245,24 +229,13 @@ const exportarASheets = asyncHandler(async (req, res) => {
         const dataRows = facturas.map(f => {
             return columnas.map(col => {
                 let val = f[col];
-                // Asegurar que null/undefined sea string vacío
                 if (val === null || val === undefined) return '';
                 return String(val);
             });
         });
 
-        // 5. Llamar al servicio de Sheets
         const sheetInfo = await googleSheetsService.getOrCreateSpreadsheet(oauth2Client, spreadsheetName);
-        
-        // Escribir: Encabezados + Datos
         await googleSheetsService.writeToSheet(oauth2Client, sheetInfo.id, sheetName, headerRow, dataRows);
-
-        // 6. Guardar registro de exportación en BD
-        const db = getDatabase();
-        db.run(`
-            INSERT INTO exportaciones (contable_id, periodo_mes, periodo_anio, spreadsheet_id, spreadsheet_url)
-            VALUES (?, ?, ?, ?, ?)
-        `, [userId, periodo_mes, periodo_anio, sheetInfo.id, sheetInfo.url]);
 
         res.json({
             success: true,
@@ -275,15 +248,6 @@ const exportarASheets = asyncHandler(async (req, res) => {
 
     } catch (error) {
         console.error('Error exportando a Sheets:', error);
-        
-        if (error.message.includes('insufficient authentication') || error.code === 403) {
-             return res.status(403).json({ 
-                success: false, 
-                error: 'scope_required',
-                message: 'Se requieren permisos adicionales para Hojas de Cálculo.' 
-            });
-        }
-        
         res.status(500).json({ success: false, message: 'Error técnico al exportar: ' + error.message });
     }
 });
@@ -294,17 +258,29 @@ const createAsistente = asyncHandler(async (req, res) => {
   const contableId = req.user.userId;
   const { email, password, nombre_completo } = req.body;
   if (!email || !password || !nombre_completo) return res.status(400).json({ success: false, message: 'Faltan datos requeridos' });
+  
   const existingUser = await User.findByEmail(email);
   if (existingUser) return res.status(409).json({ success: false, message: 'El email ya existe' });
+  
   const salt = await bcrypt.genSalt(10);
-  const password_hash = await bcrypt.hash(password, salt);
-  const result = await User.create({ email, password_hash, nombre_completo, rol: 'asistente', contable_id: contableId });
+  const hashedPassword = await bcrypt.hash(password, salt);
+  
+  // Sincronización: password en lugar de password_hash, role en lugar de rol
+  const result = await User.create({ 
+    email, 
+    password: hashedPassword, 
+    nombre_completo, 
+    role: 'asistente', 
+    contable_id: contableId 
+  });
+  
   res.status(201).json({ success: true, data: await User.findById(result.id) });
 });
 
 const getAsistentes = asyncHandler(async (req, res) => {
   const contableId = req.user.userId;
-  const asistentes = await User.findAll({ contable_id: contableId, rol: 'asistente' });
+  // Sincronización: role: 'asistente'
+  const asistentes = await User.findAll({ contable_id: contableId, role: 'asistente' });
   res.json({ success: true, data: asistentes });
 });
 
@@ -313,13 +289,16 @@ const updateAsistente = asyncHandler(async (req, res) => {
   const contableId = req.user.userId;
   const { email, password, nombre_completo } = req.body;
   const asistente = await User.findById(id);
+  
   if (!asistente) return res.status(404).json({ success: false, message: 'Asistente no encontrado' });
   if (asistente.contable_id !== contableId) return res.status(403).json({ success: false, message: 'No tienes permiso para editar este asistente' });
+  
   const updates = { email, nombre_completo };
   if (password && password.trim() !== '') {
     const salt = await bcrypt.genSalt(10);
-    updates.password_hash = await bcrypt.hash(password, salt);
+    updates.password = await bcrypt.hash(password, salt);
   }
+  
   await User.update(id, updates);
   res.json({ success: true, data: await User.findById(id) });
 });
@@ -338,6 +317,7 @@ const assignEmpresasToAsistente = asyncHandler(async (req, res) => {
   const { empresasIds } = req.body;
   const db = getDatabase();
   if (!Array.isArray(empresasIds)) return res.status(400).json({ success: false, message: 'Se requiere un array de IDs de empresas' });
+  
   db.serialize(() => {
     db.run('BEGIN TRANSACTION');
     db.run('DELETE FROM asistente_empresas WHERE asistente_id = ?', [id]);

@@ -2,8 +2,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Verificación de sesión existente
   if (isAuthenticated()) {
     const user = getUser();
-    if (user && user.rol) {
-      redirectToDashboard(user.rol);
+    if (user && user.role) {
+      redirectToDashboard(user.role);
     }
   }
 
@@ -71,7 +71,7 @@ async function handleLogin(e) {
       showToast('Inicio de sesión exitoso', 'success');
 
       setTimeout(() => {
-        redirectToDashboard(response.data.user.rol);
+        redirectToDashboard(response.data.user.role);
       }, 500);
     } else {
       throw new Error(response.message || 'Credenciales incorrectas');

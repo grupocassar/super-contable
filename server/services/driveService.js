@@ -2,16 +2,18 @@ const { google } = require('googleapis');
 const stream = require('stream');
 
 /**
- * Sube un archivo a Google Drive usando las credenciales del Contable (OAuth)
- * @param {Object} authClient - Cliente OAuth2 autenticado del usuario
- * @param {Buffer} fileBuffer - Datos de la imagen
- * @param {string} fileName - Nombre del archivo
- * @param {string} mimeType - Tipo (image/jpeg, application/pdf)
+ * Sube un archivo al Drive del CONTABLE usando su propio token (OAuth2)
+ * @param {Object} authClient - Cliente OAuth2 ya autenticado con el token del contable
+ * @param {Buffer} fileBuffer - Datos binarios de la imagen/documento
+ * @param {string} fileName - Nombre descriptivo para el archivo
+ * @param {string} mimeType - Tipo de archivo (default: image/jpeg)
  */
 const uploadToDrive = async (authClient, fileBuffer, fileName, mimeType = 'image/jpeg') => {
     try {
+        // Inicializamos Drive con el cliente que ya trae el token del contable
         const drive = google.drive({ version: 'v3', auth: authClient });
 
+        // Convertimos el Buffer a Stream (Método eficiente para Node.js)
         const bufferStream = new stream.PassThrough();
         bufferStream.end(fileBuffer);
 
@@ -20,24 +22,22 @@ const uploadToDrive = async (authClient, fileBuffer, fileName, mimeType = 'image
             body: bufferStream
         };
 
-        // 1. Crear carpeta "Super Contable" si no existe (Opcional, por ahora a la raíz para simplificar)
-        // Para este MVP subimos a la raíz del Drive del usuario o a una carpeta específica si configuramos ID
         const fileMetadata = {
-            name: fileName,
-            // parents: ['ID_CARPETA'] // Si quisieras una carpeta fija, pero mejor dejar que caiga en su Drive
+            name: fileName
         };
 
-        // 2. Subir Archivo
+        // 1. Crear el archivo en la cuenta de Google Drive del contable
         const response = await drive.files.create({
             resource: fileMetadata,
             media: media,
-            fields: 'id, webViewLink, webContentLink'
+            fields: 'id, webViewLink'
         });
 
         const fileId = response.data.id;
-        console.log(`☁️ Archivo subido a Drive del Contable. ID: ${fileId}`);
+        console.log(`☁️ Archivo subido con éxito al Drive del Contable. ID: ${fileId}`);
 
-        // 3. Hacerlo visible (Permiso público de lectura para que el link funcione en el Excel a terceros)
+        // 2. Aplicar permisos de visualización
+        // Esto permite que el link de previsualización funcione en el panel del asistente
         await drive.permissions.create({
             fileId: fileId,
             requestBody: {
@@ -46,11 +46,11 @@ const uploadToDrive = async (authClient, fileBuffer, fileName, mimeType = 'image
             }
         });
 
-        // 4. Retornar URL Web (Esta es la que saldrá en el Excel)
+        // 3. Retornar el link directo (Formato de visualización universal)
         return `https://drive.google.com/uc?export=view&id=${fileId}`;
 
     } catch (error) {
-        console.error('❌ Error subiendo a Drive con OAuth:', error.message);
+        console.error('❌ Error en Drive Service (OAuth Flow):', error.message);
         throw error;
     }
 };

@@ -3,32 +3,38 @@ const axios = require('axios');
 const { google } = require('googleapis'); 
 const { getDatabase } = require('../config/database');
 const { uploadToDrive } = require('./driveService');
+const { procesarFacturaConGemini } = require('./geminiService');
+const Factura = require('../models/Factura');
 
 let bot;
 const processingQueue = new Set();
 
+/**
+ * Inicializa el Bot de Telegram con lógica de identificación de usuario y procesamiento IA.
+ */
 const initTelegramBot = () => {
     const token = process.env.TELEGRAM_BOT_TOKEN;
     if (!token) {
-        console.warn('⚠️ TELEGRAM_BOT_TOKEN no encontrado.');
+        console.warn('⚠️ TELEGRAM_BOT_TOKEN no encontrado en el entorno.');
         return;
     }
 
     bot = new TelegramBot(token, { polling: true });
-    console.log('🤖 Super Contable Bot: ONLINE (Modo OAuth Robusto)...');
+    console.log('🤖 Super Contable Bot: ONLINE (Modo OAuth2 + IA)...');
 
     bot.on('polling_error', (error) => console.error(`[Telegram Error] ${error.message}`));
 
     bot.on('message', async (msg) => {
         const chatId = msg.chat.id;
         const telegramId = msg.from.id.toString();
-        const username = msg.from.username || '';
         const firstName = msg.from.first_name || 'Usuario';
         
+        // Verificamos si es foto o documento (PDF/Imagen)
         const isPhoto = msg.photo && msg.photo.length > 0;
         const isDoc = msg.document;
 
         if (isPhoto || isDoc) {
+            // Evitar procesar mensajes duplicados
             if (processingQueue.has(msg.message_id)) return;
             processingQueue.add(msg.message_id);
 
@@ -37,22 +43,18 @@ const initTelegramBot = () => {
             try {
                 const db = getDatabase();
                 
-                // 1. Identificar Usuario y Empresa
-                const usuarioTG = await registrarUsuarioTelegram(db, telegramId, username, firstName);
+                // 1. Identificar al Usuario de Telegram y su Empresa
+                const usuarioTG = await registrarUsuarioTelegram(db, telegramId, msg.from.username || '', firstName);
                 const empresaId = usuarioTG.empresa_id || 1; 
 
-                // 2. BUSCAR AL CONTABLE
+                // 2. Buscar al Contable responsable de la empresa para usar su Drive
                 const contable = await obtenerContableDeEmpresa(db, empresaId);
 
-                if (!contable) {
-                    throw new Error('No se encontró un contable asignado a esta empresa.');
+                if (!contable || !contable.drive_refresh_token) {
+                    throw new Error('El contable no ha vinculado su cuenta de Google Drive.');
                 }
 
-                if (!contable.drive_refresh_token) {
-                    throw new Error('El sistema de almacenamiento no está configurado.');
-                }
-
-                // 3. CONFIGURAR CLIENTE OAUTH
+                // 3. Configurar el Cliente OAuth2 con las credenciales del contable
                 const oauth2Client = new google.auth.OAuth2(
                     process.env.GOOGLE_CLIENT_ID,
                     process.env.GOOGLE_CLIENT_SECRET,
@@ -63,19 +65,7 @@ const initTelegramBot = () => {
                     refresh_token: contable.drive_refresh_token
                 });
 
-                // Validar/Refrescar Token
-                try {
-                    const tokenInfo = await oauth2Client.getAccessToken();
-                    if (!tokenInfo || !tokenInfo.token) {
-                        throw new Error('Fallo de autenticación con la nube.');
-                    }
-                    oauth2Client.setCredentials({ access_token: tokenInfo.token });
-                } catch (authError) {
-                    console.error('❌ Error Auth Google:', authError.message);
-                    throw new Error('La conexión con la nube ha caducado.');
-                }
-
-                // 4. Descargar imagen
+                // 4. Descargar el archivo desde los servidores de Telegram
                 let fileId, mimeType, ext;
                 if (isPhoto) {
                     fileId = msg.photo[msg.photo.length - 1].file_id;
@@ -91,55 +81,69 @@ const initTelegramBot = () => {
                 const response = await axios.get(fileLink, { responseType: 'arraybuffer' });
                 const fileBuffer = Buffer.from(response.data);
 
-                // 5. SUBIR A DRIVE
-                const fileName = `factura_${firstName}_${Date.now()}.${ext}`;
-                console.log(`☁️ Subiendo a Drive de: ${contable.email}...`);
-                
+                // 5. PROCESAMIENTO IA (Gemini extrae los datos para el 606)
+                console.log(`🧠 IA analizando factura de ${firstName} para Empresa ID: ${empresaId}...`);
+                let geminiData = {};
+                try {
+                    const base64Image = fileBuffer.toString('base64');
+                    geminiData = await procesarFacturaConGemini(base64Image, mimeType);
+                } catch (iaError) {
+                    console.error('⚠️ Fallo la extracción IA:', iaError.message);
+                }
+
+                // 6. SUBIR A DRIVE (Usando el Drive personal del contable)
+                const fileName = `Factura_${firstName}_${Date.now()}.${ext}`;
                 const driveLink = await uploadToDrive(oauth2Client, fileBuffer, fileName, mimeType);
 
-                // 6. Guardar en BD
-                let notas = ""; 
-                let proveedorTemp = `TG: ${firstName}`; 
+                // 7. GUARDAR EN BD (Mapeo de los 23 campos fiscales)
+                let notas = geminiData.confidence_score < 80 ? "⚠️ Revisar datos (Baja confianza IA)" : ""; 
+                if (!usuarioTG.empresa_id) notas = "⚠️ USUARIO NO VINCULADO A EMPRESA";
 
-                if (!usuarioTG.empresa_id) {
-                    notas = "⚠️ USUARIO NO VINCULADO";
-                    proveedorTemp += " (Sin Vincular)";
-                }
+                const facturaData = {
+                    empresa_id: empresaId,
+                    telegram_user_id: usuarioTG.id,
+                    telegram_message_id: msg.message_id,
+                    fecha_factura: geminiData.fecha_factura || null,
+                    rnc: geminiData.rnc || null,
+                    ncf: geminiData.ncf || null,
+                    proveedor: geminiData.proveedor || `TG: ${firstName}`,
+                    monto_servicios: geminiData.monto_servicios || 0,
+                    monto_bienes: geminiData.monto_bienes || 0,
+                    itbis_facturado: geminiData.itbis_facturado || 0,
+                    impuesto_selectivo: geminiData.impuesto_selectivo || 0,
+                    otros_impuestos: geminiData.otros_impuestos || 0,
+                    propina_legal: geminiData.propina_legal || 0,
+                    tipo_id: geminiData.tipo_id || null,
+                    tipo_gasto: geminiData.tipo_gasto || null,
+                    forma_pago: geminiData.forma_pago || null,
+                    total_pagado: geminiData.total_pagado || 0,
+                    estado: 'pending',
+                    confidence_score: geminiData.confidence_score || 0,
+                    drive_url: driveLink,
+                    notas: notas
+                };
 
-                const stmt = db.prepare(`
-                    INSERT INTO facturas (
-                        empresa_id, fecha_factura, estado, drive_url, proveedor, notas, telegram_user_id
-                    ) VALUES (?, DATE('now'), 'pending', ?, ?, ?, ?)
-                `);
-                
-                stmt.run(empresaId, driveLink, proveedorTemp, notas, usuarioTG.id);
+                await Factura.create(facturaData);
 
-                bot.sendMessage(chatId, '☁️ Recibido correctamente');
+                bot.sendMessage(chatId, '✅ Factura recibida y procesada correctamente.');
+                console.log(`✨ Éxito: Registro creado para ${firstName}.`);
 
             } catch (error) {
-                console.error('❌ Error Telegram Service:', error.message);
-                
-                // MENSAJES DE ERROR PARA EL USUARIO FINAL
-                let replyMsg = '⚠️ Error técnico al guardar.';
-                
-                if (error.message.includes('drive') || error.message.includes('caducado') || error.message.includes('nube')) {
-                    // Mensaje claro: No es culpa del usuario, debe avisar al contable
-                    replyMsg = '⚠️ Error de conexión con el sistema. Por favor notifique a su contable.';
-                } else if (error.message.includes('empresa')) {
-                    replyMsg = '⚠️ Su usuario no tiene una empresa asignada. Contacte a su contable.';
-                }
-                
-                bot.sendMessage(chatId, replyMsg);
+                console.error('❌ Error en Telegram Service:', error.message);
+                bot.sendMessage(chatId, `⚠️ Error: ${error.message}`);
             } finally {
                 processingQueue.delete(msg.message_id);
             }
 
         } else if (msg.text === '/start') {
-            bot.sendMessage(chatId, `👋 Listo. Envíame tus facturas.`);
+            bot.sendMessage(chatId, `👋 ¡Hola ${firstName}! Envíame fotos de tus facturas y yo me encargo del resto.`);
         }
     });
 };
 
+/**
+ * Busca o registra al usuario de Telegram para mantener la relación con la empresa.
+ */
 function registrarUsuarioTelegram(db, telegramId, username, firstName) {
     return new Promise((resolve, reject) => {
         db.get('SELECT id, empresa_id FROM telegram_users WHERE telegram_id = ?', [telegramId], (err, row) => {
@@ -158,10 +162,13 @@ function registrarUsuarioTelegram(db, telegramId, username, firstName) {
     });
 }
 
+/**
+ * Obtiene los datos del contable dueño de la empresa para usar sus tokens de Google.
+ */
 function obtenerContableDeEmpresa(db, empresaId) {
     return new Promise((resolve, reject) => {
         db.get(`
-            SELECT u.id, u.email, u.drive_refresh_token, u.drive_access_token
+            SELECT u.id, u.email, u.drive_refresh_token 
             FROM users u
             JOIN empresas e ON e.contable_id = u.id
             WHERE e.id = ?

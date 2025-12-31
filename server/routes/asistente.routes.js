@@ -8,6 +8,11 @@ const {
   checkDuplicado
 } = require('../controllers/asistenteController');
 
+/**
+ * RUTAS DEL ASISTENTE
+ * Maneja el flujo de validación de facturas antes de que lleguen al contable.
+ */
+
 router.get('/dashboard', getDashboard);
 router.get('/facturas', getFacturas);
 router.get('/facturas/check-duplicado', checkDuplicado);

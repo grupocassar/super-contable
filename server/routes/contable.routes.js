@@ -1,40 +1,39 @@
 const express = require('express');
 const router = express.Router();
 const contableController = require('../controllers/contableController');
+const { authenticateToken } = require('../middleware/auth');
+const { requireRole } = require('../middleware/roles');
 
-// Dashboard y Estadísticas
+/**
+ * RUTAS DEL CONTABLE
+ * Protegidas por Token y Verificación de Rol
+ */
+
+// Aplicar middlewares de seguridad a todas las rutas de este archivo
+router.use(authenticateToken);
+router.use(requireRole(['contable']));
+
+// --- Gestión de Dashboard y Empresas ---
 router.get('/dashboard', contableController.getDashboard);
-
-// Gestión de Empresas
 router.get('/empresas', contableController.getEmpresas);
 router.post('/empresas', contableController.createEmpresa);
-router.put('/empresas/:id', contableController.updateEmpresa);
 
-// Gestión de Facturas
+// --- Gestión de Facturas (606) ---
 router.get('/facturas', contableController.getFacturas);
-
-// Memoria Contable (Sugerencia de gasto)
-router.get('/facturas/sugerencia-gasto', contableController.getSugerenciaGasto);
-
-// ✅ FASE 3 - Paso B: Exportación a Google Sheets
-router.post('/exportar-sheets', contableController.exportarASheets);
-
-// Procesar lote (Archivar/Limpiar mesa)
-router.post('/facturas/procesar-lote', contableController.procesarLoteFacturas);
-
-// Actualizar campos de una factura
 router.put('/facturas/:id', contableController.updateFactura);
-
-// Eliminar factura
 router.delete('/facturas/:id', contableController.deleteFactura);
 
-// Gestión de Asistentes
+// --- Gestión de Asistentes (Contable Senior -> Asistentes) ---
 router.get('/asistentes', contableController.getAsistentes);
 router.post('/asistentes', contableController.createAsistente);
-router.put('/asistentes/:id', contableController.updateAsistente);
-
-// Gestión de Asignaciones
 router.get('/asistentes/:id/empresas', contableController.getAsistenteEmpresas);
 router.post('/asistentes/:id/empresas', contableController.assignEmpresasToAsistente);
+
+// --- Herramientas e IA ---
+router.get('/sugerencia-gasto', contableController.getSugerenciaGasto);
+router.post('/procesar-lote', contableController.procesarLoteFacturas);
+
+// --- Exportación Fiscal ---
+router.post('/exportar-sheets', contableController.exportarASheets);
 
 module.exports = router;

@@ -1,140 +1,113 @@
--- Super Contable Database Schema
--- Sistema multi-tenant de gestión contable automatizada
--- República Dominicana
+-- ==========================================================
+-- ESQUEMA MAESTRO: SUPER CONTABLE (REPORTE 606 + DRIVE)
+-- ==========================================================
 
--- USUARIOS DEL SISTEMA
+-- 1. Usuarios (Contables y Asistentes)
 CREATE TABLE IF NOT EXISTS users (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  email TEXT UNIQUE NOT NULL,
-  password_hash TEXT NOT NULL,
-  nombre_completo TEXT NOT NULL,
-  rol TEXT NOT NULL CHECK(rol IN ('super_admin', 'contable', 'asistente')),
-  contable_id INTEGER,
-  activo BOOLEAN DEFAULT 1,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (contable_id) REFERENCES users(id) ON DELETE SET NULL
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    role TEXT DEFAULT 'contable',
+    contable_id INTEGER,
+    -- Columnas para Google Drive
+    drive_refresh_token TEXT,
+    drive_access_token TEXT,
+    drive_connected INTEGER DEFAULT 0, -- <--- COLUMNA QUE FALTABA
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (contable_id) REFERENCES users(id)
 );
 
--- EMPRESAS (Clientes del contable)
+-- 2. Empresas
 CREATE TABLE IF NOT EXISTS empresas (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  contable_id INTEGER NOT NULL,
-  nombre TEXT NOT NULL,
-  rnc TEXT,
-  codigo_corto TEXT,
-  activa BOOLEAN DEFAULT 1,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (contable_id) REFERENCES users(id) ON DELETE CASCADE
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre TEXT NOT NULL,
+    rnc TEXT,
+    codigo_corto TEXT UNIQUE,
+    contable_id INTEGER,
+    activa BOOLEAN DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (contable_id) REFERENCES users(id)
 );
 
--- USUARIOS FINALES (Telegram)
+-- 3. Usuarios de Telegram
 CREATE TABLE IF NOT EXISTS telegram_users (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  empresa_id INTEGER NOT NULL,
-  telegram_id TEXT UNIQUE NOT NULL,
-  telegram_username TEXT,
-  nombre TEXT,
-  rol_empresa TEXT,
-  activo BOOLEAN DEFAULT 1,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE CASCADE
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    telegram_id TEXT UNIQUE NOT NULL,
+    username TEXT,
+    first_name TEXT,
+    empresa_id INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (empresa_id) REFERENCES empresas(id)
 );
 
--- FACTURAS
+-- 4. Facturas (Estructura de 23 campos para Reporte 606 DGII)
 CREATE TABLE IF NOT EXISTS facturas (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  empresa_id INTEGER NOT NULL,
-  telegram_user_id INTEGER,
-
-  -- DATOS EXTRAÍDOS
-  fecha_factura DATE,
-  ncf TEXT,
-  rnc TEXT,
-  proveedor TEXT,
-  itbis DECIMAL(10,2),
-  total_pagado DECIMAL(10,2),
-
-  -- ARCHIVOS
-  drive_url TEXT NOT NULL,
-
-  -- PROCESAMIENTO
-  estado TEXT NOT NULL DEFAULT 'pending' CHECK(estado IN ('pending', 'lista', 'aprobada', 'exportada', 'rechazada')),
-  confidence_score DECIMAL(5,2),
-  procesado_por INTEGER,
-  fecha_procesado DATETIME,
-
-  -- NOTAS Y MARCADORES
-  notas TEXT,
-  saltada BOOLEAN DEFAULT 0,
-
-  -- AUDITORÍA
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-
-  FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE CASCADE,
-  FOREIGN KEY (telegram_user_id) REFERENCES telegram_users(id) ON DELETE SET NULL,
-  FOREIGN KEY (procesado_por) REFERENCES users(id) ON DELETE SET NULL
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    empresa_id INTEGER NOT NULL,
+    telegram_user_id INTEGER,
+    telegram_message_id TEXT,
+    
+    -- Datos Fiscales
+    fecha_factura TEXT,
+    rnc TEXT,
+    ncf TEXT,
+    proveedor TEXT,
+    
+    -- Montos e ITBIS
+    monto_servicios REAL DEFAULT 0,
+    monto_bienes REAL DEFAULT 0,
+    itbis_facturado REAL DEFAULT 0,
+    itbis_retenido REAL DEFAULT 0,
+    itbis_proporcionalidad REAL DEFAULT 0,
+    itbis_costo REAL DEFAULT 0,
+    itbis_adelantar REAL DEFAULT 0,
+    itbis_percibido REAL DEFAULT 0,
+    
+    -- Retenciones e Impuestos
+    tipo_retencion_isr TEXT,
+    monto_retencion_isr REAL DEFAULT 0,
+    isr_percibido REAL DEFAULT 0,
+    impuesto_selectivo REAL DEFAULT 0,
+    otros_impuestos REAL DEFAULT 0,
+    propina_legal REAL DEFAULT 0,
+    
+    -- Clasificación
+    tipo_id TEXT,
+    tipo_gasto TEXT,
+    forma_pago TEXT,
+    fecha_pago TEXT,
+    ncf_modificado TEXT,
+    
+    -- Control
+    total_pagado REAL DEFAULT 0,
+    estado TEXT DEFAULT 'pendiente',
+    confidence_score REAL,
+    drive_url TEXT,
+    notas TEXT,
+    
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (empresa_id) REFERENCES empresas(id),
+    FOREIGN KEY (telegram_user_id) REFERENCES telegram_users(id)
 );
 
--- ASIGNACIÓN DE EMPRESAS A ASISTENTES
+-- 5. Relación Asistente-Empresa
 CREATE TABLE IF NOT EXISTS asistente_empresas (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  asistente_id INTEGER NOT NULL,
-  empresa_id INTEGER NOT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (asistente_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE CASCADE,
-  UNIQUE(asistente_id, empresa_id)
+    asistente_id INTEGER,
+    empresa_id INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (asistente_id, empresa_id),
+    FOREIGN KEY (asistente_id) REFERENCES users(id),
+    FOREIGN KEY (empresa_id) REFERENCES empresas(id)
 );
 
--- AUDITORÍA
-CREATE TABLE IF NOT EXISTS audit_log (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  factura_id INTEGER NOT NULL,
-  user_id INTEGER NOT NULL,
-  accion TEXT NOT NULL,
-  cambios TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (factura_id) REFERENCES facturas(id) ON DELETE CASCADE,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-
--- EXPORTACIONES
+-- 6. Historial de Exportaciones
 CREATE TABLE IF NOT EXISTS exportaciones (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  contable_id INTEGER NOT NULL,
-  empresa_id INTEGER,
-  mes INTEGER NOT NULL,
-  año INTEGER NOT NULL,
-  cantidad_facturas INTEGER,
-  archivo_url TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (contable_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE CASCADE
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    contable_id INTEGER,
+    periodo_mes TEXT,
+    periodo_anio TEXT,
+    spreadsheet_id TEXT,
+    spreadsheet_url TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (contable_id) REFERENCES users(id)
 );
-
--- ÍNDICES PARA OPTIMIZACIÓN
-CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-CREATE INDEX IF NOT EXISTS idx_users_rol ON users(rol);
-CREATE INDEX IF NOT EXISTS idx_users_contable_id ON users(contable_id);
-
-CREATE INDEX IF NOT EXISTS idx_empresas_contable ON empresas(contable_id);
-CREATE INDEX IF NOT EXISTS idx_empresas_activa ON empresas(activa);
-
-CREATE INDEX IF NOT EXISTS idx_telegram_users_telegram_id ON telegram_users(telegram_id);
-CREATE INDEX IF NOT EXISTS idx_telegram_users_empresa ON telegram_users(empresa_id);
-
-CREATE INDEX IF NOT EXISTS idx_facturas_empresa ON facturas(empresa_id);
-CREATE INDEX IF NOT EXISTS idx_facturas_estado ON facturas(estado);
-CREATE INDEX IF NOT EXISTS idx_facturas_fecha ON facturas(fecha_factura);
-
-CREATE INDEX IF NOT EXISTS idx_asistente_empresas_asistente ON asistente_empresas(asistente_id);
-CREATE INDEX IF NOT EXISTS idx_asistente_empresas_empresa ON asistente_empresas(empresa_id);
-
-CREATE INDEX IF NOT EXISTS idx_audit_factura ON audit_log(factura_id);
-CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(user_id);
-
-CREATE INDEX IF NOT EXISTS idx_exportaciones_contable ON exportaciones(contable_id);
-CREATE INDEX IF NOT EXISTS idx_exportaciones_empresa ON exportaciones(empresa_id);

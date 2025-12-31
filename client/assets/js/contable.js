@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!requireAuth()) return;
 
   currentUser = getUser();
-  if (currentUser.rol !== 'contable' && currentUser.rol !== 'super_admin') {
+  if (currentUser.role !== 'contable' && currentUser.role !== 'super_admin') {
     showToast('Acceso denegado', 'error');
     window.location.href = '/';
     return;

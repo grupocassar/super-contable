@@ -1,98 +1,100 @@
+require('dotenv').config();
 const bcrypt = require('bcryptjs');
-const { initDatabase, runQuery, closeDatabase } = require('../config/database');
+const { initDatabase, getDatabase, closeDatabase } = require('../config/database');
 const { validateEnv, config } = require('../config/env');
 
+/**
+ * Función auxiliar interna para ejecutar consultas (Fix: runQuery is not a function)
+ */
+const runQuery = (sql, params = []) => {
+  return new Promise((resolve, reject) => {
+    const db = getDatabase();
+    db.run(sql, params, function (err) {
+      if (err) reject(err);
+      else resolve({ lastID: this.lastID, changes: this.changes });
+    });
+  });
+};
+
+/**
+ * Script de población de base de datos (Seed) - VERSIÓN COMPLETA RECUPERADA
+ * Sincronizado con el Esquema Maestro 606 (role, password, itbis_facturado, total_pagado)
+ */
 async function seedDatabase() {
   try {
-    console.log('🌱 Seeding Super Contable database...\n');
+    console.log('🌱 Seeding Super Contable database (Full Version)...\n');
 
     validateEnv();
     await initDatabase();
 
-    const passwordHash = await bcrypt.hash('admin123', config.bcrypt.rounds);
+    // 1. Preparar Hashes de Contraseña
+    const rounds = config.bcrypt?.rounds || 10;
+    const adminHash = await bcrypt.hash('admin123', rounds);
+    const contableHash = await bcrypt.hash('contable123', rounds);
+    const asistenteHash = await bcrypt.hash('asistente123', rounds);
 
-    console.log('Creating users...');
+    console.log('--- 👤 Creando Usuarios ---');
 
-    const superAdminResult = await runQuery(
-      `INSERT INTO users (email, password_hash, nombre_completo, rol, activo)
-       VALUES (?, ?, ?, ?, ?)`,
-      ['admin@supercontable.com', passwordHash, 'Super Administrador', 'super_admin', 1]
+    // Super Admin
+    await runQuery(
+      `INSERT INTO users (email, password, role) VALUES (?, ?, ?)`,
+      ['admin@supercontable.com', adminHash, 'contable']
     );
-    console.log('✓ Super Admin created (email: admin@supercontable.com, password: admin123)');
+    console.log('✓ Super Admin creado: admin@supercontable.com / admin123');
 
-    const contableHash = await bcrypt.hash('contable123', config.bcrypt.rounds);
+    // Contable Principal
     const contableResult = await runQuery(
-      `INSERT INTO users (email, password_hash, nombre_completo, rol, activo)
-       VALUES (?, ?, ?, ?, ?)`,
-      ['juan@contable.com', contableHash, 'Juan Pérez Contable', 'contable', 1]
+      `INSERT INTO users (email, password, role) VALUES (?, ?, ?)`,
+      ['juan@contable.com', contableHash, 'contable']
     );
     const contableId = contableResult.lastID;
-    console.log('✓ Contable created (email: juan@contable.com, password: contable123)');
+    console.log('✓ Contable creado: juan@contable.com / contable123');
 
-    const asistenteHash = await bcrypt.hash('asistente123', config.bcrypt.rounds);
+    // Asistente (Vinculado al contableId)
     const asistenteResult = await runQuery(
-      `INSERT INTO users (email, password_hash, nombre_completo, rol, contable_id, activo)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      ['maria@asistente.com', asistenteHash, 'María García Asistente', 'asistente', contableId, 1]
+      `INSERT INTO users (email, password, role, contable_id) VALUES (?, ?, ?, ?)`,
+      ['maria@asistente.com', asistenteHash, 'asistente', contableId]
     );
     const asistenteId = asistenteResult.lastID;
-    console.log('✓ Asistente created (email: maria@asistente.com, password: asistente123)');
+    console.log('✓ Asistente creado: maria@asistente.com / asistente123');
 
-    console.log('\nCreating empresas...');
+    console.log('\n--- 🏢 Creando Empresas ---');
 
     const empresa1Result = await runQuery(
-      `INSERT INTO empresas (contable_id, nombre, rnc, codigo_corto, activa)
-       VALUES (?, ?, ?, ?, ?)`,
-      [contableId, 'Supermercado Los Pinos', '130-12345-6', 'PINOS', 1]
+      `INSERT INTO empresas (contable_id, nombre, rnc, codigo_corto) VALUES (?, ?, ?, ?)`,
+      [contableId, 'Supermercado Los Pinos', '130-12345-6', 'PINOS']
     );
     const empresa1Id = empresa1Result.lastID;
     console.log('✓ Empresa 1: Supermercado Los Pinos');
 
     const empresa2Result = await runQuery(
-      `INSERT INTO empresas (contable_id, nombre, rnc, codigo_corto, activa)
-       VALUES (?, ?, ?, ?, ?)`,
-      [contableId, 'Farmacia San José', '130-98765-4', 'FARMA', 1]
+      `INSERT INTO empresas (contable_id, nombre, rnc, codigo_corto) VALUES (?, ?, ?, ?)`,
+      [contableId, 'Farmacia San José', '130-98765-4', 'FARMA']
     );
     const empresa2Id = empresa2Result.lastID;
     console.log('✓ Empresa 2: Farmacia San José');
 
     const empresa3Result = await runQuery(
-      `INSERT INTO empresas (contable_id, nombre, rnc, codigo_corto, activa)
-       VALUES (?, ?, ?, ?, ?)`,
-      [contableId, 'Restaurant La Esquina', '130-55555-5', 'RESTA', 1]
+      `INSERT INTO empresas (contable_id, nombre, rnc, codigo_corto) VALUES (?, ?, ?, ?)`,
+      [contableId, 'Restaurant La Esquina', '130-55555-5', 'RESTA']
     );
     const empresa3Id = empresa3Result.lastID;
     console.log('✓ Empresa 3: Restaurant La Esquina');
 
-    console.log('\nAssigning empresas to asistente...');
-    await runQuery(
-      `INSERT INTO asistente_empresas (asistente_id, empresa_id) VALUES (?, ?)`,
-      [asistenteId, empresa1Id]
-    );
-    await runQuery(
-      `INSERT INTO asistente_empresas (asistente_id, empresa_id) VALUES (?, ?)`,
-      [asistenteId, empresa2Id]
-    );
-    await runQuery(
-      `INSERT INTO asistente_empresas (asistente_id, empresa_id) VALUES (?, ?)`,
-      [asistenteId, empresa3Id]
-    );
-    console.log('✓ Empresas assigned to asistente');
+    console.log('\n--- 🔗 Asignando Empresas al Asistente ---');
+    const assignStmt = `INSERT INTO asistente_empresas (asistente_id, empresa_id) VALUES (?, ?)`;
+    await runQuery(assignStmt, [asistenteId, empresa1Id]);
+    await runQuery(assignStmt, [asistenteId, empresa2Id]);
+    await runQuery(assignStmt, [asistenteId, empresa3Id]);
+    console.log('✓ Empresas asignadas a María correctamente.');
 
-    console.log('\nCreating telegram users...');
-    await runQuery(
-      `INSERT INTO telegram_users (empresa_id, telegram_id, telegram_username, nombre, rol_empresa, activo)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [empresa1Id, '123456789', 'don_jose', 'José Martínez', 'Dueño', 1]
-    );
-    await runQuery(
-      `INSERT INTO telegram_users (empresa_id, telegram_id, telegram_username, nombre, rol_empresa, activo)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [empresa2Id, '987654321', 'ana_farmacia', 'Ana López', 'Gerente', 1]
-    );
-    console.log('✓ Telegram users created');
+    console.log('\n--- 🤖 Creando Usuarios de Telegram ---');
+    const tgStmt = `INSERT INTO telegram_users (empresa_id, telegram_id, username, first_name) VALUES (?, ?, ?, ?)`;
+    await runQuery(tgStmt, [empresa1Id, '123456789', 'don_jose', 'José Martínez']);
+    await runQuery(tgStmt, [empresa2Id, '987654321', 'ana_farmacia', 'Ana López']);
+    console.log('✓ Usuarios de Telegram creados.');
 
-    console.log('\nCreating sample facturas...');
+    console.log('\n--- 📄 Cargando Lote de Facturas de Prueba (17 registros) ---');
 
     const facturas = [
       // ALTA CONFIANZA (>95%) - 6 facturas
@@ -105,7 +107,7 @@ async function seedDatabase() {
         itbis: 2850.00,
         total_pagado: 18500.00,
         drive_url: 'https://drive.google.com/file/d/factura001',
-        estado: 'pending',
+        estado: 'pendiente',
         confidence_score: 98.5
       },
       {
@@ -117,7 +119,7 @@ async function seedDatabase() {
         itbis: 4200.00,
         total_pagado: 26000.00,
         drive_url: 'https://drive.google.com/file/d/factura002',
-        estado: 'pending',
+        estado: 'pendiente',
         confidence_score: 97.2
       },
       {
@@ -129,7 +131,7 @@ async function seedDatabase() {
         itbis: 1800.00,
         total_pagado: 11800.00,
         drive_url: 'https://drive.google.com/file/d/factura003',
-        estado: 'pending',
+        estado: 'pendiente',
         confidence_score: 96.8
       },
       {
@@ -141,7 +143,7 @@ async function seedDatabase() {
         itbis: 900.00,
         total_pagado: 5900.00,
         drive_url: 'https://drive.google.com/file/d/factura004',
-        estado: 'pending',
+        estado: 'pendiente',
         confidence_score: 99.1
       },
       {
@@ -153,7 +155,7 @@ async function seedDatabase() {
         itbis: 3600.00,
         total_pagado: 23600.00,
         drive_url: 'https://drive.google.com/file/d/factura005',
-        estado: 'pending',
+        estado: 'pendiente',
         confidence_score: 95.7
       },
       {
@@ -165,7 +167,7 @@ async function seedDatabase() {
         itbis: 450.00,
         total_pagado: 2950.00,
         drive_url: 'https://drive.google.com/file/d/factura006',
-        estado: 'pending',
+        estado: 'pendiente',
         confidence_score: 97.5
       },
 
@@ -179,7 +181,7 @@ async function seedDatabase() {
         itbis: 1350.00,
         total_pagado: 8850.00,
         drive_url: 'https://drive.google.com/file/d/factura007',
-        estado: 'pending',
+        estado: 'pendiente',
         confidence_score: 88.3
       },
       {
@@ -191,7 +193,7 @@ async function seedDatabase() {
         itbis: 2700.00,
         total_pagado: 17700.00,
         drive_url: 'https://drive.google.com/file/d/factura008',
-        estado: 'pending',
+        estado: 'pendiente',
         confidence_score: 84.7
       },
       {
@@ -203,7 +205,7 @@ async function seedDatabase() {
         itbis: 1200.00,
         total_pagado: 7900.00,
         drive_url: 'https://drive.google.com/file/d/factura009',
-        estado: 'pending',
+        estado: 'pendiente',
         confidence_score: 91.2
       },
       {
@@ -215,7 +217,7 @@ async function seedDatabase() {
         itbis: 5400.00,
         total_pagado: 35400.00,
         drive_url: 'https://drive.google.com/file/d/factura010',
-        estado: 'pending',
+        estado: 'pendiente',
         confidence_score: 82.9
       },
       {
@@ -227,7 +229,7 @@ async function seedDatabase() {
         itbis: 750.00,
         total_pagado: 4950.00,
         drive_url: 'https://drive.google.com/file/d/factura011',
-        estado: 'pending',
+        estado: 'pendiente',
         confidence_score: 87.6
       },
 
@@ -241,7 +243,7 @@ async function seedDatabase() {
         itbis: 600.00,
         total_pagado: 3900.00,
         drive_url: 'https://drive.google.com/file/d/factura012',
-        estado: 'pending',
+        estado: 'pendiente',
         confidence_score: 72.4
       },
       {
@@ -253,7 +255,7 @@ async function seedDatabase() {
         itbis: 1080.00,
         total_pagado: 7080.00,
         drive_url: 'https://drive.google.com/file/d/factura013',
-        estado: 'pending',
+        estado: 'pendiente',
         confidence_score: 65.8
       },
       {
@@ -265,7 +267,7 @@ async function seedDatabase() {
         itbis: 1500.00,
         total_pagado: 9850.00,
         drive_url: 'https://drive.google.com/file/d/factura014',
-        estado: 'pending',
+        estado: 'pendiente',
         confidence_score: 78.2
       },
       {
@@ -277,11 +279,11 @@ async function seedDatabase() {
         itbis: 300.00,
         total_pagado: 1970.00,
         drive_url: 'https://drive.google.com/file/d/factura015',
-        estado: 'pending',
+        estado: 'pendiente',
         confidence_score: 69.5
       },
 
-      // FACTURAS YA LISTAS (2 para probar aprobación en lote)
+      // FACTURAS YA LISTAS (2 registros)
       {
         empresa_id: empresa1Id,
         fecha_factura: '2025-12-14',
@@ -308,50 +310,43 @@ async function seedDatabase() {
       }
     ];
 
-    for (const factura of facturas) {
+    for (const f of facturas) {
       await runQuery(
         `INSERT INTO facturas (
           empresa_id, fecha_factura, ncf, rnc, proveedor,
-          itbis, total_pagado, drive_url, estado, confidence_score
+          itbis_facturado, total_pagado, drive_url, estado, confidence_score
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          factura.empresa_id,
-          factura.fecha_factura,
-          factura.ncf,
-          factura.rnc,
-          factura.proveedor,
-          factura.itbis,
-          factura.total_pagado,
-          factura.drive_url,
-          factura.estado,
-          factura.confidence_score || null
+          f.empresa_id,
+          f.fecha_factura,
+          f.ncf,
+          f.rnc,
+          f.proveedor,
+          f.itbis,
+          f.total_pagado,
+          f.drive_url,
+          f.estado,
+          f.confidence_score
         ]
       );
     }
-    console.log(`✓ ${facturas.length} sample facturas created`);
-    console.log('  🟢 Alta confianza (>95%):   6 facturas');
-    console.log('  🟡 Media confianza (80-95%): 5 facturas');
-    console.log('  🔴 Baja confianza (<80%):    4 facturas');
-    console.log('  📋 Ya listas para aprobar:  2 facturas');
+
+    console.log(`\n✓ ${facturas.length} facturas de muestra creadas (Sincronizadas con 606).`);
+    console.log(' 🟢 Alta confianza (>95%): 6');
+    console.log(' 🟡 Media confianza (80-95%): 5');
+    console.log(' 🔴 Baja confianza (<80%): 4');
+    console.log(' 📋 Listas para aprobación: 2');
 
     await closeDatabase();
-
-    console.log('\n✅ Database seeded successfully!\n');
-    console.log('📝 Test Accounts:');
-    console.log('   Super Admin: admin@supercontable.com / admin123');
-    console.log('   Contable:    juan@contable.com / contable123');
-    console.log('   Asistente:   maria@asistente.com / asistente123\n');
-    console.log('🏢 Empresas:');
-    console.log('   1. Supermercado Los Pinos');
-    console.log('   2. Farmacia San José');
-    console.log('   3. Restaurant La Esquina\n');
+    console.log('\n✅ Base de Datos poblada con éxito. Sistema listo.');
 
   } catch (error) {
-    console.error('❌ Error seeding database:', error.message);
+    console.error('\n❌ Error fatal en el Seed:', error.message);
     process.exit(1);
   }
 }
 
+// Ejecución directa si se llama al script
 if (require.main === module) {
   seedDatabase();
 }

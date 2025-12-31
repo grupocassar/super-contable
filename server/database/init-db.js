@@ -1,3 +1,4 @@
+require('dotenv').config(); // <--- CRITICO: Cargar variables antes de validar
 const fs = require('fs');
 const path = require('path');
 const { initDatabase, getDatabase, closeDatabase } = require('../config/database');
@@ -7,7 +8,8 @@ async function initializeDatabase() {
   try {
     console.log('🚀 Initializing Super Contable database...\n');
     
-    validateEnv();
+    // Ahora validateEnv() encontrará el JWT_SECRET
+    validateEnv(); 
     await initDatabase();
     
     const db = getDatabase();
@@ -40,7 +42,7 @@ async function initializeDatabase() {
         db.run(`DROP TABLE IF EXISTS ${table.name}`, (err) => {
           if (err) {
             console.error(`   ✗ Error dropping table ${table.name}:`, err.message);
-            resolve(); // Continuar aunque falle
+            resolve();
           } else {
             console.log(`   ✓ Dropped table: ${table.name}`);
             resolve();
@@ -109,8 +111,8 @@ async function initializeDatabase() {
 
     console.log('\n✅ Database initialization completed successfully!\n');
     console.log('Next steps:');
-    console.log('  1. Run: npm run seed (to populate with test data)');
-    console.log('  2. Run: npm start (to start the server)\n');
+    console.log('   1. Run: npm run seed (to populate with test data)');
+    console.log('   2. Run: npm start (to start the server)\n');
 
   } catch (error) {
     console.error('❌ Error initializing database:', error.message);

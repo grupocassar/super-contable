@@ -1,98 +1,64 @@
 require('dotenv').config();
 const express = require('express');
-const path = require('path');
 const cors = require('cors');
+const path = require('path');
 const { initDatabase } = require('./config/database');
-const { validateEnv, config } = require('./config/env');
-const { errorHandler, notFound } = require('./middleware/errorHandler');
-const { authenticateToken } = require('./middleware/auth');
-const { requireRole } = require('./middleware/roles');
-const { initTelegramBot } = require('./services/telegramService'); // ✅ IMPORTAR SERVICIO BOT
+const { initTelegramBot } = require('./services/telegramService');
 
-// Routes
 const authRoutes = require('./routes/auth.routes');
-const adminRoutes = require('./routes/admin.routes');
 const contableRoutes = require('./routes/contable.routes');
 const asistenteRoutes = require('./routes/asistente.routes');
+const { errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
 
-// Middleware
+// --- MIDDLEWARES GLOBALES ---
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Static files
-app.use('/assets', express.static(path.join(__dirname, '../client/assets')));
-app.use('/views', express.static(path.join(__dirname, '../client/views')));
+// --- SILENCIADOR DE FAVICON (Elimina el error 404 en consola) ---
+app.get('/favicon.ico', (req, res) => res.status(204).end());
 
-// API Routes
+// --- RUTAS DE LA API ---
 app.use('/api/auth', authRoutes);
-app.use('/api/admin', authenticateToken, requireRole(['super_admin']), adminRoutes);
-app.use('/api/contable', authenticateToken, requireRole(['contable', 'super_admin']), contableRoutes);
-app.use('/api/asistente', authenticateToken, requireRole(['asistente', 'contable', 'super_admin']), asistenteRoutes);
+app.use('/api/contable', contableRoutes);
+app.use('/api/asistente', asistenteRoutes);
 
-// Root route
+// Servir archivos estáticos del frontend
+app.use(express.static(path.join(__dirname, '../client')));
+
+// Ruta raíz redirige al login
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../client/views/auth/login.html'));
 });
 
-// Error handling
-app.use(notFound);
+// Manejo de errores (Debe ir al final)
 app.use(errorHandler);
 
-// Initialize database and start server
+const PORT = process.env.PORT || 3000;
+
 async function startServer() {
   try {
-    validateEnv();
+    // 1. Inicializar Base de Datos
     await initDatabase();
-
-    // ✅ INICIAR BOT DE TELEGRAM
+    
+    // 2. Inicializar Bot de Telegram
     initTelegramBot();
 
-    const port = config.server.port;
-
-    app.listen(port, () => {
-      console.log('\n🚀 Super Contable Server Started!\n');
-      console.log(`   Environment:  ${config.server.env}`);
-      console.log(`   Port:         ${port}`);
-      console.log(`   URL:          http://localhost:${port}`);
-      console.log(`   Database:     ${config.database.path}\n`);
-      console.log('✓ Server is ready to accept connections\n');
+    // 3. Arrancar Servidor
+    app.listen(PORT, () => {
+      console.log(`
+✓ Connected to SQLite database
+🤖 Super Contable Bot: ONLINE
+🚀 Super Contable Server Started!
+   Port: ${PORT}
+      `);
     });
   } catch (error) {
-    console.error('❌ Failed to start server:', error.message);
+    console.error('❌ Error iniciando el servidor:', error.message);
     process.exit(1);
   }
 }
 
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('\n⚠️  Shutting down gracefully...');
-  process.exit(0);
-});
-
-process.on('SIGINT', () => {
-  console.log('\n⚠️  Shutting down gracefully...');
-  process.exit(0);
-});
-
-// Handle uncaught errors
-process.on('uncaughtException', (error) => {
-  console.error('❌ Uncaught Exception:', error);
-  process.exit(1);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
-  process.exit(1);
-});
-
-// No llamar a startServer() aquí si se exporta app para tests, 
-// pero como es el punto de entrada principal, lo mantenemos.
-// Si usas nodemon, asegúrate de que este archivo sea el entry point.
-if (require.main === module) {
-    startServer();
-}
-
-module.exports = app;
+startServer();

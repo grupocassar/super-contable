@@ -7,11 +7,292 @@
   <link rel="stylesheet" href="/assets/css/global.css">
   <link rel="stylesheet" href="/assets/css/contable.css">
   <link rel="stylesheet" href="/assets/css/pre-cierre.css">
+  <style>
+    /* ============================================ */
+    /* EVALUACIÓN Y AJUSTES DE CSS PARA MODALES     */
+    /* ============================================ */
+
+    .pre-cierre-header {
+      max-width: 100%;
+      margin: 0 auto 1.25rem;
+      padding: 1.25rem 1.5rem;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      border: 1px solid #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .header-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+
+    .header-controls-left {
+      display: flex;
+      align-items: center;
+      gap: 2.5rem;
+    }
+
+    .selector-group {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .selector-group label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+
+    .input-inline {
+      padding: 0.45rem 0.75rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      background-color: #f8fafc;
+      color: #1e293b;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .view-selector {
+      display: flex;
+      background: #f1f5f9;
+      padding: 3px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .btn-view-toggle {
+      border: none;
+      padding: 6px 18px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: transparent;
+      color: #64748b;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-view-toggle.active {
+      background: white;
+      color: #1e40af;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+      border: 1px solid #dbeafe;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .btn-export {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      border-radius: 4px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      text-transform: uppercase;
+    }
+
+    .btn-export-sheets { background-color: #f0fdf4; color: #15803d; border-color: #dcfce7; }
+    .btn-export-excel { background-color: #eff6ff; color: #1d4ed8; border-color: #dbeafe; }
+
+    /* --- TABLA --- */
+    .table-container-excel {
+      width: 100%;
+      overflow-x: auto;
+      background: white;
+      border-radius: 8px;
+      margin-bottom: 3rem;
+    }
+
+    .table-excel {
+      width: 100%;
+      min-width: 1155px;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      table-layout: fixed;
+    }
+
+    .table-excel th {
+      padding: 0.6rem 0.5rem;
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+      color: #475569;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      vertical-align: top;
+    }
+
+    .header-filter {
+      display: block;
+      width: 100%;
+      margin-top: 6px;
+      padding: 3px 5px;
+      font-size: 0.7rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 3px;
+      color: #1e293b;
+      height: 24px;
+      background-color: white;
+    }
+
+    .table-excel td {
+      border: 1px solid #e2e8f0;
+    }
+
+    /* --- BADGES NCF --- */
+    .badge-ncf {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
+    .badge-b01 { background: #dbeafe !important; color: #1e40af !important; } 
+    .badge-b02 { background: #fef3c7 !important; color: #92400e !important; }
+
+    /* --- MODALES OPTIMIZADOS (AJUSTES CLAVE) --- */
+    .modal-duplicados {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.75);
+      z-index: 3000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-duplicados.show { display: flex; }
+
+    .modal-duplicados-content {
+      background-color: white;
+      border-radius: 8px;
+      width: 95%;
+      max-width: 1000px;
+      max-height: 95vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-duplicados-body {
+      padding: 1.5rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .factura-comparacion {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      background: white;
+      display: flex;
+      flex-direction: column;
+      height: fit-content;
+      padding-bottom: 1rem;
+    }
+
+    .factura-comparacion-header {
+      background: #f1f5f9;
+      padding: 0.75rem 1rem;
+      font-weight: 700;
+      font-size: 0.85rem;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .comparacion-imagen {
+      height: 250px;
+      background: #0f172a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+
+    .comparacion-imagen img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    .comparacion-datos {
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .dato-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      border-bottom: 1px dashed #e2e8f0;
+      padding-bottom: 2px;
+    }
+
+    /* BOTONES DENTRO DEL MODAL */
+    .btn-danger {
+      background: #ef4444;
+      color: white;
+      border: none;
+      padding: 0.75rem 1rem;
+      border-radius: 6px;
+      font-weight: 700;
+      cursor: pointer;
+      width: calc(100% - 2rem);
+      margin: 0 auto;
+      display: block;
+      transition: background 0.2s;
+    }
+
+    .btn-danger:hover { background: #dc2626; }
+
+    .modal-duplicados-footer {
+      padding: 1rem 1.5rem;
+      border-top: 1px solid #e2e8f0;
+      background: #f8fafc;
+      display: flex;
+      justify-content: flex-end;
+      gap: 1rem;
+    }
+
+    .btn-primary { background: #2563eb; color: white; border: none; padding: 0.6rem 1.5rem; border-radius: 6px; font-weight: 600; cursor: pointer; }
+    .btn-secondary { background: #e2e8f0; color: #475569; border: none; padding: 0.6rem 1.2rem; border-radius: 6px; font-weight: 600; cursor: pointer; }
+
+    /* ESTILO PARA EXPORTACIÓN MASIVA */
+    .modal-warning { border-top: 4px solid #f59e0b; }
+    .checkbox-confirm { background: #fffbeb; border-radius: 6px; border: 1px solid #fef3c7; }
+  </style>
 </head>
 <body>
   <div class="dashboard">
     
-    <!-- NAVBAR (Título oficial centralizado) -->
+    <!-- NAVBAR -->
     <nav class="navbar">
       <div class="navbar-content">
         <div class="navbar-brand">📊 Super Contable - Pre-Cierre Fiscal</div>
@@ -36,12 +317,10 @@
       </nav>
     </div>
 
-    <!-- CABECERA DE CONTROL (Rediseñada para flujo lógico) -->
+    <!-- CABECERA DE CONTROL -->
     <div class="pre-cierre-header">
-      <!-- Fila Superior: Configuración y Acciones -->
       <div class="header-top-row">
         <div class="header-controls-left">
-          <!-- 1. Período -->
           <div class="selector-group">
             <label>Período:</label>
             <select id="periodoMes" class="input-inline">
@@ -57,7 +336,6 @@
             </select>
           </div>
 
-          <!-- 2. Empresa -->
           <div class="selector-group">
             <label>Empresa:</label>
             <select id="filterEmpresa" class="input-inline" onchange="aplicarFiltros()" style="min-width: 250px;">
@@ -66,7 +344,6 @@
           </div>
         </div>
 
-        <!-- Acciones Profesionales -->
         <div class="header-actions" id="exportButtonsContainer">
           <button class="btn-export btn-export-sheets" onclick="abrirModalExportar('sheets')">
             <span>📊</span> Google Sheets
@@ -77,7 +354,6 @@
         </div>
       </div>
 
-      <!-- Fila Inferior: Contexto de Trabajo (Estado) -->
       <div class="header-bottom-row">
         <div class="view-selector">
           <button id="btnViewPendientes" class="btn-view-toggle active" onclick="cambiarVista('aprobada')">
@@ -90,7 +366,7 @@
       </div>
     </div>
 
-    <!-- TABLA TIPO EXCEL (Anchos exactos de Evaluación Nelson) -->
+    <!-- TABLA PRINCIPAL -->
     <div class="table-container-excel">
       <table class="table-excel" id="preCierreTable">
         <thead>
@@ -109,7 +385,7 @@
                 <option value="B11">11</option><option value="B14">14</option>
               </select>
             </th>
-            <th width="100"> <!-- NCF Ajustado: -15px para eliminar "xxxx" -->
+            <th width="100">
               NCF
               <input type="text" class="header-filter" id="filterNCF" placeholder="NCF..." onkeyup="aplicarFiltros()">
             </th>
@@ -135,7 +411,7 @@
                 <option value="E11">E11 - Seguros</option>
               </select>
             </th>
-            <th width="110"> <!-- Pago Ajustado: +10px para evitar cortes -->
+            <th width="110">
               Pago
               <select class="header-filter" id="filterPago" onchange="aplicarFiltros()">
                 <option value="">--</option><option value="VACIO">⚠️</option>
@@ -149,7 +425,7 @@
           </tr>
         </thead>
         <tbody id="preCierreTableBody">
-          <tr><td colspan="10" class="text-center" style="padding: 3rem; color: #64748b;">Cargando facturas aprobadas...</td></tr>
+          <tr><td colspan="10" class="text-center" style="padding: 3rem; color: #64748b;">Cargando...</td></tr>
         </tbody>
       </table>
     </div>
@@ -157,18 +433,11 @@
     <!-- BARRA DE ESTADO -->
     <div class="status-bar">
       <div class="status-item"><span id="statusTotal">0 facturas</span></div>
-      <div class="status-item anomalia" id="statusDuplicados" style="display: none;">🔴 <span id="countDuplicados">0</span> duplicados</div>
-      <div class="status-item warning" id="statusSospechosas" style="display: none;">🟡 <span id="countSospechosas">0</span> sospechosas</div>
-      <div class="status-item warning" id="statusFueraPeriodo" style="display: none;">🟠 <span id="countFueraPeriodo">0</span> fuera período</div>
-      <div class="status-item warning" id="statusRNCInvalido" style="display: none;">🔶 <span id="countRNCInvalido">0</span> RNC inválido</div>
-      <div class="status-item warning" id="statusITBIS" style="display: none;">🧾 <span id="countITBIS">0</span> ITBIS=0</div>
-      <div class="status-item warning" id="statusSinClasificar" style="display: none;">⚠️ <span id="countSinClasificar">0</span> sin clasificar</div>
       <div class="status-item success">✅ <span id="statusOK">0</span> OK</div>
     </div>
-
   </div>
 
-  <!-- MODAL DE EXPORTACIÓN (RESTAURADO COMPLETO) -->
+  <!-- MODAL DE EXPORTACIÓN -->
   <div id="exportModal" class="modal-duplicados">
     <div class="modal-duplicados-content" style="max-width: 500px;">
       <div class="modal-duplicados-header">
@@ -184,18 +453,14 @@
         </div>
         <div>
           <label style="display:block; font-weight:600; margin-bottom:0.5rem; color:#1e293b;">2. Selecciona las columnas:</label>
-          <div class="columns-grid">
-            <!-- Dinámico vía pre-cierre.js -->
-          </div>
+          <div class="columns-grid"></div>
         </div>
         <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #e2e8f0;">
           <label style="display:flex; align-items:flex-start; gap:0.5rem; cursor:pointer; background: #fffbeb; padding: 0.75rem; border-radius: 6px; border: 1px solid #fef3c7;">
             <input type="checkbox" id="checkArchivar" style="width:1.2rem; height:1.2rem; margin-top:0.2rem;" checked>
             <div>
               <span style="font-weight:700; color:#92400e; display:block;">🧹 Limpiar mesa de trabajo</span>
-              <span style="font-size:0.85rem; color:#b45309; display:block; margin-top:0.25rem;">
-                Marca facturas como "Procesadas" para que no aparezcan en el próximo cierre.
-              </span>
+              <span style="font-size:0.85rem; color:#b45309; display:block; margin-top:0.25rem;">Marca facturas como "Procesadas" para que no aparezcan en el próximo cierre.</span>
             </div>
           </label>
         </div>
@@ -211,107 +476,104 @@
   <!-- MODAL DE CONFIRMACIÓN PARA "TODAS" -->
   <div id="confirmTodasModal" class="modal-overlay" style="display: none;">
     <div class="modal-content modal-warning">
-      <div class="modal-header-warning">
+      <div class="modal-header-warning" style="text-align: center; padding: 1rem; background: #fff7ed; border-radius: 8px 8px 0 0;">
         <span style="font-size: 2rem;">⚠️</span>
-        <h3>CONFIRMA EXPORTACIÓN MASIVA</h3>
+        <h3 style="color: #9a3412; margin-top: 0.5rem;">CONFIRMA EXPORTACIÓN MASIVA</h3>
       </div>
       <div class="modal-body" style="padding: 1.5rem;">
-        <div class="info-box" style="background:#f3f4f6; padding:1rem; border-radius:8px; margin-bottom:1rem;">
-          <strong>📦 Archivo destino:</strong> "Super Contable - TODAS"
-        </div>
         <div class="info-box" style="background:#f3f4f6; padding:1rem; border-radius:8px; margin-bottom:1rem;">
           <strong>📊 Facturas detectadas:</strong> <span id="todasFacturasCount">0</span>
         </div>
         <div class="warning-box" style="background:#fef3c7; border:2px solid #fbbf24; padding:1rem; border-radius:8px; color:#92400e; font-weight:600; text-align:center; margin-bottom:1rem;">
-          ⚠️ Este proceso consolidará múltiples empresas en una sola hoja compartida.
+          ⚠️ Este proceso consolidará múltiples empresas en un solo reporte.
         </div>
         <label class="checkbox-confirm" style="display:flex; align-items:center; gap:0.75rem; cursor:pointer; padding:0.5rem;">
           <input type="checkbox" id="checkConfirmTodas" style="width:20px; height:20px;">
-          <span style="font-weight:600;">Confirmo que quiero exportar a TODAS</span>
+          <span style="font-weight:600;">Confirmo que quiero exportar todas las empresas</span>
         </label>
       </div>
-      <div class="modal-footer">
+      <div class="modal-footer" style="padding: 1rem; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 0.5rem;">
         <button class="btn btn-secondary" onclick="cerrarModalConfirmTodas()">Cancelar</button>
-        <button id="btnConfirmarTodas" class="btn-primary" disabled onclick="confirmarExportTodas()">Exportar TODAS</button>
+        <button id="btnConfirmarTodas" class="btn btn-primary" disabled onclick="confirmarExportTodas()">Exportar TODAS</button>
       </div>
     </div>
   </div>
 
-  <!-- MODAL DE DUPLICADOS (RESTAURADO COMPLETO) -->
+  <!-- MODAL DE DUPLICADOS CORREGIDO -->
   <div id="duplicadosModal" class="modal-duplicados">
     <div class="modal-duplicados-content">
       <div class="modal-duplicados-header">
         <h3>⚠️ COMPARACIÓN DE DUPLICADOS (NCF: <span id="duplicadoNCF"></span>)</h3>
         <button class="modal-close" onclick="cerrarModalDuplicados()">×</button>
       </div>
-      <div class="modal-duplicados-body" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; padding: 1rem;">
+      <div class="modal-duplicados-body">
+        <!-- FACTURA A -->
         <div class="factura-comparacion">
-          <div class="factura-comparacion-header"><h4>FACTURA A</h4></div>
-          <div class="factura-comparacion-content">
-            <div class="comparacion-imagen"><img id="factura1Imagen" src="" alt="Factura A"></div>
-            <div class="comparacion-datos">
-              <div class="dato-row"><span class="dato-label">Fecha:</span><span id="factura1Fecha" class="dato-value"></span></div>
-              <div class="dato-row"><span class="dato-label">NCF:</span><span id="factura1NCF" class="dato-value highlight-danger"></span></div>
-              <div class="dato-row"><span class="dato-label">Monto:</span><span id="factura1Total" class="dato-value"></span></div>
-              <div class="dato-row"><span class="dato-label">Proveedor:</span><span id="factura1Proveedor" class="dato-value"></span></div>
-            </div>
+          <div class="factura-comparacion-header"><h4 id="factura1Title">FACTURA A</h4></div>
+          <div class="comparacion-imagen"><img id="factura1Imagen" src="" alt="Factura A"></div>
+          <div class="comparacion-datos">
+            <div class="dato-row"><span>Fecha:</span><span id="factura1Fecha"></span></div>
+            <div class="dato-row"><span>NCF:</span><span id="factura1NCF" style="color:#ef4444; font-weight:700;"></span></div>
+            <div class="dato-row"><span>Monto:</span><span id="factura1Total"></span></div>
+            <div class="dato-row"><span>Proveedor:</span><span id="factura1Proveedor"></span></div>
           </div>
-          <button class="btn btn-danger btn-block" id="btnEliminar1" style="width:100%;">🗑️ Eliminar esta</button>
+          <button class="btn-danger" id="btnEliminar1">🗑️ Eliminar esta</button>
         </div>
+        <!-- FACTURA B -->
         <div class="factura-comparacion">
-          <div class="factura-comparacion-header"><h4>FACTURA B</h4></div>
-          <div class="factura-comparacion-content">
-            <div class="comparacion-imagen"><img id="factura2Imagen" src="" alt="Factura B"></div>
-            <div class="comparacion-datos">
-              <div class="dato-row"><span class="dato-label">Fecha:</span><span id="factura2Fecha" class="dato-value"></span></div>
-              <div class="dato-row"><span class="dato-label">NCF:</span><span id="factura2NCF" class="dato-value highlight-danger"></span></div>
-              <div class="dato-row"><span class="dato-label">Monto:</span><span id="factura2Total" class="dato-value"></span></div>
-              <div class="dato-row"><span class="dato-label">Proveedor:</span><span id="factura2Proveedor" class="dato-value"></span></div>
-            </div>
+          <div class="factura-comparacion-header"><h4 id="factura2Title">FACTURA B</h4></div>
+          <div class="comparacion-imagen"><img id="factura2Imagen" src="" alt="Factura B"></div>
+          <div class="comparacion-datos">
+            <div class="dato-row"><span>Fecha:</span><span id="factura2Fecha"></span></div>
+            <div class="dato-row"><span>NCF:</span><span id="factura2NCF" style="color:#ef4444; font-weight:700;"></span></div>
+            <div class="dato-row"><span>Monto:</span><span id="factura2Total"></span></div>
+            <div class="dato-row"><span>Proveedor:</span><span id="factura2Proveedor"></span></div>
           </div>
-          <button class="btn btn-danger btn-block" id="btnEliminar2" style="width:100%;">🗑️ Eliminar esta</button>
+          <button class="btn-danger" id="btnEliminar2">🗑️ Eliminar esta</button>
         </div>
       </div>
       <div class="modal-duplicados-footer">
-        <button class="btn btn-outline" onclick="cerrarModalDuplicados()">Cancelar</button>
+        <button class="btn btn-secondary" onclick="cerrarModalDuplicados()">Cancelar</button>
         <button class="btn btn-primary" onclick="mantenerAmbasDuplicadas()">✅ Mantener Ambas</button>
       </div>
     </div>
   </div>
 
-  <!-- MODAL SOSPECHOSAS (RESTAURADO COMPLETO) -->
+  <!-- MODAL SOSPECHOSAS CORREGIDO -->
   <div id="sospechosasModal" class="modal-duplicados">
     <div class="modal-duplicados-content">
       <div class="modal-duplicados-header" style="border-bottom: 2px solid #fcd34d;">
         <h3 style="color: #b45309;">🟡 COMPARACIÓN DE SOSPECHOSAS</h3>
         <button class="modal-close" onclick="cerrarModalSospechosas()">×</button>
       </div>
-      <div class="modal-duplicados-body" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; padding: 1rem;">
+      <div class="modal-duplicados-body">
+        <!-- FACTURA A -->
         <div class="factura-comparacion">
-          <div class="factura-comparacion-header"><h4>FACTURA A</h4></div>
-          <div class="factura-comparacion-content">
-            <div class="comparacion-imagen"><img id="sospechosa1Imagen" src=""></div>
-            <div class="comparacion-datos">
-              <div class="dato-row"><span class="dato-label">NCF:</span><span id="sospechosa1NCF" class="dato-value"></span></div>
-              <div class="dato-row"><span class="dato-label">Monto:</span><span id="sospechosa1Total" class="dato-value"></span></div>
-            </div>
+          <div class="factura-comparacion-header"><h4 id="sospechosa1Title">FACTURA A</h4></div>
+          <div class="comparacion-imagen"><img id="sospechosa1Imagen" src=""></div>
+          <div class="comparacion-datos">
+            <div class="dato-row"><span>Fecha:</span><span id="sospechosa1Fecha"></span></div>
+            <div class="dato-row"><span>NCF:</span><span id="sospechosa1NCF"></span></div>
+            <div class="dato-row"><span>Proveedor:</span><span id="sospechosa1Proveedor"></span></div>
+            <div class="dato-row"><span>Monto:</span><span id="sospechosa1Total" style="font-weight:700;"></span></div>
           </div>
-          <button class="btn btn-danger btn-block" id="btnEliminarSosp1" style="width:100%;">🗑️ Eliminar</button>
+          <button class="btn-danger" id="btnEliminarSosp1">🗑️ Eliminar</button>
         </div>
+        <!-- FACTURA B -->
         <div class="factura-comparacion">
-          <div class="factura-comparacion-header"><h4>FACTURA B</h4></div>
-          <div class="factura-comparacion-content">
-            <div class="comparacion-imagen"><img id="sospechosa2Imagen" src=""></div>
-            <div class="comparacion-datos">
-              <div class="dato-row"><span class="dato-label">NCF:</span><span id="sospechosa2NCF" class="dato-value"></span></div>
-              <div class="dato-row"><span class="dato-label">Monto:</span><span id="sospechosa2Total" class="dato-value"></span></div>
-            </div>
+          <div class="factura-comparacion-header"><h4 id="sospechosa2Title">FACTURA B</h4></div>
+          <div class="comparacion-imagen"><img id="sospechosa2Imagen" src=""></div>
+          <div class="comparacion-datos">
+            <div class="dato-row"><span>Fecha:</span><span id="sospechosa2Fecha"></span></div>
+            <div class="dato-row"><span>NCF:</span><span id="sospechosa2NCF"></span></div>
+            <div class="dato-row"><span>Proveedor:</span><span id="sospechosa2Proveedor"></span></div>
+            <div class="dato-row"><span>Monto:</span><span id="sospechosa2Total" style="font-weight:700;"></span></div>
           </div>
-          <button class="btn btn-danger btn-block" id="btnEliminarSosp2" style="width:100%;">🗑️ Eliminar</button>
+          <button class="btn-danger" id="btnEliminarSosp2">🗑️ Eliminar</button>
         </div>
       </div>
       <div class="modal-duplicados-footer">
-        <button class="btn btn-outline" onclick="cerrarModalSospechosas()">Cancelar</button>
+        <button class="btn btn-secondary" onclick="cerrarModalSospechosas()">Cancelar</button>
         <button class="btn btn-primary" onclick="mantenerAmbas()">✅ Son Diferentes</button>
       </div>
     </div>
@@ -319,11 +581,5 @@
 
   <script src="/assets/js/utils.js"></script>
   <script src="/assets/js/pre-cierre.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const user = getUser();
-      if (user) document.getElementById('userName').textContent = user.nombre_completo;
-    });
-  </script>
 </body>
 </html>

@@ -171,3 +171,4 @@ super-contable@1.0.0
 node
 super-contable@1.0.0
 server/config/service-account.json
+server/config/google-credentials.json
