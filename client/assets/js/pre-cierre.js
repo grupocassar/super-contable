@@ -1,20 +1,20 @@
 /**
  * LÓGICA DE PRE-CIERRE FISCAL 606 - SUPER CONTABLE
  * Alineado con el "Gran Cambio" (Estructura 23 columnas + Gemini AI)
- * Corrección de Rutas: Se eliminó el prefijo '/api' explícito para evitar duplicidad con utils.js
+ * UPDATE: Sistema de columnas expandibles (14 base + 10 avanzadas)
  */
 
 let currentUser = null;
 let facturas = [];
 let facturasFiltradas = [];
 let empresas = [];
-let estadoActual = 'aprobada'; // 'aprobada' (Pendientes) o 'exportada' (Histórico)
+let estadoActual = 'aprobada';
+let columnasAvanzadasVisibles = false;
 
 // ============================================
 // CONSTANTES Y CONFIGURACIÓN
 // ============================================
 
-// Códigos de Gasto (01-11) según Norma 06-18
 const CATEGORIAS_GASTO = [
   { value: '', label: '-- Seleccionar Tipo de Gasto --' },
   { value: '01', label: '01 - Gastos de personal' },
@@ -30,7 +30,6 @@ const CATEGORIAS_GASTO = [
   { value: '11', label: '11 - Gastos de seguros' }
 ];
 
-// Formas de Pago (01-07)
 const FORMAS_PAGO = [
   { value: '', label: '-- Seleccionar --' },
   { value: '01', label: '01 - Efectivo' },
@@ -40,6 +39,17 @@ const FORMAS_PAGO = [
   { value: '05', label: '05 - Tarjeta Débito' },
   { value: '06', label: '06 - Crédito' },
   { value: '07', label: '07 - Otros' }
+];
+
+const TIPOS_RETENCION_ISR = [
+  { value: '', label: '-- Seleccionar --' },
+  { value: '01', label: '01 - Alquileres' },
+  { value: '02', label: '02 - Honorarios' },
+  { value: '03', label: '03 - Otras rentas' },
+  { value: '04', label: '04 - Rentas presuntas' },
+  { value: '05', label: '05 - Intereses' },
+  { value: '06', label: '06 - Premios' },
+  { value: '07', label: '07 - Dividendos' }
 ];
 
 // ============================================
@@ -57,7 +67,6 @@ function safeSetText(id, text) {
 
 function formatDateDDMMYYYY(isoDate) {
   if (!isoDate) return '';
-  // Manejo robusto de fechas que vienen de SQLite
   const parts = isoDate.split('-');
   if (parts.length !== 3) return isoDate; 
   return `${parts[2]}/${parts[1]}/${parts[0]}`;
@@ -68,16 +77,13 @@ function formatDateDDMMYYYY(isoDate) {
 // ============================================
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Verificación de Auth usando utils.js
   if (typeof requireAuth === 'function' && !requireAuth()) return;
 
-  // Recuperar usuario (Prioridad: utils.js > localStorage)
   currentUser = typeof getUser === 'function' ? getUser() : null;
   if (!currentUser) {
       try { currentUser = JSON.parse(localStorage.getItem('user')); } catch(e){}
   }
 
-  // Validación de Rol (Contable Senior / Super Admin)
   if (!currentUser || (currentUser.role !== 'contable' && currentUser.role !== 'super_admin')) {
     if(typeof showToast === 'function') showToast('Acceso denegado: Rol no autorizado', 'error');
     else alert('Acceso denegado');
@@ -85,16 +91,12 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  // Cargar datos iniciales
   loadPreCierre();
 
-  // Listeners de UI
   document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);
   document.getElementById('periodoMes')?.addEventListener('change', recargarDatos);
   document.getElementById('periodoAnio')?.addEventListener('change', recargarDatos);
-  document.getElementById('exportEmpresaSelect')?.addEventListener('change', renderColumnCheckboxes);
 
-  // Checkbox de confirmación masiva (Seguridad)
   const checkConfirm = document.getElementById('checkConfirmTodas');
   if (checkConfirm) {
       checkConfirm.addEventListener('change', function() {
@@ -103,11 +105,9 @@ document.addEventListener('DOMContentLoaded', () => {
       });
   }
   
-  // Mostrar nombre usuario en Navbar
   if(currentUser.email) safeSetText('userName', currentUser.email.split('@')[0].toUpperCase());
 });
 
-// Tooltip para nombres largos de empresa
 function showCompanyTooltip(e, name) {
     let tooltip = document.getElementById('company-name-tooltip');
     if (!tooltip) {
@@ -159,13 +159,33 @@ function cambiarVista(nuevoEstado) {
 }
 
 // ============================================
-// CARGA DE DATOS (RUTAS CORREGIDAS)
+// TOGGLE COLUMNAS AVANZADAS
+// ============================================
+
+function toggleColumnasAvanzadas() {
+  columnasAvanzadasVisibles = !columnasAvanzadasVisibles;
+  
+  const colsHeader = document.querySelectorAll('th.col-avanzado');
+  const colsBody = document.querySelectorAll('td.col-avanzado');
+  const icon = document.getElementById('toggleIcon');
+  
+  colsHeader.forEach(col => {
+    col.style.display = columnasAvanzadasVisibles ? 'table-cell' : 'none';
+  });
+  
+  colsBody.forEach(col => {
+    col.style.display = columnasAvanzadasVisibles ? 'table-cell' : 'none';
+  });
+  
+  if (icon) icon.textContent = columnasAvanzadasVisibles ? '◀️' : '▶️';
+}
+
+// ============================================
+// CARGA DE DATOS
 // ============================================
 
 async function loadPreCierre() {
   try {
-    // FIX: Quitamos '/api' porque fetchAPI en utils.js ya lo agrega.
-    // Rutas resultantes: /api/contable/empresas y /api/contable/facturas
     const [empresasData, facturasData] = await Promise.all([
       fetchAPI('/contable/empresas'),
       fetchAPI(`/contable/facturas?estado=${estadoActual}`)
@@ -178,12 +198,11 @@ async function loadPreCierre() {
 
     if (facturasData.success) {
       facturas = facturasData.data;
-      facturasFiltradas = [...facturas]; // Clonar para filtrar localmente sin perder datos
+      facturasFiltradas = [...facturas];
       
       aplicarFiltros(); 
       updateStatusBar();
       
-      // Activar Memoria Contable (Punto 3 del Informe Técnico)
       if (estadoActual === 'aprobada') {
         setTimeout(procesarSugerenciasMasivas, 1000);
       }
@@ -215,7 +234,7 @@ function llenarFiltroEmpresas() {
 function aplicarFiltros() {
   const fEmpresa = document.getElementById('filterEmpresa').value.toLowerCase();
   const fRNC = document.getElementById('filterRNC').value.toLowerCase();
-  const fTipo = document.getElementById('filterTipo').value.toLowerCase();
+  const fTipo = document.getElementById('filterTipo').value;
   const fNCF = document.getElementById('filterNCF').value.toLowerCase();
   const fProv = document.getElementById('filterProveedor').value.toLowerCase();
   const fGasto = document.getElementById('filterGasto').value;
@@ -224,8 +243,13 @@ function aplicarFiltros() {
   facturasFiltradas = facturas.filter(f => {
     if (fEmpresa && !(f.empresa_nombre || '').toLowerCase().includes(fEmpresa)) return false;
     if (fRNC && !(f.rnc || '').toLowerCase().includes(fRNC)) return false;
-    const tipo = getTipoNCF(f.ncf).toLowerCase();
-    if (fTipo && !tipo.includes(fTipo)) return false;
+    
+    if (fTipo) {
+        const rncLen = (f.rnc || '').replace(/-/g, '').length;
+        if (fTipo === '1' && rncLen !== 9) return false;
+        if (fTipo === '2' && rncLen !== 11) return false;
+    }
+
     if (fNCF && !(f.ncf || '').toLowerCase().includes(fNCF)) return false;
     if (fProv && !(f.proveedor || '').toLowerCase().includes(fProv)) return false;
     
@@ -246,7 +270,7 @@ function aplicarFiltros() {
 }
 
 // ============================================
-// RENDERIZADO DE TABLA (23 COLUMNAS - VISTA RESUMIDA)
+// RENDERIZADO DE TABLA
 // ============================================
 
 function renderTabla() {
@@ -255,23 +279,28 @@ function renderTabla() {
 
   if (facturasFiltradas.length === 0) {
     const msg = estadoActual === 'aprobada' ? 'No hay facturas pendientes' : 'No hay facturas en el histórico';
-    tbody.innerHTML = `<tr><td colspan="10" class="text-center" style="padding: 2rem; color: #64748b;">${msg}</td></tr>`;
+    const totalCols = columnasAvanzadasVisibles ? 24 : 14;
+    tbody.innerHTML = `<tr><td colspan="${totalCols}" class="text-center" style="padding: 2rem; color: #64748b;">${msg}</td></tr>`;
     return;
   }
 
   const isReadOnly = estadoActual === 'exportada';
   const disabledAttr = isReadOnly ? 'disabled' : '';
   const inputClass = isReadOnly ? 'cell-input readonly' : 'cell-input';
+  const displayStyle = columnasAvanzadasVisibles ? 'table-cell' : 'none';
 
   tbody.innerHTML = facturasFiltradas.map(f => {
     const fechaFormatted = formatDateDDMMYYYY(f.fecha_factura);
-    const tipoNCF = getTipoNCF(f.ncf);
+    
+    let tipoIdDisplay = '?';
+    const rncClean = (f.rnc || '').replace(/-/g, '');
+    if (rncClean.length === 9) tipoIdDisplay = '1';
+    else if (rncClean.length === 11) tipoIdDisplay = '2';
     
     const anomalia = isReadOnly ? null : getAnomalia(f);
     const rowClass = anomalia ? `anomalia-${anomalia.tipo}` : (isReadOnly ? 'fila-historico' : '');
 
     let iconoHTML = '';
-    // Lógica de anomalías con corrección de eventos onclick
     if (!isReadOnly && anomalia) {
       if (anomalia.tipo === 'duplicado') {
         iconoHTML = `<span class="anomalia-clickeable" onclick="abrirComparacionDuplicados('${f.ncf}')" title="Ver duplicados">${anomalia.icono}</span>`;
@@ -286,8 +315,6 @@ function renderTabla() {
       iconoHTML = '<span title="Factura Archivada" style="opacity:0.5">🔒</span>';
     }
 
-    // ALINEACIÓN 606: Usamos 'itbis_facturado' (nuevo esquema)
-    // Fallback a 'itbis' solo para datos migrados antiguos
     const montoITBIS = f.itbis_facturado !== undefined ? f.itbis_facturado : (f.itbis || 0);
 
     return `
@@ -302,7 +329,7 @@ function renderTabla() {
                  placeholder="XXX-XXXXX-X" onblur="saveField(${f.id}, 'rnc', this.value)">
         </td>
         <td class="text-center">
-          <span class="badge-ncf badge-${tipoNCF.toLowerCase()}" id="badge-${f.id}">${tipoNCF}</span>
+          <span class="badge-tipo-id">${tipoIdDisplay}</span>
         </td>
         <td>
           <input type="text" class="${inputClass}" value="${f.ncf || ''}" ${disabledAttr}
@@ -311,6 +338,26 @@ function renderTabla() {
         <td>
           <input type="text" class="${inputClass}" value="${f.proveedor || ''}" ${disabledAttr}
                  onblur="saveField(${f.id}, 'proveedor', this.value)">
+        </td>
+        <td class="text-right">
+          <input type="number" class="${inputClass} text-right" value="${f.monto_servicios || 0}" ${disabledAttr}
+                 step="0.01" onblur="saveField(${f.id}, 'monto_servicios', this.value)">
+        </td>
+        <td class="text-right">
+          <input type="number" class="${inputClass} text-right" value="${f.monto_bienes || 0}" ${disabledAttr}
+                 step="0.01" onblur="saveField(${f.id}, 'monto_bienes', this.value)">
+        </td>
+        <td class="text-right">
+          <input type="number" class="${inputClass} text-right" value="${montoITBIS}" ${disabledAttr}
+                 step="0.01" onblur="saveField(${f.id}, 'itbis_facturado', this.value)">
+        </td>
+        <td class="text-right">
+          <input type="number" class="${inputClass} text-right" value="${f.itbis_retenido || 0}" ${disabledAttr}
+                 step="0.01" onblur="saveField(${f.id}, 'itbis_retenido', this.value)">
+        </td>
+        <td class="text-right">
+          <input type="number" class="${inputClass} text-right" value="${f.monto_retencion_isr || 0}" ${disabledAttr}
+                 step="0.01" onblur="saveField(${f.id}, 'monto_retencion_isr', this.value)">
         </td>
         <td class="td-select">
           <select class="cell-select select-tipo-gasto" data-factura-id="${f.id}" ${disabledAttr}
@@ -324,12 +371,51 @@ function renderTabla() {
           </select>
         </td>
         <td class="text-right">
-          <input type="number" class="${inputClass} text-right" value="${montoITBIS}" ${disabledAttr}
-                 step="0.01" onblur="saveField(${f.id}, 'itbis_facturado', this.value)">
-        </td>
-        <td class="text-right">
           <input type="number" class="cell-input text-right" value="${f.total_pagado || 0}" ${disabledAttr}
                  step="0.01" style="font-weight: 600;" onblur="saveField(${f.id}, 'total_pagado', this.value)">
+        </td>
+        
+        <!-- COLUMNAS AVANZADAS -->
+        <td class="col-avanzado text-right" style="display: ${displayStyle};">
+          <input type="text" class="${inputClass}" value="${f.ncf_modificado || ''}" ${disabledAttr}
+                 onblur="saveField(${f.id}, 'ncf_modificado', this.value)">
+        </td>
+        <td class="col-avanzado text-right" style="display: ${displayStyle};">
+          <input type="number" class="${inputClass} text-right" value="${f.itbis_proporcionalidad || 0}" ${disabledAttr}
+                 step="0.01" onblur="saveField(${f.id}, 'itbis_proporcionalidad', this.value)">
+        </td>
+        <td class="col-avanzado text-right" style="display: ${displayStyle};">
+          <input type="number" class="${inputClass} text-right" value="${f.itbis_costo || 0}" ${disabledAttr}
+                 step="0.01" onblur="saveField(${f.id}, 'itbis_costo', this.value)">
+        </td>
+        <td class="col-avanzado text-right" style="display: ${displayStyle};">
+          <input type="number" class="${inputClass} text-right" value="${f.itbis_adelantar || 0}" ${disabledAttr}
+                 step="0.01" onblur="saveField(${f.id}, 'itbis_adelantar', this.value)">
+        </td>
+        <td class="col-avanzado text-right" style="display: ${displayStyle};">
+          <input type="number" class="${inputClass} text-right" value="${f.itbis_percibido || 0}" ${disabledAttr}
+                 step="0.01" onblur="saveField(${f.id}, 'itbis_percibido', this.value)">
+        </td>
+        <td class="col-avanzado" style="display: ${displayStyle};">
+          <select class="cell-select" ${disabledAttr} onchange="saveField(${f.id}, 'tipo_retencion_isr', this.value)">
+            ${TIPOS_RETENCION_ISR.map(t => `<option value="${t.value}" ${f.tipo_retencion_isr === t.value ? 'selected' : ''}>${t.label}</option>`).join('')}
+          </select>
+        </td>
+        <td class="col-avanzado text-right" style="display: ${displayStyle};">
+          <input type="number" class="${inputClass} text-right" value="${f.isr_percibido || 0}" ${disabledAttr}
+                 step="0.01" onblur="saveField(${f.id}, 'isr_percibido', this.value)">
+        </td>
+        <td class="col-avanzado text-right" style="display: ${displayStyle};">
+          <input type="number" class="${inputClass} text-right" value="${f.impuesto_selectivo || 0}" ${disabledAttr}
+                 step="0.01" onblur="saveField(${f.id}, 'impuesto_selectivo', this.value)">
+        </td>
+        <td class="col-avanzado text-right" style="display: ${displayStyle};">
+          <input type="number" class="${inputClass} text-right" value="${f.otros_impuestos || 0}" ${disabledAttr}
+                 step="0.01" onblur="saveField(${f.id}, 'otros_impuestos', this.value)">
+        </td>
+        <td class="col-avanzado text-right" style="display: ${displayStyle};">
+          <input type="number" class="${inputClass} text-right" value="${f.propina_legal || 0}" ${disabledAttr}
+                 step="0.01" onblur="saveField(${f.id}, 'propina_legal', this.value)">
         </td>
       </tr>
     `;
@@ -344,7 +430,6 @@ async function gestionarFueraDePeriodo(id) {
   const confirmacion = confirm("⚠️ Esta factura está fuera del período seleccionado.\n\n¿Deseas devolverla a 'Pendientes'?");
   if (confirmacion) {
     try {
-      // FIX: Ruta corregida
       const response = await fetchAPI(`/contable/facturas/${id}`, { method: 'PUT', body: JSON.stringify({ estado: 'pending' }) });
       if (response.success) {
         facturas = facturas.filter(f => f.id !== id);
@@ -357,7 +442,7 @@ async function gestionarFueraDePeriodo(id) {
 }
 
 // ============================================
-// MEMORIA CONTABLE (Punto 3 del Informe)
+// MEMORIA CONTABLE
 // ============================================
 
 async function aplicarMemoriaContable(facturaId, proveedor) {
@@ -367,7 +452,6 @@ async function aplicarMemoriaContable(facturaId, proveedor) {
   if (!select || select.value !== '') return false;
 
   try {
-    // FIX: Ruta corregida
     const response = await fetchAPI(`/contable/facturas/sugerencia-gasto?proveedor=${encodeURIComponent(proveedor)}`);
     if (response.success && response.data) {
       const sugerencia = response.data.tipo_gasto;
@@ -385,7 +469,6 @@ async function aplicarMemoriaContable(facturaId, proveedor) {
 
 async function procesarSugerenciasMasivas() {
   if (estadoActual === 'exportada') return;
-  // Solo aplicar a facturas con proveedor pero sin tipo de gasto
   const facturasSinGasto = facturas.filter(f => !f.tipo_gasto && f.proveedor);
   for (const f of facturasSinGasto) {
     await aplicarMemoriaContable(f.id, f.proveedor);
@@ -397,7 +480,6 @@ async function procesarSugerenciasMasivas() {
 // ============================================
 function getVisibleImageUrl(url) {
     if (!url) return '/assets/img/no-image.png';
-    // Manejo inteligente de URLs de Google Drive para miniaturas
     if (url.includes('drive.google.com') && url.includes('id=')) {
         const fileId = url.split('id=')[1].split('&')[0];
         return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
@@ -406,7 +488,7 @@ function getVisibleImageUrl(url) {
 }
 
 // ============================================
-// MODALES (Restauración de funcionalidades)
+// MODALES
 // ============================================
 
 function abrirComparacionDuplicados(ncf) {
@@ -418,7 +500,6 @@ function abrirComparacionDuplicados(ncf) {
     
     safeSetText('duplicadoNCF', ncf);
 
-    // Factura A
     safeSetText('factura1Title', `FACTURA #${f1.id}`);
     safeSetText('factura1Fecha', formatDateDDMMYYYY(f1.fecha_factura));
     safeSetText('factura1NCF', f1.ncf || '-');
@@ -427,7 +508,6 @@ function abrirComparacionDuplicados(ncf) {
     const img1 = document.getElementById('factura1Imagen');
     if (img1) img1.src = getVisibleImageUrl(f1.archivo_url || f1.drive_url);
     
-    // Factura B
     safeSetText('factura2Title', `FACTURA #${f2.id}`);
     safeSetText('factura2Fecha', formatDateDDMMYYYY(f2.fecha_factura));
     safeSetText('factura2NCF', f2.ncf || '-');
@@ -436,7 +516,6 @@ function abrirComparacionDuplicados(ncf) {
     const img2 = document.getElementById('factura2Imagen');
     if (img2) img2.src = getVisibleImageUrl(f2.archivo_url || f2.drive_url);
 
-    // Conectar botones eliminar
     const btnE1 = document.getElementById('btnEliminar1');
     if (btnE1) btnE1.onclick = () => eliminarFacturaDuplicada(f1.id);
     const btnE2 = document.getElementById('btnEliminar2');
@@ -453,7 +532,6 @@ async function mantenerAmbasDuplicadas() {
   const id1 = title1.match(/#(\d+)/)[1];
   const id2 = title2.match(/#(\d+)/)[1];
   try {
-    // FIX: Rutas corregidas
     await Promise.all([
       fetchAPI(`/contable/facturas/${id1}`, { method: 'PUT', body: JSON.stringify({ revisada: 1 }) }),
       fetchAPI(`/contable/facturas/${id2}`, { method: 'PUT', body: JSON.stringify({ revisada: 1 }) })
@@ -470,7 +548,6 @@ async function mantenerAmbasDuplicadas() {
 async function eliminarFacturaDuplicada(id) {
   if (!confirm('¿Eliminar esta factura?')) return;
   try {
-    // FIX: Ruta corregida
     const res = await fetchAPI(`/contable/facturas/${id}`, { method: 'DELETE' });
     if (res.success) {
       facturas = facturas.filter(f => f.id !== id);
@@ -482,7 +559,6 @@ async function eliminarFacturaDuplicada(id) {
   } catch (e) { if(typeof showToast === 'function') showToast('Error al eliminar', 'error'); }
 }
 
-// --- SOSPECHOSAS (DETECCIÓN INTELIGENTE) ---
 function abrirComparacionSospechosas(id) {
     const f1 = facturas.find(f => f.id === id);
     if (!f1) return;
@@ -515,7 +591,6 @@ function cerrarModalSospechosas() { document.getElementById('sospechosasModal').
 async function eliminarFacturaSospechosa(id) {
   if (!confirm('¿Eliminar esta factura?')) return;
   try {
-    // FIX: Ruta corregida
     const res = await fetchAPI(`/contable/facturas/${id}`, { method: 'DELETE' });
     if (res.success) {
       facturas = facturas.filter(f => f.id !== id);
@@ -531,7 +606,6 @@ async function mantenerAmbas() {
   const id1 = document.getElementById('sospechosa1Title').textContent.match(/#(\d+)/)[1];
   const id2 = document.getElementById('sospechosa2Title').textContent.match(/#(\d+)/)[1];
   try {
-    // FIX: Rutas corregidas
     await Promise.all([
       fetchAPI(`/contable/facturas/${id1}`, { method: 'PUT', body: JSON.stringify({ revisada: 1 }) }),
       fetchAPI(`/contable/facturas/${id2}`, { method: 'PUT', body: JSON.stringify({ revisada: 1 }) })
@@ -546,7 +620,7 @@ async function mantenerAmbas() {
 }
 
 // ============================================
-// FUNCIONES DE GUARDADO (PERSISTENCIA)
+// FUNCIONES DE GUARDADO
 // ============================================
 
 async function saveDateField(id, val) {
@@ -565,12 +639,10 @@ async function saveField(facturaId, field, value, refrescar = true) {
 
   try {
     const updates = { [field]: value };
-    // Si se editan campos clave, resetear "revisada" para que la IA/Lógica vuelva a evaluar anomalías
     if (['ncf', 'rnc', 'fecha_factura', 'proveedor', 'total_pagado'].includes(field)) {
       updates.revisada = 0;
     }
 
-    // FIX: Ruta corregida
     const response = await fetchAPI(`/contable/facturas/${facturaId}`, {
       method: 'PUT',
       body: JSON.stringify(updates)
@@ -593,7 +665,7 @@ async function saveField(facturaId, field, value, refrescar = true) {
 }
 
 // ============================================
-// DETECCIÓN DE ANOMALÍAS (Lógica de Negocio 606)
+// ANOMALÍAS
 // ============================================
 
 function getTipoNCF(ncf) {
@@ -613,7 +685,6 @@ function getAnomalia(f) {
   const pMes = document.getElementById('periodoMes')?.value;
   const pAnio = document.getElementById('periodoAnio')?.value;
   
-  // 1. Validación de Periodo
   if (f.fecha_factura && pMes && pAnio) {
     const dateStr = String(f.fecha_factura);
     const year = dateStr.substring(0, 4);
@@ -621,25 +692,18 @@ function getAnomalia(f) {
     if (year !== pAnio || month !== pMes) return { tipo: 'fuera-periodo', icono: '🟠' };
   }
   
-  // 2. Validación de RNC
   if (f.rnc && !validarRNC(f.rnc)) return { tipo: 'rnc-invalido', icono: '🔶' };
-  
-  // Si ya fue revisada manualmente, ignorar el resto
   if (f.revisada) return null;
   
-  // 3. Duplicados (Mismo NCF)
   const dups = facturas.filter(x => x.ncf === f.ncf && x.ncf && !x.revisada);
   if (dups.length > 1) return { tipo: 'duplicado', icono: '🔴' };
   
-  // 4. Sospechosas (Datos idénticos, diferente NCF)
   const sosp = facturas.filter(x => x.id !== f.id && x.proveedor === f.proveedor && x.total_pagado === f.total_pagado && x.fecha_factura === f.fecha_factura && x.ncf !== f.ncf && !x.revisada);
   if (sosp.length > 0) return { tipo: 'sospechosa', icono: '🟡' };
   
-  // 5. ITBIS (Usando el nuevo campo 'itbis_facturado')
   const itbisVal = f.itbis_facturado !== undefined ? f.itbis_facturado : f.itbis;
   if (f.ncf?.startsWith('B01') && (!itbisVal || itbisVal == 0)) return { tipo: 'itbis', icono: '🧾' };
   
-  // 6. Clasificación Incompleta
   if (!f.tipo_gasto || !f.forma_pago) return { tipo: 'sin-clasificar', icono: '⚠️' };
   
   return null;
@@ -651,8 +715,8 @@ function updateStatusBar() {
     safeSetText('statusTotal', `${total} facturas archivadas`);
     safeSetText('statusOK', 0);
     ['countDuplicados', 'countSospechosas', 'countITBIS', 'countSinClasificar', 'countFueraPeriodo', 'countRNCInvalido'].forEach(id => {
-         const el = document.getElementById(id);
-         if(el && el.parentElement) el.parentElement.style.display = 'none';
+          const el = document.getElementById(id);
+          if(el && el.parentElement) el.parentElement.style.display = 'none';
     });
     return;
   }
@@ -687,7 +751,7 @@ function updateStatusBar() {
 }
 
 // ============================================
-// EXPORTACIÓN Y MODAL "TODAS"
+// EXPORTACIÓN
 // ============================================
 
 function abrirModalConfirmTodas() {
@@ -737,28 +801,56 @@ function abrirModalExportar(modo = 'csv') {
     select.appendChild(opt);
   });
   
-  renderColumnCheckboxes();
+  renderColumnCheckboxes(modo);
   modal.classList.add('show');
 }
 
-function renderColumnCheckboxes() {
+function renderColumnCheckboxes(modo) {
     const empresaSelect = document.getElementById('exportEmpresaSelect').value;
     const grid = document.querySelector('.columns-grid');
     const showEmpresaCol = (empresaSelect === 'TODAS');
     
-    let html = `<label><input type="checkbox" checked value="fecha_factura"> Fecha</label>`;
-    if (showEmpresaCol) { html += `<label><input type="checkbox" checked value="empresa_nombre"> Empresa</label>`; }
+    const isSheets = (modo === 'sheets');
+    const attr = (def) => isSheets ? 'checked disabled' : (def ? 'checked' : '');
     
-    // Columnas ajustadas a la lógica de negocio 606
+    let html = `
+        <div style="grid-column: span 2; border-bottom:1px solid #eee; padding-bottom:5px; margin-bottom:5px; font-weight:bold; color:#2563eb;">--- DATOS GENERALES ---</div>
+        <label><input type="checkbox" ${attr(true)} value="fecha_factura"> Fecha Comp.</label>
+        `;
+    if (showEmpresaCol) { html += `<label><input type="checkbox" ${attr(true)} value="empresa_nombre"> Empresa</label>`; }
+    
     html += `
-        <label><input type="checkbox" checked value="rnc"> RNC</label>
-        <label><input type="checkbox" checked value="ncf"> NCF</label>
-        <label><input type="checkbox" checked value="tipo_ncf"> Tipo (B01)</label>
-        <label><input type="checkbox" checked value="proveedor"> Proveedor</label>
-        <label><input type="checkbox" checked value="tipo_gasto"> Tipo Gasto</label>
-        <label><input type="checkbox" checked value="forma_pago"> Forma Pago</label>
-        <label><input type="checkbox" checked value="itbis_facturado"> ITBIS</label>
-        <label><input type="checkbox" checked value="total_pagado"> Total</label>
+        <label><input type="checkbox" ${attr(true)} value="rnc"> RNC o Cédula</label>
+        <label><input type="checkbox" ${attr(true)} value="tipo_id"> Tipo Id</label>
+        <label><input type="checkbox" ${attr(true)} value="ncf"> NCF</label>
+        <label><input type="checkbox" ${attr(true)} value="ncf_modificado"> NCF Modificado</label>
+        <label><input type="checkbox" ${attr(true)} value="proveedor"> Proveedor</label>
+        
+        <div style="grid-column: span 2; border-bottom:1px solid #eee; padding-bottom:5px; margin-bottom:5px; margin-top:10px; font-weight:bold; color:#2563eb;">--- MONTOS Y BIENES ---</div>
+        <label><input type="checkbox" ${attr(true)} value="monto_servicios"> Monto Servicios</label>
+        <label><input type="checkbox" ${attr(true)} value="monto_bienes"> Monto Bienes</label>
+        <label><input type="checkbox" ${attr(true)} value="total_pagado"> Total Facturado</label>
+        
+        <div style="grid-column: span 2; border-bottom:1px solid #eee; padding-bottom:5px; margin-bottom:5px; margin-top:10px; font-weight:bold; color:#2563eb;">--- ITBIS ---</div>
+        <label><input type="checkbox" ${attr(true)} value="itbis_facturado"> ITBIS Facturado</label>
+        <label><input type="checkbox" ${attr(false)} value="itbis_retenido"> ITBIS Retenido</label>
+        <label><input type="checkbox" ${attr(false)} value="itbis_proporcionalidad"> ITBIS Proporcionalidad</label>
+        <label><input type="checkbox" ${attr(false)} value="itbis_costo"> ITBIS Costo</label>
+        <label><input type="checkbox" ${attr(false)} value="itbis_adelantar"> ITBIS Adelantar</label>
+        <label><input type="checkbox" ${attr(false)} value="itbis_percibido"> ITBIS Percibido</label>
+        
+        <div style="grid-column: span 2; border-bottom:1px solid #eee; padding-bottom:5px; margin-bottom:5px; margin-top:10px; font-weight:bold; color:#2563eb;">--- RETENCIONES E IMPUESTOS ---</div>
+        <label><input type="checkbox" ${attr(false)} value="tipo_retencion_isr"> Tipo Retención ISR</label>
+        <label><input type="checkbox" ${attr(false)} value="monto_retencion_isr"> Retención ISR</label>
+        <label><input type="checkbox" ${attr(false)} value="isr_percibido"> ISR Percibido</label>
+        <label><input type="checkbox" ${attr(false)} value="impuesto_selectivo"> Impuesto Selectivo</label>
+        <label><input type="checkbox" ${attr(false)} value="otros_impuestos"> Otros Impuestos</label>
+        <label><input type="checkbox" ${attr(false)} value="propina_legal"> Propina Legal</label>
+        
+        <div style="grid-column: span 2; border-bottom:1px solid #eee; padding-bottom:5px; margin-bottom:5px; margin-top:10px; font-weight:bold; color:#2563eb;">--- CLASIFICACIÓN ---</div>
+        <label><input type="checkbox" ${attr(true)} value="tipo_gasto"> Tipo de Gasto</label>
+        <label><input type="checkbox" ${attr(true)} value="forma_pago"> Forma de Pago</label>
+        
         <label><input type="checkbox" value="drive_url"> Link Factura</label>
     `;
     grid.innerHTML = html;
@@ -788,7 +880,14 @@ function prepararDatosParaExportar() {
     const filaProcesada = {};
     columnasActivas.forEach(col => {
       let val = f[col];
-      // Mapeo itbis_facturado en export
+      
+      if (col === 'tipo_id') {
+          const rncClean = (f.rnc || '').replace(/-/g, '');
+          if (rncClean.length === 9) val = '1';
+          else if (rncClean.length === 11) val = '2';
+          else val = '';
+      }
+      
       if (col === 'itbis_facturado') val = f.itbis_facturado !== undefined ? f.itbis_facturado : f.itbis;
 
       if (col === 'tipo_ncf') val = getTipoNCF(f.ncf);
@@ -796,8 +895,13 @@ function prepararDatosParaExportar() {
       if (col === 'tipo_gasto') { const o = CATEGORIAS_GASTO.find(c => c.value == String(val).trim()); if(o) val = o.value === '' ? '' : o.label; }
       if (col === 'rnc' && val) val = String(val).replace(/-/g, '');
       if (col === 'fecha_factura') val = formatDateDDMMYYYY(val);
-      if (col === 'itbis_facturado' || col === 'total_pagado') { let num = parseFloat(val); if(isNaN(num)) num = 0; val = num.toFixed(2); }
-      // FIX CRÍTICO: Recuperar ruta absoluta para links de Drive
+      
+      if (['itbis_facturado', 'total_pagado', 'monto_servicios', 'monto_bienes', 'itbis_retenido', 'itbis_proporcionalidad', 'itbis_costo', 'itbis_adelantar', 'itbis_percibido', 'monto_retencion_isr', 'isr_percibido', 'impuesto_selectivo', 'otros_impuestos', 'propina_legal'].includes(col)) { 
+          let num = parseFloat(val); 
+          if(isNaN(num)) num = 0; 
+          val = num.toFixed(2); 
+      }
+      
       if (col === 'drive_url' && val && val.startsWith('/')) { val = window.location.origin + val; }
       if (val === null || val === undefined) val = '';
       filaProcesada[col] = String(val);
@@ -851,7 +955,6 @@ async function ejecutarExportacionSheets() {
   if(typeof showToast === 'function') showToast('⏳ Exportando a Google Sheets...', 'info');
 
   try {
-    // FIX: Ruta corregida
     const response = await fetchAPI('/contable/exportar-sheets', {
       method: 'POST',
       body: JSON.stringify({
@@ -883,7 +986,6 @@ async function ejecutarExportacionSheets() {
 
 async function archivarFacturas(ids) {
   try {
-    // FIX: Ruta corregida
     const response = await fetchAPI('/contable/facturas/procesar-lote', { method: 'POST', body: JSON.stringify({ ids }) });
     if (response.success) {
       if(typeof showToast === 'function') showToast(`Sweep! ${ids.length} facturas archivadas`, 'success');
@@ -894,9 +996,31 @@ async function archivarFacturas(ids) {
 
 function generarCSV(datosProcesados, columnas, nombreArchivoBase) {
   const headerMap = { 
-      'fecha_factura': 'Fecha', 'empresa_nombre': 'Empresa', 'rnc': 'RNC', 'ncf': 'NCF', 
-      'tipo_ncf': 'Tipo', 'proveedor': 'Proveedor', 'tipo_gasto': 'Tipo Gasto', 
-      'forma_pago': 'Forma Pago', 'itbis_facturado': 'ITBIS', 'total_pagado': 'Total', 'drive_url': 'Link Factura' 
+      'fecha_factura': 'Fecha Comp.', 
+      'empresa_nombre': 'Empresa', 
+      'rnc': 'RNC o Cédula', 
+      'tipo_id': 'Tipo Id',
+      'ncf': 'NCF', 
+      'ncf_modificado': 'NCF Modificado',
+      'proveedor': 'Proveedor', 
+      'tipo_gasto': 'Tipo de Gasto', 
+      'forma_pago': 'Forma de Pago', 
+      'monto_servicios': 'Monto Servicios',
+      'monto_bienes': 'Monto Bienes',
+      'total_pagado': 'Total Facturado',
+      'itbis_facturado': 'ITBIS Facturado',
+      'itbis_retenido': 'ITBIS Retenido',
+      'itbis_proporcionalidad': 'ITBIS Proporcionalidad',
+      'itbis_costo': 'ITBIS Costo',
+      'itbis_adelantar': 'ITBIS Adelantar',
+      'itbis_percibido': 'ITBIS Percibido',
+      'tipo_retencion_isr': 'Tipo Retención ISR',
+      'monto_retencion_isr': 'Retención ISR',
+      'isr_percibido': 'ISR Percibido',
+      'impuesto_selectivo': 'Impuesto Selectivo',
+      'otros_impuestos': 'Otros Impuestos',
+      'propina_legal': 'Propina Legal',
+      'drive_url': 'Link Factura' 
   };
   
   const headerRow = columnas.map(col => headerMap[col] || col).join(',');

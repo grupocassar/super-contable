@@ -1,39 +1,40 @@
 const express = require('express');
 const router = express.Router();
 const contableController = require('../controllers/contableController');
+
+// FIX: Importación correcta basada en tu archivo auth.js
 const { authenticateToken } = require('../middleware/auth');
-const { requireRole } = require('../middleware/roles');
 
-/**
- * RUTAS DEL CONTABLE
- * Protegidas por Token y Verificación de Rol
- */
-
-// Aplicar middlewares de seguridad a todas las rutas de este archivo
+// Middleware de autenticación global para estas rutas
+// Ahora pasamos la función directa, no el objeto
 router.use(authenticateToken);
-router.use(requireRole(['contable']));
 
-// --- Gestión de Dashboard y Empresas ---
+// --- DASHBOARD ---
 router.get('/dashboard', contableController.getDashboard);
+
+// --- EMPRESAS ---
 router.get('/empresas', contableController.getEmpresas);
 router.post('/empresas', contableController.createEmpresa);
+router.put('/empresas/:id', contableController.updateEmpresa);
 
-// --- Gestión de Facturas (606) ---
+// --- FACTURAS ---
+// ⚠️ IMPORTANTE: Las rutas estáticas/específicas deben ir PRIMERO
+router.get('/facturas/sugerencia-gasto', contableController.getSugerenciaGasto);
+router.post('/facturas/procesar-lote', contableController.procesarLoteFacturas);
+
+// Rutas generales y dinámicas de facturas
 router.get('/facturas', contableController.getFacturas);
 router.put('/facturas/:id', contableController.updateFactura);
 router.delete('/facturas/:id', contableController.deleteFactura);
 
-// --- Gestión de Asistentes (Contable Senior -> Asistentes) ---
+// --- EXPORTACIÓN ---
+router.post('/exportar-sheets', contableController.exportarASheets);
+
+// --- ASISTENTES ---
 router.get('/asistentes', contableController.getAsistentes);
 router.post('/asistentes', contableController.createAsistente);
+router.put('/asistentes/:id', contableController.updateAsistente);
 router.get('/asistentes/:id/empresas', contableController.getAsistenteEmpresas);
 router.post('/asistentes/:id/empresas', contableController.assignEmpresasToAsistente);
-
-// --- Herramientas e IA ---
-router.get('/sugerencia-gasto', contableController.getSugerenciaGasto);
-router.post('/procesar-lote', contableController.procesarLoteFacturas);
-
-// --- Exportación Fiscal ---
-router.post('/exportar-sheets', contableController.exportarASheets);
 
 module.exports = router;

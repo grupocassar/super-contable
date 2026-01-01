@@ -81,6 +81,7 @@ const updateEmpresa = asyncHandler(async (req, res) => {
 const getFacturas = asyncHandler(async (req, res) => {
   const contableId = req.user.role === 'contable' ? req.user.userId : req.user.contableId;
   const { estado, empresa_id } = req.query;
+  // Esto invoca al Modelo Factura que debe hacer SELECT * para traer los 23 campos
   const facturas = await Factura.findByContableId(contableId, { estado, empresa_id: empresa_id ? parseInt(empresa_id) : undefined });
   res.json({ success: true, data: facturas });
 });
@@ -160,7 +161,7 @@ const procesarLoteFacturas = asyncHandler(async (req, res) => {
   const db = getDatabase();
 
   if (!ids || !Array.isArray(ids) || ids.length === 0) {
-    return res.status(400).json({ success: false, message: 'Se requiere una lista de IDs' });
+    return res.status(400).json({ success: false, message: 'Se requiere un lista de IDs' });
   }
 
   db.serialize(() => {
@@ -211,6 +212,7 @@ const exportarASheets = asyncHandler(async (req, res) => {
         const mesCapitalizado = mesNombre.charAt(0).toUpperCase() + mesNombre.slice(1);
         const sheetName = `${mesCapitalizado} ${periodo_anio}`;
 
+        // ALINEACIÓN 606: Mapeo de columnas corregido para soportar los nuevos campos
         const headerMap = {
             'fecha_factura': 'Fecha',
             'empresa_nombre': 'Empresa',
@@ -220,7 +222,8 @@ const exportarASheets = asyncHandler(async (req, res) => {
             'proveedor': 'Proveedor',
             'tipo_gasto': 'Tipo Gasto',
             'forma_pago': 'Forma Pago',
-            'itbis': 'ITBIS',
+            'itbis': 'ITBIS',             // Compatibilidad legacy
+            'itbis_facturado': 'ITBIS',   // Nuevo esquema
             'total_pagado': 'Total',
             'drive_url': 'Link Factura'
         };
@@ -229,6 +232,7 @@ const exportarASheets = asyncHandler(async (req, res) => {
         const dataRows = facturas.map(f => {
             return columnas.map(col => {
                 let val = f[col];
+                // Manejo de valores nulos o undefined
                 if (val === null || val === undefined) return '';
                 return String(val);
             });

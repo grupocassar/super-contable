@@ -13,7 +13,7 @@
   border: 1px solid #e2e8f0;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem; /* Controla la separación entre las dos filas del header */
+  gap: 1.25rem;
 }
 
 /* FILA SUPERIOR: FILTROS Y EXPORTACIÓN */
@@ -27,7 +27,7 @@
 .header-controls-left {
   display: flex;
   align-items: center;
-  gap: 2.5rem; /* Separación entre Periodo y Empresa */
+  gap: 2.5rem;
 }
 
 /* GRUPOS DE SELECTORES (Label + Input) */
@@ -96,7 +96,7 @@
 
 .btn-view-toggle.active {
   background: white;
-  color: #1e40af; /* Azul profesional */
+  color: #1e40af;
   box-shadow: 0 1px 2px rgba(0,0,0,0.1);
   border: 1px solid #dbeafe;
 }
@@ -183,7 +183,7 @@
 
 .table-excel {
   width: 100%;
-  min-width: 1155px; /* Suma exacta de columnas optimizadas */
+  min-width: 1750px;
   border-collapse: collapse;
   font-size: 0.8rem;
   table-layout: fixed;
@@ -245,6 +245,45 @@
   z-index: 2;
 }
 
+/* --- COLUMNAS AVANZADAS --- */
+.col-avanzado {
+  background-color: #fef3c7;
+  border-left: 2px solid #f59e0b;
+}
+
+.col-avanzado input,
+.col-avanzado select {
+  background-color: #fffbeb;
+}
+
+.col-avanzado input:focus,
+.col-avanzado select:focus {
+  background-color: white;
+}
+
+/* --- COLUMNA TOGGLE --- */
+.col-toggle {
+  background: #eff6ff;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s;
+}
+
+.col-toggle:hover {
+  background: #dbeafe;
+}
+
+.col-toggle span {
+  font-size: 1rem;
+  display: inline-block;
+  transition: transform 0.2s;
+}
+
+.col-toggle:hover span {
+  transform: scale(1.1);
+}
+
 /* --- BADGES NCF (RESTABLECIDO SOMBREO AZUL) --- */
 .badge-ncf {
   display: inline-block;
@@ -300,7 +339,7 @@
 /* ZONA DE SELECCIÓN DE COLUMNAS - GRID DE 2 COLUMNAS (RESTAURADO) */
 .columns-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr; /* Fuerza las dos columnas */
+  grid-template-columns: 1fr 1fr;
   gap: 0.75rem;
   background: #f8fafc;
   padding: 1rem;

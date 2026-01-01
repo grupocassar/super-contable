@@ -9,11 +9,12 @@
   <link rel="stylesheet" href="/assets/css/pre-cierre.css">
   <style>
     /* ============================================ */
-    /* EVALUACIÓN Y AJUSTES DE CSS PARA MODALES     */
+    /* ESTILOS ESPECÍFICOS DE ESTA VISTA            */
     /* ============================================ */
 
     body { background-color: #f1f5f9; margin: 0; font-family: 'Inter', sans-serif; }
 
+    /* --- HEADER DE CONTROL --- */
     .pre-cierre-header {
       max-width: 100%;
       margin: 0 auto 1.25rem;
@@ -67,6 +68,7 @@
       transition: all 0.2s;
     }
 
+    /* --- SELECTOR DE VISTAS (PENDIENTES/HISTÓRICO) --- */
     .view-selector {
       display: flex;
       background: #f1f5f9;
@@ -117,43 +119,46 @@
     .btn-export-sheets { background-color: #f0fdf4; color: #15803d; border-color: #dcfce7; }
     .btn-export-excel { background-color: #eff6ff; color: #1d4ed8; border-color: #dbeafe; }
 
-    /* --- TABLA --- */
+    /* --- TABLA EXCEL --- */
     .table-container-excel {
       width: 100%;
       overflow-x: auto;
       background: white;
       border-radius: 8px;
       margin-bottom: 3rem;
+      border: 1px solid #e2e8f0;
     }
 
     .table-excel {
       width: 100%;
-      min-width: 1155px;
+      min-width: 1750px;
       border-collapse: collapse;
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       table-layout: fixed;
     }
 
     .table-excel th {
-      padding: 0.6rem 0.5rem;
+      padding: 0.5rem 0.4rem;
       border: 1px solid #e2e8f0;
-      background: #f8fafc;
-      color: #475569;
+      background: #f1f5f9;
+      color: #334155;
       font-size: 0.7rem;
       text-transform: uppercase;
       vertical-align: top;
+      font-weight: 700;
+      text-align: center;
     }
 
     .header-filter {
       display: block;
       width: 100%;
-      margin-top: 6px;
-      padding: 3px 5px;
+      margin-top: 4px;
+      padding: 2px 4px;
       font-size: 0.7rem;
       border: 1px solid #cbd5e1;
       border-radius: 3px;
       color: #1e293b;
-      height: 24px;
+      height: 22px;
       background-color: white;
     }
 
@@ -164,32 +169,43 @@
     }
     
     .cell-input {
-      width: 100%; border: none; padding: 8px 6px; background: transparent; outline: none; font-family: inherit; font-size: 0.85rem;
+      width: 100%; border: none; padding: 6px 4px; background: transparent; outline: none; font-family: inherit; font-size: 0.8rem;
     }
     .cell-input:focus { background: #f0f9ff; box-shadow: inset 0 0 0 2px #3b82f6; }
     .cell-input.readonly { background: #f8fafc; color: #64748b; cursor: default; }
     
     .cell-select {
-      width: 100%; border: none; padding: 7px 4px; font-size: 0.8rem; background: transparent; cursor: pointer; outline: none;
+      width: 100%; border: none; padding: 5px 2px; font-size: 0.75rem; background: transparent; cursor: pointer; outline: none;
     }
     .sugerencia-activa { background-color: #f0fdf4 !important; color: #166534; font-weight: 700; }
 
-    /* --- BADGES NCF --- */
-    .badge-ncf {
-      display: inline-block;
-      padding: 0.2rem 0.5rem;
-      border-radius: 4px;
-      font-size: 0.7rem;
-      font-weight: 700;
-    }
-    .badge-b01 { background: #dbeafe !important; color: #1e40af !important; } 
-    .badge-b02 { background: #fef3c7 !important; color: #92400e !important; }
+    /* --- COLUMNAS ESPECÍFICAS --- */
+    .col-alert { width: 35px; }
+    .col-fecha { width: 90px; }
+    .col-rnc { width: 110px; }
+    .col-tipo { width: 60px; text-align: center; }
+    .col-ncf { width: 110px; }
+    .col-prov { width: 160px; }
+    .col-monto-dgii { width: 110px; background-color: #fffbeb; } 
+    .col-itbis { width: 100px; }
+    .col-ret { width: 100px; }
+    .col-gasto { width: 180px; }
+    .col-pago { width: 110px; }
+    .col-total { width: 115px; font-weight: bold; background-color: #f8fafc; }
+    .col-toggle { width: 40px; text-align: center; background: #eff6ff; cursor: pointer; }
+    .col-toggle:hover { background: #dbeafe; }
+
+    /* --- COLUMNAS AVANZADAS --- */
+    .col-avanzado { width: 110px; background-color: #fef3c7; }
+
+    /* --- BADGES --- */
+    .badge-tipo-id { font-size: 0.75rem; font-weight: 800; color: #475569; }
     
-    .anomalia-clickeable { cursor: pointer; font-size: 1.2rem; transition: transform 0.2s; display: inline-block; }
+    .anomalia-clickeable { cursor: pointer; font-size: 1.1rem; transition: transform 0.2s; display: inline-block; }
     .anomalia-clickeable:hover { transform: scale(1.2); }
     .fila-historico { background-color: #f8fafc; opacity: 0.9; }
 
-    /* --- MODALES OPTIMIZADOS (AJUSTES CLAVE) --- */
+    /* --- MODALES GENERALES --- */
     .modal-duplicados {
       display: none;
       position: fixed;
@@ -235,6 +251,30 @@
       flex: 1;
     }
 
+    /* --- REJILLA DE COLUMNAS PARA EXPORTACIÓN --- */
+    .columns-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      max-height: 350px;
+      overflow-y: auto;
+      padding-right: 5px;
+      border: 1px solid #e2e8f0;
+      padding: 1rem;
+      border-radius: 6px;
+      background: #f8fafc;
+    }
+    
+    .columns-grid label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.85rem;
+      color: #334155;
+      cursor: pointer;
+    }
+    
+    /* --- COMPARACIÓN DE FACTURAS --- */
     .factura-comparacion {
       border: 1px solid #e2e8f0;
       border-radius: 8px;
@@ -283,7 +323,7 @@
       padding-bottom: 2px;
     }
 
-    /* BOTONES DENTRO DEL MODAL */
+    /* BOTONES */
     .btn-danger {
       background: #ef4444;
       color: white;
@@ -297,7 +337,6 @@
       display: block;
       transition: background 0.2s;
     }
-
     .btn-danger:hover { background: #dc2626; }
 
     .modal-duplicados-footer {
@@ -314,7 +353,7 @@
     .btn-success { background: #10b981; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 6px; font-weight: 600; cursor: pointer; }
     .btn-outline { background: transparent; border: 1px solid #cbd5e1; color: #475569; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; }
 
-    /* ESTILO PARA EXPORTACIÓN MASIVA */
+    /* ALERTAS */
     .modal-warning { border-top: 4px solid #f59e0b; background: white; border-radius: 8px; width: 90%; max-width: 500px; padding: 0; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 4000; display: flex; align-items: center; justify-content: center; }
     .checkbox-confirm { background: #fffbeb; border-radius: 6px; border: 1px solid #fef3c7; padding: 0.5rem; display: flex; align-items: center; gap: 0.75rem; cursor: pointer; }
@@ -327,14 +366,14 @@
     }
     .company-tooltip.show { opacity: 1; }
 
-    /* Estilos de Pestañas (Que faltaban) */
+    /* PESTAÑAS */
     .tabs-container { background: white; border-bottom: 1px solid #e2e8f0; padding: 0 1.5rem; margin-bottom: 1rem; }
     .tabs { display: flex; gap: 1.5rem; overflow-x: auto; }
     .tab { text-decoration: none; color: #64748b; padding: 1rem 0.5rem; font-size: 0.9rem; font-weight: 600; border-bottom: 2px solid transparent; transition: all 0.2s; white-space: nowrap; }
     .tab:hover { color: #1e293b; }
     .tab.active { color: #2563eb; border-bottom-color: #2563eb; }
     
-    /* Navbar básica */
+    /* NAVBAR */
     .navbar { background: #1e293b; padding: 0.75rem 1.5rem; color: white; margin-bottom: 0; }
     .navbar-content { display: flex; justify-content: space-between; align-items: center; }
     .navbar-brand { font-weight: 700; font-size: 1.1rem; }
@@ -342,7 +381,7 @@
     .navbar-user-name { font-weight: 600; font-size: 0.9rem; }
     .navbar-user-role { font-size: 0.7rem; background: #334155; padding: 2px 6px; border-radius: 4px; }
     
-    /* Barra de Estado (Items de alerta) */
+    /* BARRA DE ESTADO */
     .status-bar {
       position: fixed; bottom: 0; left: 0; width: 100%;
       background: white; border-top: 1px solid #e2e8f0;
@@ -377,7 +416,7 @@
       </div>
     </nav>
 
-    <!-- PESTAÑAS (RESTAURADO) -->
+    <!-- PESTAÑAS -->
     <div class="tabs-container">
       <nav class="tabs">
         <a href="dashboard.html" class="tab">📊 Dashboard</a>
@@ -442,48 +481,53 @@
       <table class="table-excel" id="preCierreTable">
         <thead>
           <tr>
-            <th width="40" title="Anomalías">Alert</th>
-            <th width="90">Fecha</th>
-            <th width="100">
-              RNC
+            <th class="col-alert" title="Anomalías">⚠️</th>
+            <th class="col-fecha">Fecha Comp.</th>
+            <th class="col-rnc">
+              RNC o Cédula
               <input type="text" class="header-filter" id="filterRNC" placeholder="Filtro..." onkeyup="aplicarFiltros()">
             </th>
-            <th width="55">
-              Tipo
+            <th class="col-tipo">
+              Tipo Id
               <select class="header-filter" id="filterTipo" onchange="aplicarFiltros()">
                 <option value="">--</option>
-                <option value="B01">01</option><option value="B02">02</option>
-                <option value="B11">11</option><option value="B14">14</option>
+                <option value="1">1 (RNC)</option>
+                <option value="2">2 (Céd)</option>
               </select>
             </th>
-            <th width="100">
+            <th class="col-ncf">
               NCF
               <input type="text" class="header-filter" id="filterNCF" placeholder="NCF..." onkeyup="aplicarFiltros()">
             </th>
-            <th width="180">
+            <th class="col-prov">
               Proveedor
               <input type="text" class="header-filter" id="filterProveedor" placeholder="Buscar..." onkeyup="aplicarFiltros()">
             </th>
-            <th width="280">
+            <th class="col-monto-dgii">Monto Servicios</th>
+            <th class="col-monto-dgii">Monto Bienes</th>
+            <th class="col-itbis" title="ITBIS Facturado">ITBIS Facturado</th>
+            <th class="col-ret" title="ITBIS Retenido">ITBIS Retenido</th>
+            <th class="col-ret" title="Retención ISR">Retención ISR</th>
+            <th class="col-gasto">
               Tipo de Gasto
               <select class="header-filter" id="filterGasto" onchange="aplicarFiltros()">
-                <option value="">-- Todos los Gastos --</option>
-                <option value="VACIO">⚠️ Sin Clasificar</option>
+                <option value="">-- Todos --</option>
+                <option value="VACIO">⚠️ Sin Clasif</option>
                 <option value="01">01 - Personal</option>
                 <option value="02">02 - Suministros</option>
-                <option value="03">03 - Arrendamientos</option>
-                <option value="04">04 - Activos Fijos</option>
-                <option value="05">05 - Representación</option>
-                <option value="06">06 - Deducciones</option>
-                <option value="07">07 - Financieros</option>
-                <option value="08">08 - Extraordinarios</option>
-                <option value="09">09 - Costo Venta</option>
-                <option value="10">10 - Adq. Activos</option>
+                <option value="03">03 - Arrend.</option>
+                <option value="04">04 - Activos</option>
+                <option value="05">05 - Repres.</option>
+                <option value="06">06 - Deducc.</option>
+                <option value="07">07 - Financ.</option>
+                <option value="08">08 - Extraord.</option>
+                <option value="09">09 - Costos</option>
+                <option value="10">10 - Adq. Act.</option>
                 <option value="11">11 - Seguros</option>
               </select>
             </th>
-            <th width="110">
-              Pago
+            <th class="col-pago">
+              Forma de Pago
               <select class="header-filter" id="filterPago" onchange="aplicarFiltros()">
                 <option value="">--</option><option value="VACIO">⚠️</option>
                 <option value="01">01</option><option value="02">02</option>
@@ -491,22 +535,36 @@
                 <option value="05">05</option><option value="06">06</option>
               </select>
             </th>
-            <th width="85" class="text-right">ITBIS</th>
-            <th width="115" class="text-right">Total</th>
+            <th class="col-total text-right">Total Facturado</th>
+            
+            <!-- COLUMNAS AVANZADAS (OCULTAS INICIALMENTE) -->
+            <th class="col-avanzado" style="display: none;">NCF Modificado</th>
+            <th class="col-avanzado" style="display: none;">ITBIS Proporcionalidad</th>
+            <th class="col-avanzado" style="display: none;">ITBIS Costo</th>
+            <th class="col-avanzado" style="display: none;">ITBIS Adelantar</th>
+            <th class="col-avanzado" style="display: none;">ITBIS Percibido</th>
+            <th class="col-avanzado" style="display: none;">Tipo Retención ISR</th>
+            <th class="col-avanzado" style="display: none;">ISR Percibido</th>
+            <th class="col-avanzado" style="display: none;">Impuesto Selectivo</th>
+            <th class="col-avanzado" style="display: none;">Otros Impuestos</th>
+            <th class="col-avanzado" style="display: none;">Propina Legal</th>
+            
+            <th class="col-toggle" onclick="toggleColumnasAvanzadas()">
+              <span id="toggleIcon" title="Expandir campos">▶️</span>
+            </th>
           </tr>
         </thead>
         <tbody id="preCierreTableBody">
-          <tr><td colspan="10" class="text-center" style="padding: 3rem; color: #64748b;">Cargando...</td></tr>
+          <tr><td colspan="25" class="text-center" style="padding: 3rem; color: #64748b;">Cargando...</td></tr>
         </tbody>
       </table>
     </div>
 
-    <!-- BARRA DE ESTADO (ELEMENTOS CRÍTICOS PARA EL JS) -->
+    <!-- BARRA DE ESTADO -->
     <div class="status-bar">
       <div class="status-item"><span id="statusTotal">0 facturas</span></div>
       <div class="status-item success">✅ <span id="statusOK">0</span> OK</div>
       
-      <!-- Items ocultos que el JS togglea (Sin esto, el JS falla) -->
       <div class="status-item danger" id="statusDuplicados" style="display:none">
         🔴 <span id="countDuplicados">0</span> Duplicados
       </div>
@@ -530,22 +588,21 @@
 
   <!-- MODAL DE EXPORTACIÓN -->
   <div id="exportModal" class="modal-duplicados">
-    <div class="modal-duplicados-content" style="max-width: 500px;">
+    <div class="modal-duplicados-content" style="max-width: 600px;">
       <div class="modal-duplicados-header">
-        <h3>📤 Exportar Datos Fiscales</h3>
+        <h3>📤 Exportar Datos Fiscales (606)</h3>
         <button class="modal-close" onclick="cerrarModalExportar()">×</button>
       </div>
       <div class="modal-duplicados-body" style="display: block; padding: 1.5rem;">
-        <div style="margin-bottom: 1.5rem;">
+        <div style="margin-bottom: 1rem;">
           <label style="display:block; font-weight:600; margin-bottom:0.5rem; color:#1e293b;">1. Selecciona la Empresa:</label>
           <select id="exportEmpresaSelect" class="input-inline" style="width: 100%; padding: 0.6rem;">
             <option value="TODAS">📦 Todas las Empresas (Archivo Unificado)</option>
           </select>
         </div>
         
-        <!-- Contenedor con ID para lógica de Sheets (IMPORTANTE) -->
         <div id="columnsContainer">
-          <label style="display:block; font-weight:600; margin-bottom:0.5rem; color:#1e293b;">2. Selecciona las columnas:</label>
+          <label style="display:block; font-weight:600; margin-bottom:0.5rem; color:#1e293b;">2. Selecciona las columnas a exportar:</label>
           <div class="columns-grid"></div>
         </div>
 
@@ -593,7 +650,7 @@
     </div>
   </div>
 
-  <!-- MODAL DE DUPLICADOS CORREGIDO -->
+  <!-- MODAL DE DUPLICADOS -->
   <div id="duplicadosModal" class="modal-duplicados">
     <div class="modal-duplicados-content">
       <div class="modal-duplicados-header">
@@ -601,7 +658,6 @@
         <button class="modal-close" onclick="cerrarModalDuplicados()">×</button>
       </div>
       <div class="modal-duplicados-body">
-        <!-- FACTURA A -->
         <div class="factura-comparacion">
           <div class="factura-comparacion-header"><h4 id="factura1Title">FACTURA A</h4></div>
           <div class="comparacion-imagen"><img id="factura1Imagen" src="" alt="Factura A"></div>
@@ -613,7 +669,6 @@
           </div>
           <button class="btn-danger" id="btnEliminar1">🗑️ Eliminar esta</button>
         </div>
-        <!-- FACTURA B -->
         <div class="factura-comparacion">
           <div class="factura-comparacion-header"><h4 id="factura2Title">FACTURA B</h4></div>
           <div class="comparacion-imagen"><img id="factura2Imagen" src="" alt="Factura B"></div>
@@ -633,7 +688,7 @@
     </div>
   </div>
 
-  <!-- MODAL SOSPECHOSAS CORREGIDO -->
+  <!-- MODAL SOSPECHOSAS -->
   <div id="sospechosasModal" class="modal-duplicados">
     <div class="modal-duplicados-content">
       <div class="modal-duplicados-header" style="border-bottom: 2px solid #fcd34d;">
@@ -641,7 +696,6 @@
         <button class="modal-close" onclick="cerrarModalSospechosas()">×</button>
       </div>
       <div class="modal-duplicados-body">
-        <!-- FACTURA A -->
         <div class="factura-comparacion">
           <div class="factura-comparacion-header"><h4 id="sospechosa1Title">FACTURA A</h4></div>
           <div class="comparacion-imagen"><img id="sospechosa1Imagen" src=""></div>
@@ -653,7 +707,6 @@
           </div>
           <button class="btn-danger" id="btnEliminarSosp1">🗑️ Eliminar</button>
         </div>
-        <!-- FACTURA B -->
         <div class="factura-comparacion">
           <div class="factura-comparacion-header"><h4 id="sospechosa2Title">FACTURA B</h4></div>
           <div class="comparacion-imagen"><img id="sospechosa2Imagen" src=""></div>
