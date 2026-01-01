@@ -21,7 +21,7 @@ const getAdminDashboard = asyncHandler(async (req, res) => {
 
     try {
         const [totalContables, totalEmpresas, totalFacturas] = await Promise.all([
-            getCount("SELECT COUNT(*) as count FROM users WHERE rol = 'contable'"),
+            getCount("SELECT COUNT(*) as count FROM users WHERE role = 'contable'"),
             getCount("SELECT COUNT(*) as count FROM empresas"),
             getCount("SELECT COUNT(*) as count FROM facturas")
         ]);
@@ -57,9 +57,9 @@ const getContables = asyncHandler(async (req, res) => {
             u.email, 
             u.created_at,
             (SELECT COUNT(*) FROM empresas e WHERE e.contable_id = u.id) as total_empresas,
-            (SELECT COUNT(*) FROM users a WHERE a.contable_id = u.id AND a.rol = 'asistente') as total_asistentes
+            (SELECT COUNT(*) FROM users a WHERE a.contable_id = u.id AND a.role = 'asistente') as total_asistentes
         FROM users u
-        WHERE u.rol = 'contable'
+        WHERE u.role = 'contable'
         ORDER BY u.created_at DESC
     `;
 
@@ -94,7 +94,7 @@ const createContable = asyncHandler(async (req, res) => {
         nombre_completo,
         email,
         password_hash,
-        rol: 'contable'
+        role: 'contable'
     });
 
     res.status(201).json({ success: true, data: await User.findById(result.id) });
@@ -129,7 +129,7 @@ const deleteContable = asyncHandler(async (req, res) => {
     const db = getDatabase();
     
     // Verificar si existe antes de borrar
-    db.get("SELECT id FROM users WHERE id = ? AND rol = 'contable'", [id], (err, row) => {
+    db.get("SELECT id FROM users WHERE id = ? AND role = 'contable'", [id], (err, row) => {
         if (err) return res.status(500).json({ success: false, message: err.message });
         if (!row) return res.status(404).json({ success: false, message: "Contable no encontrado" });
 

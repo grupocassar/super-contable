@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!requireAuth()) return;
 
   currentUser = getUser();
-  if (!['asistente', 'contable', 'super_admin'].includes(currentUser.rol)) {
+  if (!['asistente', 'contable', 'super_admin'].includes(currentUser.role)) {
     showToast('Acceso denegado', 'error');
     window.location.href = '/';
     return;

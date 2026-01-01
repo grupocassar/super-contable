@@ -3,8 +3,7 @@
  * Especializado en la extracción de datos para el Formato 606 de República Dominicana.
  */
 
-// El entorno proporciona el API Key automáticamente al ejecutar
-const apiKey = ""; 
+const apiKey = process.env.GOOGLE_API_KEY;
 
 /**
  * Función principal para procesar la imagen de una factura.

@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!requireAuth()) return;
 
   currentUser = getUser();
-  if (currentUser.rol !== 'super_admin') {
+  if (currentUser.role !== 'super_admin') {
     showToast('Acceso denegado', 'error');
     window.location.href = '/';
     return;

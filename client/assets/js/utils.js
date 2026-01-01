@@ -130,8 +130,8 @@ function isAuthenticated() {
   return !!getToken();
 }
 
-function redirectToDashboard(rol) {
-  switch (rol) {
+function redirectToDashboard(role) {
+  switch (role) {
     case 'super_admin':
       window.location.href = '/views/admin/dashboard.html';
       break;

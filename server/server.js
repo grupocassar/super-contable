@@ -6,6 +6,7 @@ const { initDatabase } = require('./config/database');
 const { initTelegramBot } = require('./services/telegramService');
 
 const authRoutes = require('./routes/auth.routes');
+const adminRoutes = require('./routes/admin.routes');
 const contableRoutes = require('./routes/contable.routes');
 const asistenteRoutes = require('./routes/asistente.routes');
 const { errorHandler } = require('./middleware/errorHandler');
@@ -22,6 +23,7 @@ app.get('/favicon.ico', (req, res) => res.status(204).end());
 
 // --- RUTAS DE LA API ---
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/contable', contableRoutes);
 app.use('/api/asistente', asistenteRoutes);
 
