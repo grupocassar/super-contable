@@ -15,13 +15,20 @@ async function procesarFacturaConGemini(base64Data, mimeType = "image/jpeg") {
   const modelId = "gemini-2.5-flash-preview-09-2025";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
 
+  // VERSIÓN HÍBRIDA RECOMENDADA: Mejoras de ITBIS + Códigos Completos
   const systemPrompt = `
-    Actúa como un experto contable senior en República Dominicana especializado en reportes DGII.
-    Tu tarea es extraer datos de facturas para completar el Formato 606.
+    Actúa como un experto contable senior en República Dominicana especializado en reportes DGII (Formato 606).
+    Tu tarea es extraer datos precisos de facturas escaneadas o fotos.
     
-    REGLAS DE NEGOCIO CRÍTICAS:
-    1. RNC/Cédula: Solo números, sin guiones (9 u 11 dígitos).
-    2. NCF: Debe ser válido (ej: B0100000001).
+    ESTRATEGIA DE EXTRACCIÓN DE ITBIS (CRÍTICO):
+    1. BÚSQUEDA EXHAUSTIVA: El impuesto puede aparecer como: "ITBIS", "ITEBIS", "IVA", "Impuesto", "Ley", "18%", o "16%".
+    2. UBICACIÓN: Generalmente está cerca del Subtotal y antes del Total General.
+    3. VALIDACIÓN MATEMÁTICA: Si detectas Subtotal y Total, verifica si (Total - Subtotal) corresponde al impuesto.
+    4. Si es B01 y NO aparece ITBIS explícito ni implícito, entonces es 0.
+    
+    REGLAS DE NEGOCIO (OTROS CAMPOS):
+    1. RNC/Cédula: Solo números (9 u 11 dígitos).
+    2. NCF: Patrón B + 10 dígitos (ej: B0100000001).
     3. Clasificación de Gasto (tipo_gasto): 
        '01' Gastos de personal
        '02' Gastos por trabajos, suministros y servicios
@@ -35,19 +42,13 @@ async function procesarFacturaConGemini(base64Data, mimeType = "image/jpeg") {
        '10' Adquisiciones de activos
        '11' Gastos de seguros
     4. Forma de Pago (forma_pago): 
-       '01' Efectivo
-       '02' Cheque/Transferencia/Depósito
-       '03' Tarjeta Crédito/Débito
-       '04' Compra a Crédito
-       '05' Permuta
-       '06' Notas de Crédito
-       '07' Mixto
-    5. Tipo de ID (tipo_id): '1' para RNC (9 dígitos), '2' para Cédula (11 dígitos).
-    6. Montos: Si la factura tiene Propina Legal (10%), extráela por separado.
-    7. ITBIS: Si es B01 y no hay ITBIS, marca 0.
+       '01' Efectivo, '02' Cheque/Transferencia, '03' Tarjeta, '04' Crédito, '05' Permuta, '06' Nota Crédito, '07' Mixto
+    5. Tipo de ID: '1' para RNC (9 dígitos), '2' para Cédula (11 dígitos).
+    6. Fecha: Formato YYYY-MM-DD.
+    7. Propina Legal: Extrae 10% por separado si existe.
   `;
 
-  const userQuery = "Analiza esta factura dominicana y extrae todos los campos requeridos para el reporte 606.";
+  const userQuery = "Analiza esta factura y extrae los datos para el 606. Pon especial atención al ITBIS/Impuestos.";
 
   const payload = {
     contents: [
@@ -79,7 +80,7 @@ async function procesarFacturaConGemini(base64Data, mimeType = "image/jpeg") {
           fecha_factura: { type: "STRING", description: "Formato YYYY-MM-DD" },
           monto_servicios: { type: "NUMBER" },
           monto_bienes: { type: "NUMBER" },
-          itbis_facturado: { type: "NUMBER" },
+          itbis_facturado: { type: "NUMBER", description: "Monto del impuesto. Si es 0, pon 0." },
           impuesto_selectivo: { type: "NUMBER" },
           otros_impuestos: { type: "NUMBER" },
           propina_legal: { type: "NUMBER" },
@@ -88,7 +89,8 @@ async function procesarFacturaConGemini(base64Data, mimeType = "image/jpeg") {
           total_pagado: { type: "NUMBER" },
           confidence_score: { type: "NUMBER", description: "0 a 100" }
         },
-        required: ["rnc", "ncf", "fecha_factura", "total_pagado", "confidence_score"]
+        // CAMBIO CRÍTICO MANTENIDO: itbis_facturado es obligatorio
+        required: ["rnc", "ncf", "fecha_factura", "total_pagado", "itbis_facturado", "confidence_score"]
       }
     }
   };
