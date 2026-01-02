@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const Empresa = require('../models/Empresa');
 const Factura = require('../models/Factura');
+const ContablePlan = require('../models/ContablePlan'); // <--- NUEVO IMPORT
 const bcrypt = require('bcryptjs'); 
 const { google } = require('googleapis');
 const { asyncHandler } = require('../middleware/errorHandler');
@@ -41,6 +42,22 @@ const getDashboard = asyncHandler(async (req, res) => {
       empresas_recientes: empresas.slice(0, 5),
       facturas_recientes: await Factura.findByContableId(contableId, { limit: 10 })
     }
+  });
+});
+
+/**
+ * GET /api/contable/plan-consumo
+ * Retorna la información del plan y el uso actual para el widget
+ */
+const getPlanYConsumo = asyncHandler(async (req, res) => {
+  // Usamos la misma lógica que en getDashboard para obtener el ID del dueño de la cuenta
+  const contableId = req.user.role === 'contable' ? req.user.userId : req.user.contableId;
+  
+  const datos = await ContablePlan.getPlanYConsumo(contableId);
+  
+  res.json({
+    success: true,
+    data: datos
   });
 });
 
@@ -338,6 +355,7 @@ const assignEmpresasToAsistente = asyncHandler(async (req, res) => {
 
 module.exports = {
   getDashboard,
+  getPlanYConsumo, // <--- NUEVO EXPORT
   getEmpresas,
   createEmpresa,
   updateEmpresa,

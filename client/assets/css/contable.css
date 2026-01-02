@@ -865,3 +865,131 @@
   background-color: #e0e7ff;
   color: #4338ca;
 }
+/* Widget de Plan y Consumo */
+.plan-consumo-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  margin-bottom: 24px;
+}
+
+.plan-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.plan-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.plan-precio {
+  margin: 4px 0 0 0;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.badge-normal {
+  background: #d1fae5;
+  color: #065f46;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.badge-advertencia {
+  background: #fef3c7;
+  color: #92400e;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.badge-critico {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  animation: pulse-badge 2s infinite;
+}
+
+.badge-bloqueado {
+  background: #7f1d1d;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+@keyframes pulse-badge {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.consumo-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.consumo-numeros {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.consumo-actual {
+  font-size: 32px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.consumo-separador {
+  font-size: 24px;
+  color: #9ca3af;
+}
+
+.consumo-limite {
+  font-size: 24px;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.consumo-label {
+  font-size: 14px;
+  color: #9ca3af;
+  margin-left: 4px;
+}
+
+.barra-progreso {
+  width: 100%;
+  height: 12px;
+  background: #e5e7eb;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.barra-progreso-fill {
+  height: 100%;
+  transition: width 0.3s ease, background-color 0.3s ease;
+  border-radius: 6px;
+}
+
+.consumo-gracia {
+  margin: 0;
+  font-size: 13px;
+  color: #6b7280;
+  text-align: right;
+}

@@ -32,12 +32,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadDashboard() {
   try {
-    const [dashboardData, empresasData, facturasData, asistentesData] = await Promise.all([
+    // Se agrega fetchAPI('/contable/plan-consumo') al array de promesas
+    const [dashboardData, empresasData, facturasData, asistentesData, planData] = await Promise.all([
       fetchAPI('/contable/dashboard'),
       fetchAPI('/contable/empresas'),
       fetchAPI('/contable/facturas'),
-      fetchAPI('/contable/asistentes')
+      fetchAPI('/contable/asistentes'),
+      fetchAPI('/contable/plan-consumo')
     ]);
+
+    // Procesar Plan y Consumo (NUEVO)
+    if (planData && planData.success) {
+      mostrarWidgetConsumo(planData.data);
+    }
 
     if (dashboardData.success) {
       displayStats(dashboardData.data.stats);
@@ -427,6 +434,70 @@ function showImagePreview(id, url) {
             preview.style.display = 'none';
         };
     }
+}
+
+// ==========================================
+// NUEVO: FUNCIONES PARA WIDGET DE CONSUMO
+// ==========================================
+
+function mostrarWidgetConsumo(datos) {
+  const container = document.getElementById('plan-consumo-widget');
+  if (!container) return;
+
+  const { 
+    plan, 
+    limite_facturas, 
+    zona_gracia, 
+    facturas_procesadas, 
+    porcentaje,
+    estado_alerta 
+  } = datos;
+
+  // Determinar color de barra según estado
+  const colorBarra = {
+    'normal': '#10b981',      // verde
+    'advertencia': '#f59e0b', // amarillo
+    'critico': '#ef4444',     // rojo
+    'bloqueado': '#991b1b'    // rojo oscuro
+  }[estado_alerta.nivel] || '#10b981';
+
+  // Determinar precio según plan (simulado para visualización)
+  const precios = {
+    'STARTER': 135,
+    'PROFESSIONAL': 195,
+    'BUSINESS': 450
+  };
+
+  container.innerHTML = `
+    <div class="plan-consumo-card">
+      <div class="plan-header">
+        <div>
+          <h3>Plan: ${plan}</h3>
+          <p class="plan-precio">$${precios[plan] || 0}/mes</p>
+        </div>
+        <span class="badge-${estado_alerta.nivel}">
+          ${estado_alerta.mensaje}
+        </span>
+      </div>
+      
+      <div class="consumo-info">
+        <div class="consumo-numeros">
+          <span class="consumo-actual">${facturas_procesadas.toLocaleString()}</span>
+          <span class="consumo-separador">/</span>
+          <span class="consumo-limite">${limite_facturas.toLocaleString()}</span>
+          <span class="consumo-label">facturas</span>
+        </div>
+        
+        <div class="barra-progreso">
+          <div class="barra-progreso-fill" style="width: ${Math.min(porcentaje, 100)}%; background-color: ${colorBarra}"></div>
+        </div>
+        
+        <p class="consumo-gracia">
+          Zona de gracia: +${zona_gracia} facturas
+        </p>
+      </div>
+    </div>
+  `;
 }
 
 function displayStats(stats) {

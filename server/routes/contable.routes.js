@@ -1,40 +1,50 @@
 const express = require('express');
 const router = express.Router();
-const contableController = require('../controllers/contableController');
+const { protect, authorize } = require('../middleware/auth');
+const {
+  getDashboard,
+  getPlanYConsumo, // <--- Esta es la nueva función que agregamos
+  getEmpresas,
+  createEmpresa,
+  updateEmpresa,
+  getFacturas,
+  updateFactura,
+  deleteFactura,
+  getSugerenciaGasto,
+  procesarLoteFacturas,
+  exportarASheets,
+  createAsistente,
+  getAsistentes,
+  updateAsistente,
+  getAsistenteEmpresas,
+  assignEmpresasToAsistente
+} = require('../controllers/contableController');
 
-// FIX: Importación correcta basada en tu archivo auth.js
-const { authenticateToken } = require('../middleware/auth');
+// Middleware de protección: Todas las rutas requieren estar logueado
+router.use(protect);
 
-// Middleware de autenticación global para estas rutas
-// Ahora pasamos la función directa, no el objeto
-router.use(authenticateToken);
-
-// --- DASHBOARD ---
-router.get('/dashboard', contableController.getDashboard);
+// --- DASHBOARD & PLAN ---
+router.get('/dashboard', authorize('contable', 'asistente'), getDashboard);
+router.get('/plan-consumo', authorize('contable', 'asistente'), getPlanYConsumo); // <--- RUTA DEL WIDGET
 
 // --- EMPRESAS ---
-router.get('/empresas', contableController.getEmpresas);
-router.post('/empresas', contableController.createEmpresa);
-router.put('/empresas/:id', contableController.updateEmpresa);
+router.get('/empresas', authorize('contable', 'asistente'), getEmpresas);
+router.post('/empresas', authorize('contable'), createEmpresa);
+router.put('/empresas/:id', authorize('contable', 'super_admin'), updateEmpresa);
 
 // --- FACTURAS ---
-// ⚠️ IMPORTANTE: Las rutas estáticas/específicas deben ir PRIMERO
-router.get('/facturas/sugerencia-gasto', contableController.getSugerenciaGasto);
-router.post('/facturas/procesar-lote', contableController.procesarLoteFacturas);
-
-// Rutas generales y dinámicas de facturas
-router.get('/facturas', contableController.getFacturas);
-router.put('/facturas/:id', contableController.updateFactura);
-router.delete('/facturas/:id', contableController.deleteFactura);
-
-// --- EXPORTACIÓN ---
-router.post('/exportar-sheets', contableController.exportarASheets);
+router.get('/facturas', authorize('contable', 'asistente'), getFacturas);
+router.put('/facturas/:id', authorize('contable', 'asistente'), updateFactura);
+router.delete('/facturas/:id', authorize('contable'), deleteFactura);
+router.get('/sugerencia-gasto', authorize('contable', 'asistente'), getSugerenciaGasto);
+router.post('/facturas/lote', authorize('contable'), procesarLoteFacturas);
+router.post('/facturas/exportar-sheets', authorize('contable'), exportarASheets);
 
 // --- ASISTENTES ---
-router.get('/asistentes', contableController.getAsistentes);
-router.post('/asistentes', contableController.createAsistente);
-router.put('/asistentes/:id', contableController.updateAsistente);
-router.get('/asistentes/:id/empresas', contableController.getAsistenteEmpresas);
-router.post('/asistentes/:id/empresas', contableController.assignEmpresasToAsistente);
+router.post('/asistentes', authorize('contable'), createAsistente);
+router.get('/asistentes', authorize('contable'), getAsistentes);
+router.put('/asistentes/:id', authorize('contable'), updateAsistente);
+router.get('/asistentes/:id/empresas', authorize('contable'), getAsistenteEmpresas);
+router.post('/asistentes/:id/empresas', authorize('contable'), assignEmpresasToAsistente);
 
 module.exports = router;
