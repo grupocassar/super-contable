@@ -1,6 +1,7 @@
 const Empresa = require('../models/Empresa');
 const Factura = require('../models/Factura');
 const { asyncHandler } = require('../middleware/errorHandler');
+const { notificarRechazo } = require('../services/telegramService');
 
 const getDashboard = asyncHandler(async (req, res) => {
   const asistenteId = req.user.userId;
@@ -79,6 +80,16 @@ const updateFactura = asyncHandler(async (req, res) => {
   }
 
   await Factura.update(id, updates, asistenteId);
+
+  // Si se rechazó la factura, notificar al usuario
+  if (updates.estado === 'rechazada') {
+    try {
+      await notificarRechazo(id);
+    } catch (error) {
+      console.error('Error notificando rechazo:', error);
+      // No fallar el request si falla la notificación
+    }
+  }
 
   const updatedFactura = await Factura.findById(id);
 

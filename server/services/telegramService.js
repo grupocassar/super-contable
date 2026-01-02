@@ -218,18 +218,18 @@ function registrarUsuarioTelegram(db, telegramId, username, firstName, chatId) {
         db.get('SELECT id, empresa_id FROM telegram_users WHERE telegram_id = ?', [telegramId], (err, row) => {
             if (err) return reject(err);
             if (row) {
-                // Usuario existe - actualizar chatId si cambió
-                db.run('UPDATE telegram_users SET first_name = ? WHERE telegram_id = ?', 
-                    [firstName, telegramId], 
+                // Usuario existe - actualizar nombre y chat_id
+                db.run('UPDATE telegram_users SET first_name = ?, chat_id = ? WHERE telegram_id = ?', 
+                    [firstName, chatId, telegramId], 
                     (err) => {
-                        if (err) console.warn('⚠️ Error actualizando nombre:', err.message);
+                        if (err) console.warn('⚠️ Error actualizando usuario:', err.message);
                     }
                 );
                 resolve(row);
             } else {
-                // Usuario nuevo
-                db.run('INSERT INTO telegram_users (telegram_id, username, first_name) VALUES (?, ?, ?)', 
-                    [telegramId, username, firstName], 
+                // Usuario nuevo - incluir chat_id
+                db.run('INSERT INTO telegram_users (telegram_id, username, first_name, chat_id) VALUES (?, ?, ?, ?)', 
+                    [telegramId, username, firstName, chatId], 
                     function(err) {
                         if (err) reject(err);
                         else resolve({ id: this.lastID, empresa_id: null });
@@ -283,8 +283,62 @@ function formatearRNC(rnc) {
 }
 
 /**
+ * Notifica al usuario que su factura fue rechazada
+ * Reenvía la imagen original para que pueda corregirla
+ */
+async function notificarRechazo(facturaId) {
+    if (!bot) {
+        console.warn('⚠️ Bot no disponible para notificar rechazo');
+        return;
+    }
+
+    try {
+        const db = getDatabase();
+
+        // Obtener datos de la factura y el job original
+        const jobData = await new Promise((resolve, reject) => {
+            db.get(`
+                SELECT 
+                    jq.file_id,
+                    tu.chat_id,
+                    tu.first_name,
+                    f.ncf,
+                    f.proveedor,
+                    f.total_pagado
+                FROM facturas f
+                JOIN telegram_users tu ON f.telegram_user_id = tu.id
+                LEFT JOIN jobs_queue jq ON jq.telegram_user_id = tu.id 
+                    AND jq.message_id = f.telegram_message_id
+                WHERE f.id = ?
+                LIMIT 1
+            `, [facturaId], (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
+            });
+        });
+
+        if (!jobData || !jobData.chat_id || !jobData.file_id) {
+            console.warn(`⚠️ No se pudo notificar rechazo - Factura #${facturaId} sin datos completos`);
+            return;
+        }
+
+        // Reenviar la imagen original
+        await bot.sendPhoto(jobData.chat_id, jobData.file_id, {
+            caption: `❌ Esta factura no pudo procesarse.\n\n` +
+                     `Por favor, enviá una foto más clara o verificá que la factura sea legible.\n\n` +
+                     `💡 Tip: Asegurate de que la imagen tenga buena iluminación y esté enfocada.`
+        });
+
+        console.log(`📤 Notificación de rechazo enviada a ${jobData.first_name} (Factura #${facturaId})`);
+
+    } catch (error) {
+        console.error(`❌ Error notificando rechazo de Factura #${facturaId}:`, error.message);
+    }
+}
+
+/**
  * Exporta el bot para que el worker pueda usarlo
  */
 const getBot = () => bot;
 
-module.exports = { initTelegramBot, getBot };
+module.exports = { initTelegramBot, getBot, notificarRechazo };
