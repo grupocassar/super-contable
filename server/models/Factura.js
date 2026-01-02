@@ -227,12 +227,6 @@ class Factura {
         }
       });
 
-      // Actualizar auditoría si hay un usuario
-      if (userId) {
-        fields.push('updated_by = ?, updated_at = CURRENT_TIMESTAMP');
-        values.push(userId);
-      }
-
       if (fields.length === 0) return resolve();
 
       values.push(id);
@@ -246,11 +240,7 @@ class Factura {
   }
 
   static approve(id, userId) {
-    return this.update(id, { 
-      estado: 'aprobada',
-      approved_at: new Date().toISOString(),
-      approved_by: userId
-    }, userId);
+    return this.update(id, { estado: 'aprobada' }, userId);
   }
 
   static reject(id, userId) {

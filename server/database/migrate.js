@@ -1,3 +1,5 @@
+require('dotenv').config(); // ← AGREGADO AL INICIO
+
 const fs = require('fs');
 const path = require('path');
 const { initDatabase, getDatabase, closeDatabase } = require('../config/database');
@@ -5,7 +7,6 @@ const { validateEnv } = require('../config/env');
 
 async function runMigration(migrationFile) {
   const migrationPath = path.join(__dirname, 'migrations', migrationFile);
-
   if (!fs.existsSync(migrationPath)) {
     throw new Error(`Migration file not found: ${migrationFile}`);
   }
@@ -23,7 +24,7 @@ async function runMigration(migrationFile) {
       db.run(statement, (err) => {
         if (err) {
           if (err.message.includes('duplicate column name')) {
-            console.log(`   ⚠️  Column already exists, skipping...`);
+            console.log('   ⚠️  Column already exists, skipping...');
             resolve();
           } else {
             reject(err);
@@ -39,7 +40,7 @@ async function runMigration(migrationFile) {
 async function migrate() {
   try {
     console.log('🔄 Running database migrations...\n');
-
+    
     validateEnv();
     await initDatabase();
 
@@ -63,9 +64,7 @@ async function migrate() {
     }
 
     await closeDatabase();
-
     console.log('✅ All migrations completed successfully!\n');
-
   } catch (error) {
     console.error('❌ Migration failed:', error.message);
     process.exit(1);

@@ -629,7 +629,7 @@ function mostrarFacturaEnModal(index) {
   inputNCF.value = factura.ncf || '';
   inputRNC.value = factura.rnc || '';
   inputProveedor.value = factura.proveedor || '';
-  inputITBIS.value = factura.itbis || '';
+  inputITBIS.value = factura.itbis_facturado || ''; // CORRECCIÓN 1: itbis -> itbis_facturado
   inputTotal.value = factura.total_pagado || '';
   inputNotas.value = factura.notas || '';
 
@@ -641,7 +641,7 @@ function mostrarFacturaEnModal(index) {
   };
   inputRNC.onblur = (e) => saveField(factura.id, 'rnc', e.target.value);
   inputProveedor.onblur = (e) => saveField(factura.id, 'proveedor', e.target.value);
-  inputITBIS.onblur = (e) => saveField(factura.id, 'itbis', parseFloat(e.target.value) || 0);
+  inputITBIS.onblur = (e) => saveField(factura.id, 'itbis_facturado', parseFloat(e.target.value) || 0); // CORRECCIÓN 2: itbis -> itbis_facturado
   inputTotal.onblur = (e) => saveField(factura.id, 'total_pagado', parseFloat(e.target.value) || 0);
   inputNotas.onblur = (e) => saveField(factura.id, 'notas', e.target.value);
 
@@ -753,7 +753,7 @@ async function marcarListaModal() {
     ncf: document.getElementById('infoNCF').value || null,
     rnc: document.getElementById('infoRNC').value || null,
     proveedor: document.getElementById('infoProveedor').value || null,
-    itbis: parseFloat(document.getElementById('infoITBIS').value) || 0,
+    itbis_facturado: parseFloat(document.getElementById('infoITBIS').value) || 0, // CORRECCIÓN 3: itbis -> itbis_facturado
     total_pagado: parseFloat(document.getElementById('infoTotal').value) || 0,
     notas: document.getElementById('infoNotas').value || null,
     estado: 'lista'

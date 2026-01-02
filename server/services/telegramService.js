@@ -1,17 +1,12 @@
 const TelegramBot = require('node-telegram-bot-api');
-const axios = require('axios');
-const { google } = require('googleapis'); 
 const { getDatabase } = require('../config/database');
-const { uploadToDrive } = require('./driveService');
-const { procesarFacturaConGemini } = require('./geminiService');
-const Factura = require('../models/Factura');
 
 let bot;
 const processingQueue = new Set();
 const awaitingRNC = new Map(); // telegram_id → { chatId, fileData }
 
 /**
- * Inicializa el Bot de Telegram con lógica de identificación de usuario y procesamiento IA.
+ * Inicializa el Bot de Telegram con lógica de encolamiento
  */
 const initTelegramBot = () => {
     const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -21,7 +16,7 @@ const initTelegramBot = () => {
     }
 
     bot = new TelegramBot(token, { polling: true });
-    console.log('🤖 Super Contable Bot: ONLINE (Modo OAuth2 + IA)...');
+    console.log('🤖 Super Contable Bot: ONLINE (Modo Asíncrono con Colas)...');
 
     bot.on('polling_error', (error) => console.error(`[Telegram Error] ${error.message}`));
 
@@ -79,12 +74,12 @@ const initTelegramBot = () => {
                     `Ahora podés enviar tus facturas.`
                 );
 
-                // Recuperar datos del archivo y procesar
+                // Recuperar datos del archivo y encolar
                 const pendingData = awaitingRNC.get(telegramId);
                 awaitingRNC.delete(telegramId);
 
-                // Procesar la factura original
-                await procesarFactura(chatId, telegramId, empresa.id, pendingData.fileData, firstName);
+                // Encolar la factura original
+                await encolarFactura(chatId, telegramId, empresa.id, pendingData.fileData, firstName);
 
             } catch (error) {
                 console.error('Error vinculando usuario:', error);
@@ -111,7 +106,7 @@ const initTelegramBot = () => {
                 const db = getDatabase();
                 
                 // Identificar al Usuario de Telegram y su Empresa
-                const usuarioTG = await registrarUsuarioTelegram(db, telegramId, msg.from.username || '', firstName);
+                const usuarioTG = await registrarUsuarioTelegram(db, telegramId, msg.from.username || '', firstName, chatId);
 
                 // VERIFICAR SI TIENE EMPRESA ASIGNADA
                 if (!usuarioTG.empresa_id) {
@@ -144,7 +139,7 @@ const initTelegramBot = () => {
                     return;
                 }
 
-                // Usuario ya tiene empresa - procesar directamente
+                // Usuario ya tiene empresa - encolar directamente
                 const empresaId = usuarioTG.empresa_id;
 
                 let fileId, mimeType, ext;
@@ -158,7 +153,7 @@ const initTelegramBot = () => {
                     ext = 'pdf';
                 }
 
-                await procesarFactura(chatId, telegramId, empresaId, { fileId, mimeType, ext, messageId: msg.message_id }, firstName);
+                await encolarFactura(chatId, telegramId, empresaId, { fileId, mimeType, ext, messageId: msg.message_id }, firstName);
 
             } catch (error) {
                 console.error('❌ Error en Telegram Service:', error.message);
@@ -171,50 +166,13 @@ const initTelegramBot = () => {
 };
 
 /**
- * Procesa una factura: descarga, IA, Drive, BD
+ * NUEVA FUNCIÓN: Encola la factura en vez de procesarla
  */
-async function procesarFactura(chatId, telegramId, empresaId, fileData, firstName) {
+async function encolarFactura(chatId, telegramId, empresaId, fileData, firstName) {
     try {
         const db = getDatabase();
 
-        // 1. Buscar al Contable responsable de la empresa para usar su Drive
-        const contable = await obtenerContableDeEmpresa(db, empresaId);
-
-        if (!contable || !contable.drive_refresh_token) {
-            throw new Error('El contable no ha vinculado su cuenta de Google Drive.');
-        }
-
-        // 2. Configurar el Cliente OAuth2 con las credenciales del contable
-        const oauth2Client = new google.auth.OAuth2(
-            process.env.GOOGLE_CLIENT_ID,
-            process.env.GOOGLE_CLIENT_SECRET,
-            process.env.GOOGLE_CALLBACK_URL
-        );
-
-        oauth2Client.setCredentials({
-            refresh_token: contable.drive_refresh_token
-        });
-
-        // 3. Descargar el archivo desde los servidores de Telegram
-        const fileLink = await bot.getFileLink(fileData.fileId);
-        const response = await axios.get(fileLink, { responseType: 'arraybuffer' });
-        const fileBuffer = Buffer.from(response.data);
-
-        // 4. PROCESAMIENTO IA (Gemini extrae los datos para el 606)
-        console.log(`🧠 IA analizando factura de ${firstName} para Empresa ID: ${empresaId}...`);
-        let geminiData = {};
-        try {
-            const base64Image = fileBuffer.toString('base64');
-            geminiData = await procesarFacturaConGemini(base64Image, fileData.mimeType);
-        } catch (iaError) {
-            console.error('⚠️ Fallo la extracción IA:', iaError.message);
-        }
-
-        // 5. SUBIR A DRIVE (Usando el Drive personal del contable)
-        const fileName = `Factura_${firstName}_${Date.now()}.${fileData.ext}`;
-        const driveLink = await uploadToDrive(oauth2Client, fileBuffer, fileName, fileData.mimeType);
-
-        // 6. GUARDAR EN BD
+        // Obtener el ID del telegram_user
         const usuarioTG = await new Promise((resolve, reject) => {
             db.get('SELECT id FROM telegram_users WHERE telegram_id = ?', [telegramId], (err, row) => {
                 if (err) reject(err);
@@ -222,52 +180,54 @@ async function procesarFactura(chatId, telegramId, empresaId, fileData, firstNam
             });
         });
 
-        let notas = geminiData.confidence_score < 80 ? "⚠️ Revisar datos (Baja confianza IA)" : "";
+        // Insertar en la cola de jobs
+        await new Promise((resolve, reject) => {
+            db.run(`
+                INSERT INTO jobs_queue (
+                    telegram_user_id, 
+                    empresa_id, 
+                    file_id, 
+                    mime_type, 
+                    file_ext, 
+                    message_id
+                ) VALUES (?, ?, ?, ?, ?, ?)
+            `, [usuarioTG.id, empresaId, fileData.fileId, fileData.mimeType, fileData.ext, fileData.messageId], 
+            function(err) {
+                if (err) reject(err);
+                else {
+                    console.log(`📥 Job #${this.lastID} encolado - Usuario: ${firstName}, Empresa ID: ${empresaId}`);
+                    resolve();
+                }
+            });
+        });
 
-        const facturaData = {
-            empresa_id: empresaId,
-            telegram_user_id: usuarioTG.id,
-            telegram_message_id: fileData.messageId,
-            fecha_factura: geminiData.fecha_factura || null,
-            rnc: geminiData.rnc || null,
-            ncf: geminiData.ncf || null,
-            proveedor: geminiData.proveedor || `TG: ${firstName}`,
-            monto_servicios: geminiData.monto_servicios || 0,
-            monto_bienes: geminiData.monto_bienes || 0,
-            itbis_facturado: geminiData.itbis_facturado || 0,
-            impuesto_selectivo: geminiData.impuesto_selectivo || 0,
-            otros_impuestos: geminiData.otros_impuestos || 0,
-            propina_legal: geminiData.propina_legal || 0,
-            tipo_id: geminiData.tipo_id || null,
-            tipo_gasto: geminiData.tipo_gasto || null,
-            forma_pago: geminiData.forma_pago || null,
-            total_pagado: geminiData.total_pagado || 0,
-            estado: 'pending',
-            confidence_score: geminiData.confidence_score || 0,
-            drive_url: driveLink,
-            notas: notas
-        };
-
-        await Factura.create(facturaData);
-
-        bot.sendMessage(chatId, '✅ Factura recibida y procesada correctamente.');
-        console.log(`✨ Éxito: Registro creado para ${firstName}.`);
+        // RESPUESTA INMEDIATA AL USUARIO (<2 segundos) - CORREGIDO
+        bot.sendMessage(chatId, `✅ Factura recibida correctamente.`);
 
     } catch (error) {
-        console.error('❌ Error procesando factura:', error.message);
-        bot.sendMessage(chatId, `⚠️ Error: ${error.message}`);
+        console.error('❌ Error encolando factura:', error.message);
+        bot.sendMessage(chatId, `⚠️ Error al recibir factura: ${error.message}`);
     }
 }
 
 /**
- * Busca o registra al usuario de Telegram para mantener la relación con la empresa.
+ * Busca o registra al usuario de Telegram
  */
-function registrarUsuarioTelegram(db, telegramId, username, firstName) {
+function registrarUsuarioTelegram(db, telegramId, username, firstName, chatId) {
     return new Promise((resolve, reject) => {
         db.get('SELECT id, empresa_id FROM telegram_users WHERE telegram_id = ?', [telegramId], (err, row) => {
             if (err) return reject(err);
-            if (row) resolve(row);
-            else {
+            if (row) {
+                // Usuario existe - actualizar chatId si cambió
+                db.run('UPDATE telegram_users SET first_name = ? WHERE telegram_id = ?', 
+                    [firstName, telegramId], 
+                    (err) => {
+                        if (err) console.warn('⚠️ Error actualizando nombre:', err.message);
+                    }
+                );
+                resolve(row);
+            } else {
+                // Usuario nuevo
                 db.run('INSERT INTO telegram_users (telegram_id, username, first_name) VALUES (?, ?, ?)', 
                     [telegramId, username, firstName], 
                     function(err) {
@@ -285,7 +245,6 @@ function registrarUsuarioTelegram(db, telegramId, username, firstName) {
  */
 function buscarEmpresaPorRNC(db, rnc) {
     return new Promise((resolve, reject) => {
-        // Buscar con o sin guiones
         const rncLimpio = rnc.replace(/-/g, '');
         db.get('SELECT id, nombre, rnc FROM empresas WHERE REPLACE(rnc, \'-\', \'\') = ?', 
             [rncLimpio], 
@@ -324,20 +283,8 @@ function formatearRNC(rnc) {
 }
 
 /**
- * Obtiene los datos del contable dueño de la empresa para usar sus tokens de Google.
+ * Exporta el bot para que el worker pueda usarlo
  */
-function obtenerContableDeEmpresa(db, empresaId) {
-    return new Promise((resolve, reject) => {
-        db.get(`
-            SELECT u.id, u.email, u.drive_refresh_token 
-            FROM users u
-            JOIN empresas e ON e.contable_id = u.id
-            WHERE e.id = ?
-        `, [empresaId], (err, row) => {
-            if (err) reject(err);
-            else resolve(row);
-        });
-    });
-}
+const getBot = () => bot;
 
-module.exports = { initTelegramBot };
+module.exports = { initTelegramBot, getBot };

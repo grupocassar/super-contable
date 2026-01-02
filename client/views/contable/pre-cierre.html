@@ -181,15 +181,16 @@
 
     /* --- COLUMNAS ESPECÍFICAS --- */
     .col-alert { width: 35px; }
-    .col-fecha { width: 90px; }
     .col-rnc { width: 110px; }
     .col-tipo { width: 60px; text-align: center; }
+    .col-gasto { width: 180px; }
     .col-ncf { width: 110px; }
+    .col-periodo { width: 70px; }
+    .col-dia { width: 40px; }
     .col-prov { width: 160px; }
     .col-monto-dgii { width: 110px; background-color: #fffbeb; } 
     .col-itbis { width: 100px; }
     .col-ret { width: 100px; }
-    .col-gasto { width: 180px; }
     .col-pago { width: 110px; }
     .col-total { width: 115px; font-weight: bold; background-color: #f8fafc; }
     .col-toggle { width: 40px; text-align: center; background: #eff6ff; cursor: pointer; }
@@ -481,12 +482,16 @@
       <table class="table-excel" id="preCierreTable">
         <thead>
           <tr>
+            <!-- ANOMALÍAS -->
             <th class="col-alert" title="Anomalías">⚠️</th>
-            <th class="col-fecha">Fecha Comp.</th>
+            
+            <!-- RNC O CÉDULA -->
             <th class="col-rnc">
               RNC o Cédula
               <input type="text" class="header-filter" id="filterRNC" placeholder="Filtro..." onkeyup="aplicarFiltros()">
             </th>
+            
+            <!-- TIPO ID -->
             <th class="col-tipo">
               Tipo Id
               <select class="header-filter" id="filterTipo" onchange="aplicarFiltros()">
@@ -495,19 +500,8 @@
                 <option value="2">2 (Céd)</option>
               </select>
             </th>
-            <th class="col-ncf">
-              NCF
-              <input type="text" class="header-filter" id="filterNCF" placeholder="NCF..." onkeyup="aplicarFiltros()">
-            </th>
-            <th class="col-prov">
-              Proveedor
-              <input type="text" class="header-filter" id="filterProveedor" placeholder="Buscar..." onkeyup="aplicarFiltros()">
-            </th>
-            <th class="col-monto-dgii">Monto Servicios</th>
-            <th class="col-monto-dgii">Monto Bienes</th>
-            <th class="col-itbis" title="ITBIS Facturado">ITBIS Facturado</th>
-            <th class="col-ret" title="ITBIS Retenido">ITBIS Retenido</th>
-            <th class="col-ret" title="Retención ISR">Retención ISR</th>
+            
+            <!-- TIPO DE GASTO (MOVIDO A POSICIÓN 3) -->
             <th class="col-gasto">
               Tipo de Gasto
               <select class="header-filter" id="filterGasto" onchange="aplicarFiltros()">
@@ -526,6 +520,47 @@
                 <option value="11">11 - Seguros</option>
               </select>
             </th>
+            
+            <!-- NCF -->
+            <th class="col-ncf">
+              NCF
+              <input type="text" class="header-filter" id="filterNCF" placeholder="NCF..." onkeyup="aplicarFiltros()">
+            </th>
+            
+            <!-- NCF MODIFICADO (AVANZADO) -->
+            <th class="col-avanzado" style="display: none;">NCF Modificado</th>
+            
+            <!-- PERIODO (YYYYMM) - NUEVO -->
+            <th class="col-periodo">Periodo</th>
+            
+            <!-- DÍA (DD) - NUEVO -->
+            <th class="col-dia">Día</th>
+            
+            <!-- PROVEEDOR -->
+            <th class="col-prov">
+              Proveedor
+              <input type="text" class="header-filter" id="filterProveedor" placeholder="Buscar..." onkeyup="aplicarFiltros()">
+            </th>
+            
+            <!-- MONTO SERVICIOS -->
+            <th class="col-monto-dgii">Monto Servicios</th>
+            
+            <!-- MONTO BIENES -->
+            <th class="col-monto-dgii">Monto Bienes</th>
+            
+            <!-- TOTAL FACTURADO (MOVIDO A POSICIÓN 11) -->
+            <th class="col-total text-right">Total Facturado</th>
+            
+            <!-- ITBIS FACTURADO -->
+            <th class="col-itbis" title="ITBIS Facturado">ITBIS Facturado</th>
+            
+            <!-- ITBIS RETENIDO -->
+            <th class="col-ret" title="ITBIS Retenido">ITBIS Retenido</th>
+            
+            <!-- RETENCIÓN ISR -->
+            <th class="col-ret" title="Retención ISR">Retención ISR</th>
+            
+            <!-- FORMA DE PAGO -->
             <th class="col-pago">
               Forma de Pago
               <select class="header-filter" id="filterPago" onchange="aplicarFiltros()">
@@ -535,10 +570,8 @@
                 <option value="05">05</option><option value="06">06</option>
               </select>
             </th>
-            <th class="col-total text-right">Total Facturado</th>
             
-            <!-- COLUMNAS AVANZADAS (OCULTAS INICIALMENTE) -->
-            <th class="col-avanzado" style="display: none;">NCF Modificado</th>
+            <!-- ========== COLUMNAS AVANZADAS (RESTO) ========== -->
             <th class="col-avanzado" style="display: none;">ITBIS Proporcionalidad</th>
             <th class="col-avanzado" style="display: none;">ITBIS Costo</th>
             <th class="col-avanzado" style="display: none;">ITBIS Adelantar</th>
@@ -549,13 +582,14 @@
             <th class="col-avanzado" style="display: none;">Otros Impuestos</th>
             <th class="col-avanzado" style="display: none;">Propina Legal</th>
             
+            <!-- TOGGLE EXPANDIR -->
             <th class="col-toggle" onclick="toggleColumnasAvanzadas()">
               <span id="toggleIcon" title="Expandir campos">▶️</span>
             </th>
           </tr>
         </thead>
         <tbody id="preCierreTableBody">
-          <tr><td colspan="25" class="text-center" style="padding: 3rem; color: #64748b;">Cargando...</td></tr>
+          <tr><td colspan="26" class="text-center" style="padding: 3rem; color: #64748b;">Cargando...</td></tr>
         </tbody>
       </table>
     </div>

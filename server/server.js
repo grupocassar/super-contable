@@ -3,8 +3,8 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const { initDatabase } = require('./config/database');
-const { initTelegramBot } = require('./services/telegramService');
-
+const { initTelegramBot, getBot } = require('./services/telegramService');
+const { initWorker } = require('./services/workerService');
 const authRoutes = require('./routes/auth.routes');
 const adminRoutes = require('./routes/admin.routes');
 const contableRoutes = require('./routes/contable.routes');
@@ -47,12 +47,21 @@ async function startServer() {
     
     // 2. Inicializar Bot de Telegram
     initTelegramBot();
-
-    // 3. Arrancar Servidor
+    
+    // 3. Inicializar Worker (procesamiento en segundo plano)
+    const bot = getBot();
+    if (bot) {
+      initWorker(bot);
+    } else {
+      console.warn('⚠️ Worker no iniciado: Bot de Telegram no disponible');
+    }
+    
+    // 4. Arrancar Servidor
     app.listen(PORT, () => {
       console.log(`
 ✓ Connected to SQLite database
 🤖 Super Contable Bot: ONLINE
+⚙️ Worker Service: ONLINE (Procesando cola cada 5s)
 🚀 Super Contable Server Started!
    Port: ${PORT}
       `);

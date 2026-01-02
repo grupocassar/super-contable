@@ -2,6 +2,8 @@
  * LÓGICA DE PRE-CIERRE FISCAL 606 - SUPER CONTABLE
  * Alineado con el "Gran Cambio" (Estructura 23 columnas + Gemini AI)
  * UPDATE: Sistema de columnas expandibles (14 base + 10 avanzadas)
+ * UPDATE: Formato DGII 606 - Fecha atomizada (Periodo YYYYMM + Día DD)
+ * UPDATE: Exportación con formato DGII 606 nativo
  */
 
 let currentUser = null;
@@ -70,6 +72,60 @@ function formatDateDDMMYYYY(isoDate) {
   const parts = isoDate.split('-');
   if (parts.length !== 3) return isoDate; 
   return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+// ========== FUNCIONES DGII 606 - FORMATO ATOMIZADO ==========
+
+/**
+ * Convierte fecha ISO a formato Periodo DGII (YYYYMM)
+ * @param {string} isoDate - Fecha en formato ISO: "2025-07-16"
+ * @returns {string} - Periodo: "202507"
+ */
+function formatPeriodo(isoDate) {
+  if (!isoDate) return '';
+  const parts = isoDate.split('-');
+  if (parts.length !== 3) return '';
+  return `${parts[0]}${parts[1]}`; // YYYYMM
+}
+
+/**
+ * Convierte fecha ISO a formato Día DGII (DD)
+ * @param {string} isoDate - Fecha en formato ISO: "2025-07-16"
+ * @returns {string} - Día: "16"
+ */
+function formatDia(isoDate) {
+  if (!isoDate) return '';
+  const parts = isoDate.split('-');
+  if (parts.length !== 3) return '';
+  return parts[2]; // DD
+}
+
+/**
+ * Reconstruye fecha ISO desde componentes DGII
+ * @param {string} periodo - Periodo en formato YYYYMM: "202507"
+ * @param {string} dia - Día en formato DD: "16"
+ * @returns {string} - Fecha ISO: "2025-07-16"
+ */
+function reconstruirFechaISO(periodo, dia) {
+  if (!periodo || !dia) return '';
+  
+  // Validar formato periodo (6 dígitos)
+  if (!/^\d{6}$/.test(periodo)) return '';
+  
+  // Validar formato día (2 dígitos)
+  if (!/^\d{2}$/.test(dia)) return '';
+  
+  const year = periodo.substring(0, 4);   // "2025"
+  const month = periodo.substring(4, 6);  // "07"
+  
+  // Validar rangos
+  const monthNum = parseInt(month, 10);
+  const dayNum = parseInt(dia, 10);
+  
+  if (monthNum < 1 || monthNum > 12) return '';
+  if (dayNum < 1 || dayNum > 31) return '';
+  
+  return `${year}-${month}-${dia}`; // "2025-07-16"
 }
 
 // ============================================
@@ -279,7 +335,7 @@ function renderTabla() {
 
   if (facturasFiltradas.length === 0) {
     const msg = estadoActual === 'aprobada' ? 'No hay facturas pendientes' : 'No hay facturas en el histórico';
-    const totalCols = columnasAvanzadasVisibles ? 24 : 14;
+    const totalCols = columnasAvanzadasVisibles ? 26 : 16;
     tbody.innerHTML = `<tr><td colspan="${totalCols}" class="text-center" style="padding: 2rem; color: #64748b;">${msg}</td></tr>`;
     return;
   }
@@ -290,7 +346,9 @@ function renderTabla() {
   const displayStyle = columnasAvanzadasVisibles ? 'table-cell' : 'none';
 
   tbody.innerHTML = facturasFiltradas.map(f => {
-    const fechaFormatted = formatDateDDMMYYYY(f.fecha_factura);
+    // Extraer componentes de fecha para formato DGII
+    const periodo = formatPeriodo(f.fecha_factura);
+    const dia = formatDia(f.fecha_factura);
     
     let tipoIdDisplay = '?';
     const rncClean = (f.rnc || '').replace(/-/g, '');
@@ -319,67 +377,104 @@ function renderTabla() {
 
     return `
       <tr data-id="${f.id}" class="${rowClass}">
+        <!-- ANOMALÍAS -->
         <td class="text-center">${iconoHTML}</td>
-        <td>
-          <input type="text" class="${inputClass}" value="${fechaFormatted}" ${disabledAttr}
-                 placeholder="DD/MM/YYYY" maxlength="10" onblur="saveDateField(${f.id}, this.value)">
-        </td>
+        
+        <!-- RNC O CÉDULA -->
         <td onmouseenter="showCompanyTooltip(event, '${f.empresa_nombre || 'N/A'}')" onmouseleave="hideCompanyTooltip()">
           <input type="text" class="${inputClass}" value="${f.rnc || ''}" ${disabledAttr}
                  placeholder="XXX-XXXXX-X" onblur="saveField(${f.id}, 'rnc', this.value)">
         </td>
+        
+        <!-- TIPO ID -->
         <td class="text-center">
           <span class="badge-tipo-id">${tipoIdDisplay}</span>
         </td>
-        <td>
-          <input type="text" class="${inputClass}" value="${f.ncf || ''}" ${disabledAttr}
-                 onblur="saveNCFField(${f.id}, this.value)">
-        </td>
-        <td>
-          <input type="text" class="${inputClass}" value="${f.proveedor || ''}" ${disabledAttr}
-                 onblur="saveField(${f.id}, 'proveedor', this.value)">
-        </td>
-        <td class="text-right">
-          <input type="number" class="${inputClass} text-right" value="${f.monto_servicios || 0}" ${disabledAttr}
-                 step="0.01" onblur="saveField(${f.id}, 'monto_servicios', this.value)">
-        </td>
-        <td class="text-right">
-          <input type="number" class="${inputClass} text-right" value="${f.monto_bienes || 0}" ${disabledAttr}
-                 step="0.01" onblur="saveField(${f.id}, 'monto_bienes', this.value)">
-        </td>
-        <td class="text-right">
-          <input type="number" class="${inputClass} text-right" value="${montoITBIS}" ${disabledAttr}
-                 step="0.01" onblur="saveField(${f.id}, 'itbis_facturado', this.value)">
-        </td>
-        <td class="text-right">
-          <input type="number" class="${inputClass} text-right" value="${f.itbis_retenido || 0}" ${disabledAttr}
-                 step="0.01" onblur="saveField(${f.id}, 'itbis_retenido', this.value)">
-        </td>
-        <td class="text-right">
-          <input type="number" class="${inputClass} text-right" value="${f.monto_retencion_isr || 0}" ${disabledAttr}
-                 step="0.01" onblur="saveField(${f.id}, 'monto_retencion_isr', this.value)">
-        </td>
+        
+        <!-- TIPO DE GASTO (MOVIDO A POSICIÓN 3) -->
         <td class="td-select">
           <select class="cell-select select-tipo-gasto" data-factura-id="${f.id}" ${disabledAttr}
                   onchange="saveField(${f.id}, 'tipo_gasto', this.value)">
             ${CATEGORIAS_GASTO.map(cat => `<option value="${cat.value}" ${f.tipo_gasto === cat.value ? 'selected' : ''}>${cat.label}</option>`).join('')}
           </select>
         </td>
-        <td class="td-select">
-          <select class="cell-select" ${disabledAttr} onchange="saveField(${f.id}, 'forma_pago', this.value)">
-            ${FORMAS_PAGO.map(fp => `<option value="${fp.value}" ${f.forma_pago === fp.value ? 'selected' : ''}>${fp.label}</option>`).join('')}
-          </select>
+        
+        <!-- NCF -->
+        <td>
+          <input type="text" class="${inputClass}" value="${f.ncf || ''}" ${disabledAttr}
+                 onblur="saveNCFField(${f.id}, this.value)">
         </td>
+        
+        <!-- NCF MODIFICADO (AVANZADO) -->
+        <td class="col-avanzado" style="display: ${displayStyle};">
+          <input type="text" class="${inputClass}" value="${f.ncf_modificado || ''}" ${disabledAttr}
+                 onblur="saveField(${f.id}, 'ncf_modificado', this.value)">
+        </td>
+        
+        <!-- PERIODO (YYYYMM) - NUEVO -->
+        <td>
+          <input type="text" class="${inputClass}" value="${periodo}" ${disabledAttr}
+                 placeholder="202412" maxlength="6" pattern="[0-9]{6}"
+                 onblur="saveDateFieldAtomized(${f.id}, this.value, 'periodo')">
+        </td>
+        
+        <!-- DÍA (DD) - NUEVO -->
+        <td>
+          <input type="text" class="${inputClass}" value="${dia}" ${disabledAttr}
+                 placeholder="16" maxlength="2" pattern="[0-9]{2}"
+                 onblur="saveDateFieldAtomized(${f.id}, this.value, 'dia')">
+        </td>
+        
+        <!-- PROVEEDOR -->
+        <td>
+          <input type="text" class="${inputClass}" value="${f.proveedor || ''}" ${disabledAttr}
+                 onblur="saveField(${f.id}, 'proveedor', this.value)">
+        </td>
+        
+        <!-- MONTO SERVICIOS -->
+        <td class="text-right">
+          <input type="number" class="${inputClass} text-right" value="${f.monto_servicios || 0}" ${disabledAttr}
+                 step="0.01" onblur="saveField(${f.id}, 'monto_servicios', this.value)">
+        </td>
+        
+        <!-- MONTO BIENES -->
+        <td class="text-right">
+          <input type="number" class="${inputClass} text-right" value="${f.monto_bienes || 0}" ${disabledAttr}
+                 step="0.01" onblur="saveField(${f.id}, 'monto_bienes', this.value)">
+        </td>
+        
+        <!-- TOTAL FACTURADO (MOVIDO A POSICIÓN 11) -->
         <td class="text-right">
           <input type="number" class="cell-input text-right" value="${f.total_pagado || 0}" ${disabledAttr}
                  step="0.01" style="font-weight: 600;" onblur="saveField(${f.id}, 'total_pagado', this.value)">
         </td>
         
-        <!-- COLUMNAS AVANZADAS -->
-        <td class="col-avanzado text-right" style="display: ${displayStyle};">
-          <input type="text" class="${inputClass}" value="${f.ncf_modificado || ''}" ${disabledAttr}
-                 onblur="saveField(${f.id}, 'ncf_modificado', this.value)">
+        <!-- ITBIS FACTURADO -->
+        <td class="text-right">
+          <input type="number" class="${inputClass} text-right" value="${montoITBIS}" ${disabledAttr}
+                 step="0.01" onblur="saveField(${f.id}, 'itbis_facturado', this.value)">
         </td>
+        
+        <!-- ITBIS RETENIDO -->
+        <td class="text-right">
+          <input type="number" class="${inputClass} text-right" value="${f.itbis_retenido || 0}" ${disabledAttr}
+                 step="0.01" onblur="saveField(${f.id}, 'itbis_retenido', this.value)">
+        </td>
+        
+        <!-- RETENCIÓN ISR -->
+        <td class="text-right">
+          <input type="number" class="${inputClass} text-right" value="${f.monto_retencion_isr || 0}" ${disabledAttr}
+                 step="0.01" onblur="saveField(${f.id}, 'monto_retencion_isr', this.value)">
+        </td>
+        
+        <!-- FORMA DE PAGO -->
+        <td class="td-select">
+          <select class="cell-select" ${disabledAttr} onchange="saveField(${f.id}, 'forma_pago', this.value)">
+            ${FORMAS_PAGO.map(fp => `<option value="${fp.value}" ${f.forma_pago === fp.value ? 'selected' : ''}>${fp.label}</option>`).join('')}
+          </select>
+        </td>
+        
+        <!-- ========== COLUMNAS AVANZADAS (RESTO) ========== -->
         <td class="col-avanzado text-right" style="display: ${displayStyle};">
           <input type="number" class="${inputClass} text-right" value="${f.itbis_proporcionalidad || 0}" ${disabledAttr}
                  step="0.01" onblur="saveField(${f.id}, 'itbis_proporcionalidad', this.value)">
@@ -634,6 +729,43 @@ async function saveNCFField(id, val) {
   await saveField(id, 'ncf', val);
 }
 
+/**
+ * Guarda cambios en campos de fecha atomizados (Periodo o Día)
+ * @param {number} facturaId - ID de la factura
+ * @param {string} valor - Valor del campo editado
+ * @param {string} tipo - 'periodo' o 'dia'
+ */
+async function saveDateFieldAtomized(facturaId, valor, tipo) {
+  if (estadoActual === 'exportada') return;
+  if (!valor || valor.trim() === '') return;
+
+  // Obtener factura actual
+  const factura = facturas.find(f => f.id === facturaId);
+  if (!factura) return;
+
+  // Obtener componentes actuales
+  let periodoActual = formatPeriodo(factura.fecha_factura);
+  let diaActual = formatDia(factura.fecha_factura);
+
+  // Actualizar el componente modificado
+  if (tipo === 'periodo') {
+    periodoActual = valor.trim();
+  } else if (tipo === 'dia') {
+    diaActual = valor.trim();
+  }
+
+  // Reconstruir fecha ISO
+  const fechaISO = reconstruirFechaISO(periodoActual, diaActual);
+
+  if (!fechaISO) {
+    if(typeof showToast === 'function') showToast('Formato inválido (Periodo: YYYYMM, Día: DD)', 'error');
+    return;
+  }
+
+  // Guardar en BD
+  await saveField(facturaId, 'fecha_factura', fechaISO);
+}
+
 async function saveField(facturaId, field, value, refrescar = true) {
   if (estadoActual === 'exportada') return; 
 
@@ -698,7 +830,7 @@ function getAnomalia(f) {
   const dups = facturas.filter(x => x.ncf === f.ncf && x.ncf && !x.revisada);
   if (dups.length > 1) return { tipo: 'duplicado', icono: '🔴' };
   
-  const sosp = facturas.filter(x => x.id !== f.id && x.proveedor === f.proveedor && x.total_pagado === f.total_pagado && x.fecha_factura === f.fecha_factura && x.ncf !== f.ncf && !x.revisada);
+  const sosp = facturas.filter(x => x.id !== f.id && x.proveedor === f.proveedor && x.total_pagado === f.total_pagado && x.fecha_factura === f.fecha_factura && x.ncf !== f1.ncf && !x.revisada);
   if (sosp.length > 0) return { tipo: 'sospechosa', icono: '🟡' };
   
   const itbisVal = f.itbis_facturado !== undefined ? f.itbis_facturado : f.itbis;
@@ -815,15 +947,17 @@ function renderColumnCheckboxes(modo) {
     
     let html = `
         <div style="grid-column: span 2; border-bottom:1px solid #eee; padding-bottom:5px; margin-bottom:5px; font-weight:bold; color:#2563eb;">--- DATOS GENERALES ---</div>
-        <label><input type="checkbox" ${attr(true)} value="fecha_factura"> Fecha Comp.</label>
         `;
     if (showEmpresaCol) { html += `<label><input type="checkbox" ${attr(true)} value="empresa_nombre"> Empresa</label>`; }
     
     html += `
         <label><input type="checkbox" ${attr(true)} value="rnc"> RNC o Cédula</label>
         <label><input type="checkbox" ${attr(true)} value="tipo_id"> Tipo Id</label>
+        <label><input type="checkbox" ${attr(true)} value="tipo_gasto"> Tipo de Gasto</label>
         <label><input type="checkbox" ${attr(true)} value="ncf"> NCF</label>
         <label><input type="checkbox" ${attr(true)} value="ncf_modificado"> NCF Modificado</label>
+        <label><input type="checkbox" ${attr(true)} value="periodo"> Periodo (YYYYMM)</label>
+        <label><input type="checkbox" ${attr(true)} value="dia"> Día (DD)</label>
         <label><input type="checkbox" ${attr(true)} value="proveedor"> Proveedor</label>
         
         <div style="grid-column: span 2; border-bottom:1px solid #eee; padding-bottom:5px; margin-bottom:5px; margin-top:10px; font-weight:bold; color:#2563eb;">--- MONTOS Y BIENES ---</div>
@@ -848,7 +982,6 @@ function renderColumnCheckboxes(modo) {
         <label><input type="checkbox" ${attr(false)} value="propina_legal"> Propina Legal</label>
         
         <div style="grid-column: span 2; border-bottom:1px solid #eee; padding-bottom:5px; margin-bottom:5px; margin-top:10px; font-weight:bold; color:#2563eb;">--- CLASIFICACIÓN ---</div>
-        <label><input type="checkbox" ${attr(true)} value="tipo_gasto"> Tipo de Gasto</label>
         <label><input type="checkbox" ${attr(true)} value="forma_pago"> Forma de Pago</label>
         
         <label><input type="checkbox" value="drive_url"> Link Factura</label>
@@ -888,13 +1021,21 @@ function prepararDatosParaExportar() {
           else val = '';
       }
       
+      // Extraer componentes de fecha atomizados
+      if (col === 'periodo') {
+        val = formatPeriodo(f.fecha_factura);
+      }
+      
+      if (col === 'dia') {
+        val = formatDia(f.fecha_factura);
+      }
+      
       if (col === 'itbis_facturado') val = f.itbis_facturado !== undefined ? f.itbis_facturado : f.itbis;
 
       if (col === 'tipo_ncf') val = getTipoNCF(f.ncf);
       if (col === 'forma_pago') { const o = FORMAS_PAGO.find(p => p.value == val); if(o) val = o.value === '' ? '' : o.label; }
       if (col === 'tipo_gasto') { const o = CATEGORIAS_GASTO.find(c => c.value == String(val).trim()); if(o) val = o.value === '' ? '' : o.label; }
       if (col === 'rnc' && val) val = String(val).replace(/-/g, '');
-      if (col === 'fecha_factura') val = formatDateDDMMYYYY(val);
       
       if (['itbis_facturado', 'total_pagado', 'monto_servicios', 'monto_bienes', 'itbis_retenido', 'itbis_proporcionalidad', 'itbis_costo', 'itbis_adelantar', 'itbis_percibido', 'monto_retencion_isr', 'isr_percibido', 'impuesto_selectivo', 'otros_impuestos', 'propina_legal'].includes(col)) { 
           let num = parseFloat(val); 
@@ -996,15 +1137,15 @@ async function archivarFacturas(ids) {
 
 function generarCSV(datosProcesados, columnas, nombreArchivoBase) {
   const headerMap = { 
-      'fecha_factura': 'Fecha Comp.', 
       'empresa_nombre': 'Empresa', 
       'rnc': 'RNC o Cédula', 
       'tipo_id': 'Tipo Id',
+      'tipo_gasto': 'Tipo de Gasto',
       'ncf': 'NCF', 
       'ncf_modificado': 'NCF Modificado',
+      'periodo': 'Periodo',
+      'dia': 'Día',
       'proveedor': 'Proveedor', 
-      'tipo_gasto': 'Tipo de Gasto', 
-      'forma_pago': 'Forma de Pago', 
       'monto_servicios': 'Monto Servicios',
       'monto_bienes': 'Monto Bienes',
       'total_pagado': 'Total Facturado',
@@ -1020,6 +1161,7 @@ function generarCSV(datosProcesados, columnas, nombreArchivoBase) {
       'impuesto_selectivo': 'Impuesto Selectivo',
       'otros_impuestos': 'Otros Impuestos',
       'propina_legal': 'Propina Legal',
+      'forma_pago': 'Forma de Pago',
       'drive_url': 'Link Factura' 
   };
   
