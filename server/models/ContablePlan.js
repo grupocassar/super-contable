@@ -2,7 +2,7 @@ const { getDatabase } = require('../config/database');
 
 class ContablePlan {
   /**
-   * Obtiene el plan activo del contable (usuario)
+   * Obtiene el plan activo del contable (usuario) desde la base de datos
    */
   static findByContableId(contableId) {
     return new Promise((resolve, reject) => {
@@ -26,7 +26,7 @@ class ContablePlan {
   static getConsumoMes(contableId) {
     return new Promise((resolve, reject) => {
       const db = getDatabase();
-      // Join: Facturas -> Empresas -> Contable
+      // Relación: Facturas -> Empresas -> Contable
       const query = `
         SELECT COUNT(f.id) as facturas_procesadas
         FROM facturas f
@@ -44,21 +44,25 @@ class ContablePlan {
 
   /**
    * Devuelve el objeto completo para el Dashboard (Plan + Consumo Real)
+   * Sincronizado con el nuevo límite de 800 para el plan STARTER
    */
   static async getPlanYConsumo(contableId) {
     try {
       const plan = await this.findByContableId(contableId);
       const consumo = await this.getConsumoMes(contableId);
 
-      // Si no tiene plan asignado, usamos valores por defecto (STARTER)
+      // Si no tiene plan asignado, usamos los nuevos valores por defecto (STARTER @ 800)
       if (!plan) {
+        const defaultLimite = 800; // ACTUALIZADO: Antes 1000
+        const defaultGracia = 50;
+
         return {
           plan: 'STARTER',
-          limite_facturas: 1000,
-          zona_gracia: 50,
+          limite_facturas: defaultLimite,
+          zona_gracia: defaultGracia,
           facturas_procesadas: consumo,
-          porcentaje: Math.round((consumo / 1000) * 100),
-          estado_alerta: this.calcularEstadoAlerta(consumo, 1000, 50)
+          porcentaje: Math.round((consumo / defaultLimite) * 100),
+          estado_alerta: this.calcularEstadoAlerta(consumo, defaultLimite, defaultGracia)
         };
       }
 
@@ -81,7 +85,7 @@ class ContablePlan {
   }
 
   /**
-   * Lógica de semáforo (Verde, Amarillo, Rojo)
+   * Lógica de semáforo para el Dashboard (Normal, Advertencia, Crítico, Bloqueado)
    */
   static calcularEstadoAlerta(consumo, limite, gracia) {
     const porcentaje = (consumo / limite) * 100;

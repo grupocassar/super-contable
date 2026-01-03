@@ -69,7 +69,7 @@
               <th>Contable</th>
               <th>Empresas</th>
               <th>Asistentes</th>
-              <th>Estado</th>
+              <th>Plan / Consumo</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -83,6 +83,7 @@
     </div>
   </div>
 
+  <!-- Modal: Crear/Editar Contable -->
   <div id="contableModal" class="modal">
     <div class="modal-content">
       <div class="modal-header">
@@ -115,6 +116,62 @@
           </button>
           <button type="submit" class="btn btn-primary">
             Guardar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Cambiar Plan -->
+  <div id="planModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Cambiar Plan</h3>
+        <button class="modal-close" onclick="closePlanModal()">×</button>
+      </div>
+      <form id="planForm" onsubmit="cambiarPlan(event)">
+        <div class="modal-body">
+          <input type="hidden" id="planContableId">
+
+          <div class="form-group">
+            <label class="label">Contable</label>
+            <p id="planContableNombre" style="font-weight: 600; margin: 0.5rem 0;"></p>
+          </div>
+
+          <div class="form-group">
+            <label class="label">Plan Actual</label>
+            <p style="margin: 0.5rem 0;">
+              <span id="planActual" class="badge badge-primary"></span>
+            </p>
+          </div>
+
+          <div class="form-group">
+            <label class="label">Consumo del Mes</label>
+            <p id="planConsumo" style="color: var(--text-secondary); font-size: 0.875rem; margin: 0.5rem 0;"></p>
+          </div>
+
+          <div class="form-group">
+            <label for="planNuevo" class="label">Nuevo Plan</label>
+            <select id="planNuevo" class="input" required>
+              <option value="STARTER">Starter - $135/mes (800 facturas + 50 gracia)</option>
+              <option value="PROFESSIONAL">Professional - $195/mes (1,500 facturas + 100 gracia)</option>
+              <option value="BUSINESS">Business - $450/mes (6,000 facturas + 500 gracia)</option>
+            </select>
+          </div>
+
+          <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 1rem; border-radius: 0.5rem; margin-top: 1rem;">
+            <p style="margin: 0; font-size: 0.875rem; color: #92400e;">
+              ⚠️ <strong>Nota:</strong> El cambio de plan se aplica inmediatamente y actualiza los límites de facturación.
+            </p>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closePlanModal()">
+            Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary">
+            Cambiar Plan
           </button>
         </div>
       </form>

@@ -9,6 +9,7 @@ router.get('/dashboard', adminController.getAdminDashboard);
 router.get('/contables', adminController.getContables);
 router.post('/contables', adminController.createContable);
 router.put('/contables/:id', adminController.updateContable);
+router.put('/contables/:id/plan', adminController.cambiarPlanContable); // NUEVA RUTA
 router.delete('/contables/:id', adminController.deleteContable);
 
 module.exports = router;

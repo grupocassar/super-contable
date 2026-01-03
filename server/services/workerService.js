@@ -1,6 +1,7 @@
 /**
  * Worker Service - Procesa la cola de facturas en segundo plano
  * Se ejecuta cada 5 segundos para procesar jobs pendientes
+ * INCLUYE: Verificación de límites de plan antes de procesar
  */
 
 const axios = require('axios');
@@ -9,6 +10,7 @@ const { getDatabase } = require('../config/database');
 const { uploadToDrive } = require('./driveService');
 const { procesarFacturaConGemini } = require('./geminiService');
 const Factura = require('../models/Factura');
+const ContablePlan = require('../models/ContablePlan');
 
 let bot; // Referencia al bot de Telegram (se inyecta desde telegramService)
 let workerInterval;
@@ -82,12 +84,134 @@ function obtenerJobsPendientes(db) {
 }
 
 /**
+ * NUEVA FUNCIÓN: Verifica si el contable puede procesar más facturas este mes
+ */
+async function verificarLimiteContable(db, empresaId) {
+    try {
+        // 1. Obtener la empresa y su contable
+        const empresa = await new Promise((resolve, reject) => {
+            db.get(
+                'SELECT id, nombre, contable_id FROM empresas WHERE id = ?',
+                [empresaId],
+                (err, row) => {
+                    if (err) reject(err);
+                    else resolve(row);
+                }
+            );
+        });
+
+        if (!empresa) {
+            return {
+                permitido: false,
+                mensaje: 'Empresa no encontrada'
+            };
+        }
+
+        // 2. Obtener plan y consumo del contable
+        const planYConsumo = await ContablePlan.getPlanYConsumo(empresa.contable_id);
+
+        const {
+            limite_facturas,
+            zona_gracia,
+            facturas_procesadas,
+            estado_alerta
+        } = planYConsumo;
+
+        const limiteTotal = limite_facturas + zona_gracia;
+
+        // 3. Verificar si excede el límite + gracia
+        if (facturas_procesadas >= limiteTotal) {
+            return {
+                permitido: false,
+                bloqueado: true,
+                plan: planYConsumo.plan,
+                limite: limite_facturas,
+                gracia: zona_gracia,
+                consumo: facturas_procesadas,
+                mensaje: `Límite mensual alcanzado (${facturas_procesadas}/${limiteTotal} facturas). Contactá a tu contador para hacer upgrade.`
+            };
+        }
+
+        // 4. Si está en zona de gracia, advertir pero permitir
+        if (facturas_procesadas >= limite_facturas) {
+            return {
+                permitido: true,
+                advertencia: true,
+                plan: planYConsumo.plan,
+                limite: limite_facturas,
+                gracia: zona_gracia,
+                consumo: facturas_procesadas,
+                mensaje: `⚠️ Zona de gracia: ${facturas_procesadas - limite_facturas}/${zona_gracia} facturas extra usadas`
+            };
+        }
+
+        // 5. Todo OK, procesar normalmente
+        return {
+            permitido: true,
+            plan: planYConsumo.plan,
+            consumo: facturas_procesadas,
+            limite: limite_facturas
+        };
+
+    } catch (error) {
+        console.error('Error verificando límite:', error);
+        // En caso de error, permitir procesar (fail-safe)
+        return {
+            permitido: true,
+            mensaje: 'Error verificando límite, procesando de todas formas'
+        };
+    }
+}
+
+/**
  * Procesa un job individual: descarga, IA, Drive, BD
+ * MODIFICADO: Verifica límites ANTES de procesar
  */
 async function procesarJob(db, job) {
     const jobId = job.id;
     
     try {
+        // ============================================
+        // PASO 0: VERIFICAR LÍMITE DEL CONTABLE
+        // ============================================
+        console.log(`🔍 Verificando límites - Job #${jobId} (Empresa ID: ${job.empresa_id})`);
+        
+        const verificacion = await verificarLimiteContable(db, job.empresa_id);
+        
+        if (!verificacion.permitido) {
+            console.log(`🚫 Job #${jobId} BLOQUEADO: ${verificacion.mensaje}`);
+            
+            // Marcar job como bloqueado
+            await actualizarEstadoJob(db, jobId, 'blocked', verificacion.mensaje);
+            
+            // Notificar al usuario vía Telegram
+            const telegramUser = await obtenerTelegramUser(db, job.telegram_user_id);
+            if (bot && telegramUser.chat_id) {
+                await bot.sendMessage(telegramUser.chat_id,
+                    `⛔ *Límite mensual alcanzado*\n\n` +
+                    `Tu contador ha procesado el máximo de facturas permitidas este mes.\n\n` +
+                    `📊 *Plan:* ${verificacion.plan}\n` +
+                    `📈 *Procesadas:* ${verificacion.consumo}/${verificacion.limite + verificacion.gracia}\n\n` +
+                    `💡 *Opciones:*\n` +
+                    `• Esperar hasta el próximo mes\n` +
+                    `• Tu contador puede hacer upgrade de plan\n\n` +
+                    `Las facturas nuevas se procesarán automáticamente cuando se reinicie el límite.`,
+                    { parse_mode: 'Markdown' }
+                );
+            }
+            
+            return; // NO procesar este job
+        }
+
+        // Si hay advertencia (zona de gracia), solo logear
+        if (verificacion.advertencia) {
+            console.log(`⚠️ Job #${jobId} - ${verificacion.mensaje}`);
+        }
+
+        // ============================================
+        // PROCESAMIENTO NORMAL (si límite OK)
+        // ============================================
+        
         // Marcar como "processing"
         await actualizarEstadoJob(db, jobId, 'processing', null);
         
@@ -163,11 +287,6 @@ async function procesarJob(db, job) {
         
         // 8. Marcar job como completado
         await actualizarEstadoJob(db, jobId, 'completed', null);
-        
-        // 9. Notificar al usuario (opcional)
-        if (bot && telegramUser.chat_id) {
-            bot.sendMessage(telegramUser.chat_id, '✅ Factura procesada correctamente.');
-        }
         
         console.log(`✅ Job #${jobId} completado exitosamente.`);
         
@@ -255,7 +374,7 @@ function obtenerContableDeEmpresa(db, empresaId) {
 function obtenerTelegramUser(db, telegramUserId) {
     return new Promise((resolve, reject) => {
         db.get(`
-            SELECT id, telegram_id, first_name 
+            SELECT id, telegram_id, first_name, chat_id
             FROM telegram_users 
             WHERE id = ?
         `, [telegramUserId], (err, row) => {

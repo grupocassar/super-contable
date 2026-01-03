@@ -1,7 +1,17 @@
 const User = require('../models/User');
+const ContablePlan = require('../models/ContablePlan');
 const bcrypt = require('bcryptjs');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { getDatabase } = require('../config/database');
+
+/**
+ * CONFIGURACIÓN MAESTRA DE PLANES (Única fuente de verdad)
+ */
+const PLANES_CONFIG = {
+    'STARTER': { limite: 800, gracia: 50 },  // ACTUALIZADO: 800 facturas
+    'PROFESSIONAL': { limite: 1500, gracia: 100 },
+    'BUSINESS': { limite: 6000, gracia: 500 }
+};
 
 /**
  * Obtener estadísticas generales para el Dashboard del Admin
@@ -9,7 +19,6 @@ const { getDatabase } = require('../config/database');
 const getAdminDashboard = asyncHandler(async (req, res) => {
     const db = getDatabase();
     
-    // Promesa auxiliar para consultas de conteo
     const getCount = (query) => {
         return new Promise((resolve, reject) => {
             db.get(query, [], (err, row) => {
@@ -43,13 +52,11 @@ const getAdminDashboard = asyncHandler(async (req, res) => {
 });
 
 /**
- * Obtener lista de Contables con sus estadísticas (Empresas y Asistentes vinculados)
+ * Obtener lista de Contables con estadísticas y consumo optimizado
  */
 const getContables = asyncHandler(async (req, res) => {
     const db = getDatabase();
     
-    // Consulta segura que cuenta sub-elementos directamente en SQL
-    // Esto evita el Error 500 por métodos faltantes en el modelo
     const query = `
         SELECT 
             u.id, 
@@ -57,8 +64,18 @@ const getContables = asyncHandler(async (req, res) => {
             u.email, 
             u.created_at,
             (SELECT COUNT(*) FROM empresas e WHERE e.contable_id = u.id) as total_empresas,
-            (SELECT COUNT(*) FROM users a WHERE a.contable_id = u.id AND a.role = 'asistente') as total_asistentes
+            (SELECT COUNT(*) FROM users a WHERE a.contable_id = u.id AND a.role = 'asistente') as total_asistentes,
+            cp.plan,
+            cp.limite_facturas,
+            cp.zona_gracia,
+            (SELECT COUNT(*) 
+             FROM facturas f
+             INNER JOIN empresas e ON f.empresa_id = e.id
+             WHERE e.contable_id = u.id
+             AND strftime('%Y-%m', f.created_at) = strftime('%Y-%m', 'now')
+            ) as facturas_mes
         FROM users u
+        LEFT JOIN contables_planes cp ON cp.contable_id = u.id AND cp.estado = 'activo'
         WHERE u.role = 'contable'
         ORDER BY u.created_at DESC
     `;
@@ -68,7 +85,37 @@ const getContables = asyncHandler(async (req, res) => {
             console.error("Error obteniendo contables:", err);
             return res.status(500).json({ success: false, message: "Error al consultar la base de datos" });
         }
-        res.json({ success: true, data: rows });
+        
+        const contablesConEstado = rows.map(contable => {
+            // Si no tiene plan activo, asumimos el nuevo default (STARTER @ 800)
+            const planKey = contable.plan || 'STARTER';
+            const config = PLANES_CONFIG[planKey] || PLANES_CONFIG['STARTER'];
+            
+            const limite = contable.limite_facturas || config.limite;
+            const gracia = contable.zona_gracia || config.gracia;
+            const consumo = contable.facturas_mes || 0;
+            const limiteTotal = limite + gracia;
+            
+            let estado_plan = 'normal';
+            if (consumo >= limiteTotal) {
+                estado_plan = 'bloqueado';
+            } else if (consumo >= limite) {
+                estado_plan = 'critico';
+            } else if ((consumo / limite) >= 0.8) {
+                estado_plan = 'advertencia';
+            }
+            
+            return {
+                ...contable,
+                plan: planKey,
+                limite_facturas: limite,
+                zona_gracia: gracia,
+                estado_plan: estado_plan,
+                porcentaje_uso: Math.round((consumo / limite) * 100)
+            };
+        });
+        
+        res.json({ success: true, data: contablesConEstado });
     });
 });
 
@@ -122,19 +169,16 @@ const updateContable = asyncHandler(async (req, res) => {
 });
 
 /**
- * Eliminar un Contable
+ * Eliminar un Contable (Baja lógica/física)
  */
 const deleteContable = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const db = getDatabase();
     
-    // Verificar si existe antes de borrar
     db.get("SELECT id FROM users WHERE id = ? AND role = 'contable'", [id], (err, row) => {
         if (err) return res.status(500).json({ success: false, message: err.message });
         if (!row) return res.status(404).json({ success: false, message: "Contable no encontrado" });
 
-        // Borrar (Las empresas y facturas se borran en cascada si está configurado así en la BD, 
-        // o quedan huérfanas. Para este MVP, asumimos borrado directo).
         db.run("DELETE FROM users WHERE id = ?", [id], function(err) {
             if (err) return res.status(500).json({ success: false, message: "Error al eliminar" });
             res.json({ success: true, message: "Contable eliminado correctamente" });
@@ -142,10 +186,71 @@ const deleteContable = asyncHandler(async (req, res) => {
     });
 });
 
+/**
+ * Cambiar plan de un contable (STARTER ahora limitado a 800)
+ */
+const cambiarPlanContable = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { plan } = req.body;
+    
+    if (!PLANES_CONFIG[plan]) {
+        return res.status(400).json({ 
+            success: false, 
+            message: `Plan inválido. Opciones: ${Object.keys(PLANES_CONFIG).join(', ')}` 
+        });
+    }
+    
+    const db = getDatabase();
+    const user = await User.findById(id);
+    if (!user || user.role !== 'contable') {
+        return res.status(404).json({ success: false, message: "Contable no encontrado" });
+    }
+    
+    try {
+        // Inactivar planes anteriores
+        await new Promise((resolve, reject) => {
+            db.run(
+                "UPDATE contables_planes SET estado = 'inactivo' WHERE contable_id = ? AND estado = 'activo'",
+                [id],
+                (err) => err ? reject(err) : resolve()
+            );
+        });
+        
+        const config = PLANES_CONFIG[plan];
+        const now = new Date().toISOString().split('T')[0];
+        
+        // Crear nuevo plan con los nuevos límites
+        await new Promise((resolve, reject) => {
+            db.run(
+                `INSERT INTO contables_planes 
+                (contable_id, plan, limite_facturas, zona_gracia, fecha_inicio, estado, created_at)
+                VALUES (?, ?, ?, ?, ?, 'activo', datetime('now'))`,
+                [id, plan, config.limite, config.gracia, now],
+                function(err) { err ? reject(err) : resolve({ id: this.lastID }); }
+            );
+        });
+        
+        res.json({ 
+            success: true, 
+            message: `Plan actualizado a ${plan} con éxito.`,
+            data: {
+                plan: plan,
+                limite_facturas: config.limite,
+                zona_gracia: config.gracia
+            }
+        });
+        
+    } catch (error) {
+        console.error("Error cambiando plan:", error);
+        res.status(500).json({ success: false, message: "Error al actualizar el plan" });
+    }
+});
+
 module.exports = {
     getAdminDashboard,
     getContables,
     createContable,
     updateContable,
-    deleteContable
+    deleteContable,
+    cambiarPlanContable
 };
