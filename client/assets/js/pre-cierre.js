@@ -4,6 +4,7 @@
  * UPDATE: Sistema de columnas expandibles (14 base + 10 avanzadas)
  * UPDATE: Formato DGII 606 - Fecha atomizada (Periodo YYYYMM + Día DD)
  * UPDATE: Exportación con formato DGII 606 nativo
+ * UPDATE: Sistema Lightbox con lupa inteligente CORREGIDA
  */
 
 let currentUser = null;
@@ -12,6 +13,7 @@ let facturasFiltradas = [];
 let empresas = [];
 let estadoActual = 'aprobada';
 let columnasAvanzadasVisibles = false;
+let lightboxActivo = false;
 
 // ============================================
 // CONSTANTES Y CONFIGURACIÓN
@@ -76,56 +78,34 @@ function formatDateDDMMYYYY(isoDate) {
 
 // ========== FUNCIONES DGII 606 - FORMATO ATOMIZADO ==========
 
-/**
- * Convierte fecha ISO a formato Periodo DGII (YYYYMM)
- * @param {string} isoDate - Fecha en formato ISO: "2025-07-16"
- * @returns {string} - Periodo: "202507"
- */
 function formatPeriodo(isoDate) {
   if (!isoDate) return '';
   const parts = isoDate.split('-');
   if (parts.length !== 3) return '';
-  return `${parts[0]}${parts[1]}`; // YYYYMM
+  return `${parts[0]}${parts[1]}`;
 }
 
-/**
- * Convierte fecha ISO a formato Día DGII (DD)
- * @param {string} isoDate - Fecha en formato ISO: "2025-07-16"
- * @returns {string} - Día: "16"
- */
 function formatDia(isoDate) {
   if (!isoDate) return '';
   const parts = isoDate.split('-');
   if (parts.length !== 3) return '';
-  return parts[2]; // DD
+  return parts[2];
 }
 
-/**
- * Reconstruye fecha ISO desde componentes DGII
- * @param {string} periodo - Periodo en formato YYYYMM: "202507"
- * @param {string} dia - Día en formato DD: "16"
- * @returns {string} - Fecha ISO: "2025-07-16"
- */
 function reconstruirFechaISO(periodo, dia) {
   if (!periodo || !dia) return '';
-  
-  // Validar formato periodo (6 dígitos)
   if (!/^\d{6}$/.test(periodo)) return '';
-  
-  // Validar formato día (2 dígitos)
   if (!/^\d{2}$/.test(dia)) return '';
   
-  const year = periodo.substring(0, 4);   // "2025"
-  const month = periodo.substring(4, 6);  // "07"
-  
-  // Validar rangos
+  const year = periodo.substring(0, 4);
+  const month = periodo.substring(4, 6);
   const monthNum = parseInt(month, 10);
   const dayNum = parseInt(dia, 10);
   
   if (monthNum < 1 || monthNum > 12) return '';
   if (dayNum < 1 || dayNum > 31) return '';
   
-  return `${year}-${month}-${dia}`; // "2025-07-16"
+  return `${year}-${month}-${dia}`;
 }
 
 // ============================================
@@ -162,6 +142,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   if(currentUser.email) safeSetText('userName', currentUser.email.split('@')[0].toUpperCase());
+  
+  // Crear lightbox al cargar
+  crearLightbox();
 });
 
 function showCompanyTooltip(e, name) {
@@ -346,7 +329,6 @@ function renderTabla() {
   const displayStyle = columnasAvanzadasVisibles ? 'table-cell' : 'none';
 
   tbody.innerHTML = facturasFiltradas.map(f => {
-    // Extraer componentes de fecha para formato DGII
     const periodo = formatPeriodo(f.fecha_factura);
     const dia = formatDia(f.fecha_factura);
     
@@ -377,104 +359,69 @@ function renderTabla() {
 
     return `
       <tr data-id="${f.id}" class="${rowClass}">
-        <!-- ANOMALÍAS -->
         <td class="text-center">${iconoHTML}</td>
-        
-        <!-- RNC O CÉDULA -->
         <td onmouseenter="showCompanyTooltip(event, '${f.empresa_nombre || 'N/A'}')" onmouseleave="hideCompanyTooltip()">
           <input type="text" class="${inputClass}" value="${f.rnc || ''}" ${disabledAttr}
                  placeholder="XXX-XXXXX-X" onblur="saveField(${f.id}, 'rnc', this.value)">
         </td>
-        
-        <!-- TIPO ID -->
-        <td class="text-center">
-          <span class="badge-tipo-id">${tipoIdDisplay}</span>
-        </td>
-        
-        <!-- TIPO DE GASTO (MOVIDO A POSICIÓN 3) -->
+        <td class="text-center"><span class="badge-tipo-id">${tipoIdDisplay}</span></td>
         <td class="td-select">
           <select class="cell-select select-tipo-gasto" data-factura-id="${f.id}" ${disabledAttr}
                   onchange="saveField(${f.id}, 'tipo_gasto', this.value)">
             ${CATEGORIAS_GASTO.map(cat => `<option value="${cat.value}" ${f.tipo_gasto === cat.value ? 'selected' : ''}>${cat.label}</option>`).join('')}
           </select>
         </td>
-        
-        <!-- NCF -->
         <td>
           <input type="text" class="${inputClass}" value="${f.ncf || ''}" ${disabledAttr}
                  onblur="saveNCFField(${f.id}, this.value)">
         </td>
-        
-        <!-- NCF MODIFICADO (AVANZADO) -->
         <td class="col-avanzado" style="display: ${displayStyle};">
           <input type="text" class="${inputClass}" value="${f.ncf_modificado || ''}" ${disabledAttr}
                  onblur="saveField(${f.id}, 'ncf_modificado', this.value)">
         </td>
-        
-        <!-- PERIODO (YYYYMM) - NUEVO -->
         <td>
           <input type="text" class="${inputClass}" value="${periodo}" ${disabledAttr}
                  placeholder="202412" maxlength="6" pattern="[0-9]{6}"
                  onblur="saveDateFieldAtomized(${f.id}, this.value, 'periodo')">
         </td>
-        
-        <!-- DÍA (DD) - NUEVO -->
         <td>
           <input type="text" class="${inputClass}" value="${dia}" ${disabledAttr}
                  placeholder="16" maxlength="2" pattern="[0-9]{2}"
                  onblur="saveDateFieldAtomized(${f.id}, this.value, 'dia')">
         </td>
-        
-        <!-- PROVEEDOR -->
         <td>
           <input type="text" class="${inputClass}" value="${f.proveedor || ''}" ${disabledAttr}
                  onblur="saveField(${f.id}, 'proveedor', this.value)">
         </td>
-        
-        <!-- MONTO SERVICIOS -->
         <td class="text-right">
           <input type="number" class="${inputClass} text-right" value="${f.monto_servicios || 0}" ${disabledAttr}
                  step="0.01" onblur="saveField(${f.id}, 'monto_servicios', this.value)">
         </td>
-        
-        <!-- MONTO BIENES -->
         <td class="text-right">
           <input type="number" class="${inputClass} text-right" value="${f.monto_bienes || 0}" ${disabledAttr}
                  step="0.01" onblur="saveField(${f.id}, 'monto_bienes', this.value)">
         </td>
-        
-        <!-- TOTAL FACTURADO (MOVIDO A POSICIÓN 11) -->
         <td class="text-right">
           <input type="number" class="cell-input text-right" value="${f.total_pagado || 0}" ${disabledAttr}
                  step="0.01" style="font-weight: 600;" onblur="saveField(${f.id}, 'total_pagado', this.value)">
         </td>
-        
-        <!-- ITBIS FACTURADO -->
         <td class="text-right">
           <input type="number" class="${inputClass} text-right" value="${montoITBIS}" ${disabledAttr}
                  step="0.01" onblur="saveField(${f.id}, 'itbis_facturado', this.value)">
         </td>
-        
-        <!-- ITBIS RETENIDO -->
         <td class="text-right">
           <input type="number" class="${inputClass} text-right" value="${f.itbis_retenido || 0}" ${disabledAttr}
                  step="0.01" onblur="saveField(${f.id}, 'itbis_retenido', this.value)">
         </td>
-        
-        <!-- RETENCIÓN ISR -->
         <td class="text-right">
           <input type="number" class="${inputClass} text-right" value="${f.monto_retencion_isr || 0}" ${disabledAttr}
                  step="0.01" onblur="saveField(${f.id}, 'monto_retencion_isr', this.value)">
         </td>
-        
-        <!-- FORMA DE PAGO -->
         <td class="td-select">
           <select class="cell-select" ${disabledAttr} onchange="saveField(${f.id}, 'forma_pago', this.value)">
             ${FORMAS_PAGO.map(fp => `<option value="${fp.value}" ${f.forma_pago === fp.value ? 'selected' : ''}>${fp.label}</option>`).join('')}
           </select>
         </td>
-        
-        <!-- ========== COLUMNAS AVANZADAS (RESTO) ========== -->
         <td class="col-avanzado text-right" style="display: ${displayStyle};">
           <input type="number" class="${inputClass} text-right" value="${f.itbis_proporcionalidad || 0}" ${disabledAttr}
                  step="0.01" onblur="saveField(${f.id}, 'itbis_proporcionalidad', this.value)">
@@ -515,6 +462,192 @@ function renderTabla() {
       </tr>
     `;
   }).join('');
+}
+
+// ============================================
+// SISTEMA LIGHTBOX - IMAGEN EXPANDIBLE
+// ============================================
+
+function crearLightbox() {
+  const lightbox = document.createElement('div');
+  lightbox.className = 'lightbox-overlay';
+  lightbox.id = 'lightboxOverlay';
+  
+  lightbox.innerHTML = `
+    <div class="lightbox-image-container" id="lightboxContainer">
+      <img id="lightboxImage" src="" alt="Factura expandida">
+      <div class="lightbox-lens" id="lightboxLens"></div>
+    </div>
+    <div class="lightbox-instructions">
+      <span><kbd>ESC</kbd> Cerrar</span>
+      <span>🔍 Hover para lupa</span>
+      <span>Click fuera para cerrar</span>
+    </div>
+  `;
+  
+  document.body.appendChild(lightbox);
+  
+  // Click en overlay (fuera de imagen) cierra
+  lightbox.addEventListener('click', function(e) {
+    if (e.target === lightbox) {
+      cerrarLightbox();
+    }
+  });
+  
+  // ESC cierra lightbox
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && lightboxActivo) {
+      cerrarLightbox();
+    }
+  });
+}
+
+function abrirLightbox(imgSrc) {
+  const lightbox = document.getElementById('lightboxOverlay');
+  const img = document.getElementById('lightboxImage');
+  
+  if (!lightbox || !img) return;
+  
+  img.src = imgSrc;
+  lightbox.classList.add('active');
+  lightboxActivo = true;
+  
+  // Esperar a que la imagen cargue para inicializar lupa
+  img.onload = function() {
+    inicializarLupaLightbox();
+  };
+}
+
+function cerrarLightbox() {
+  const lightbox = document.getElementById('lightboxOverlay');
+  if (lightbox) {
+    lightbox.classList.remove('active');
+    lightboxActivo = false;
+  }
+}
+
+function inicializarLupaLightbox() {
+  const container = document.getElementById('lightboxContainer');
+  const img = document.getElementById('lightboxImage');
+  const lupa = document.getElementById('lightboxLens');
+  
+  if (!container || !img || !lupa) return;
+  
+  // Remover listeners anteriores clonando el nodo
+  const newContainer = container.cloneNode(true);
+  container.parentNode.replaceChild(newContainer, container);
+  
+  // Obtener referencias frescas después de clonar
+  const freshContainer = document.getElementById('lightboxContainer');
+  const freshImg = document.getElementById('lightboxImage');
+  const freshLupa = document.getElementById('lightboxLens');
+  
+  // Factor de zoom
+  const zoom = 3.5;
+  
+  freshContainer.addEventListener('mousemove', function(e) {
+    const containerRect = freshContainer.getBoundingClientRect();
+    const imgRect = freshImg.getBoundingClientRect();
+    
+    // Posición del mouse relativa a la imagen
+    const mouseX = e.clientX - imgRect.left;
+    const mouseY = e.clientY - imgRect.top;
+    
+    // Centrar lupa en el cursor (180px / 2 = 90px de radio)
+    freshLupa.style.left = (e.clientX - containerRect.left - 90) + 'px';
+    freshLupa.style.top = (e.clientY - containerRect.top - 90) + 'px';
+    
+    // CRITICAL: Usar dimensiones RENDERIZADAS (clientWidth/Height)
+    const imgWidth = freshImg.clientWidth;
+    const imgHeight = freshImg.clientHeight;
+    
+    // Calcular porcentaje de posición del mouse en la imagen
+    const percentX = (mouseX / imgWidth) * 100;
+    const percentY = (mouseY / imgHeight) * 100;
+    
+    // Aplicar imagen de fondo con zoom
+    freshLupa.style.backgroundImage = `url('${freshImg.src}')`;
+    freshLupa.style.backgroundSize = `${imgWidth * zoom}px ${imgHeight * zoom}px`;
+    
+    // Calcular posición del background para centrar en el cursor
+    // La fórmula centra la porción ampliada en el centro de la lupa (90px)
+    const bgPosX = -((percentX / 100) * imgWidth * zoom - 90);
+    const bgPosY = -((percentY / 100) * imgHeight * zoom - 90);
+    
+    freshLupa.style.backgroundPosition = `${bgPosX}px ${bgPosY}px`;
+  });
+  
+  // Ocultar lupa al salir del container
+  freshContainer.addEventListener('mouseleave', function() {
+    freshLupa.style.display = 'none';
+  });
+  
+  // Mostrar lupa al entrar
+  freshContainer.addEventListener('mouseenter', function() {
+    freshLupa.style.display = 'block';
+  });
+}
+
+// Agregar event listeners a imágenes en modales
+function agregarEventosLightbox(imgId) {
+  const imgElement = document.getElementById(imgId);
+  if (!imgElement) return;
+  
+  const container = imgElement.closest('.comparacion-imagen');
+  if (!container) return;
+  
+  container.addEventListener('mouseenter', function() {
+    abrirLightbox(imgElement.src);
+  });
+}
+
+// ============================================
+// ATAJOS DE TECLADO PARA MODALES
+// ============================================
+
+let modalActivo = null;
+
+function activarAtajosModal(tipo) {
+  modalActivo = tipo;
+  document.addEventListener('keydown', manejarAtajosModal);
+}
+
+function desactivarAtajosModal() {
+  modalActivo = null;
+  document.removeEventListener('keydown', manejarAtajosModal);
+}
+
+function manejarAtajosModal(e) {
+  if (!modalActivo || lightboxActivo) return;
+
+  if (e.key === 'Escape') {
+    if (modalActivo === 'duplicados') cerrarModalDuplicados();
+    else if (modalActivo === 'sospechosas') cerrarModalSospechosas();
+    return;
+  }
+
+  if (e.key === ' ' || e.key === 'Spacebar') {
+    e.preventDefault();
+    if (modalActivo === 'duplicados') mantenerAmbasDuplicadas();
+    else if (modalActivo === 'sospechosas') mantenerAmbas();
+    return;
+  }
+
+  if (e.key === '1') {
+    const btn = document.getElementById(
+      modalActivo === 'duplicados' ? 'btnEliminar1' : 'btnEliminarSosp1'
+    );
+    if (btn) btn.click();
+    return;
+  }
+
+  if (e.key === '2') {
+    const btn = document.getElementById(
+      modalActivo === 'duplicados' ? 'btnEliminar2' : 'btnEliminarSosp2'
+    );
+    if (btn) btn.click();
+    return;
+  }
 }
 
 // ============================================
@@ -583,7 +716,7 @@ function getVisibleImageUrl(url) {
 }
 
 // ============================================
-// MODALES
+// MODALES - DUPLICADOS (OPTIMIZADO)
 // ============================================
 
 function abrirComparacionDuplicados(ncf) {
@@ -617,9 +750,20 @@ function abrirComparacionDuplicados(ncf) {
     if (btnE2) btnE2.onclick = () => eliminarFacturaDuplicada(f2.id);
 
     document.getElementById('duplicadosModal').classList.add('show');
+    
+    // Activar eventos lightbox y atajos
+    setTimeout(() => {
+      agregarEventosLightbox('factura1Imagen');
+      agregarEventosLightbox('factura2Imagen');
+      activarAtajosModal('duplicados');
+    }, 100);
 }
 
-function cerrarModalDuplicados() { document.getElementById('duplicadosModal').classList.remove('show'); }
+function cerrarModalDuplicados() { 
+  document.getElementById('duplicadosModal').classList.remove('show');
+  desactivarAtajosModal();
+  cerrarLightbox();
+}
 
 async function mantenerAmbasDuplicadas() {
   const title1 = document.getElementById('factura1Title').textContent;
@@ -654,6 +798,10 @@ async function eliminarFacturaDuplicada(id) {
   } catch (e) { if(typeof showToast === 'function') showToast('Error al eliminar', 'error'); }
 }
 
+// ============================================
+// MODALES - SOSPECHOSAS (OPTIMIZADO)
+// ============================================
+
 function abrirComparacionSospechosas(id) {
     const f1 = facturas.find(f => f.id === id);
     if (!f1) return;
@@ -679,9 +827,20 @@ function abrirComparacionSospechosas(id) {
     document.getElementById('btnEliminarSosp1').onclick = () => eliminarFacturaSospechosa(f1.id);
     document.getElementById('btnEliminarSosp2').onclick = () => eliminarFacturaSospechosa(f2.id);
     document.getElementById('sospechosasModal').classList.add('show');
+    
+    // Activar eventos lightbox y atajos
+    setTimeout(() => {
+      agregarEventosLightbox('sospechosa1Imagen');
+      agregarEventosLightbox('sospechosa2Imagen');
+      activarAtajosModal('sospechosas');
+    }, 100);
 }
 
-function cerrarModalSospechosas() { document.getElementById('sospechosasModal').classList.remove('show'); }
+function cerrarModalSospechosas() { 
+  document.getElementById('sospechosasModal').classList.remove('show');
+  desactivarAtajosModal();
+  cerrarLightbox();
+}
 
 async function eliminarFacturaSospechosa(id) {
   if (!confirm('¿Eliminar esta factura?')) return;
@@ -729,32 +888,22 @@ async function saveNCFField(id, val) {
   await saveField(id, 'ncf', val);
 }
 
-/**
- * Guarda cambios en campos de fecha atomizados (Periodo o Día)
- * @param {number} facturaId - ID de la factura
- * @param {string} valor - Valor del campo editado
- * @param {string} tipo - 'periodo' o 'dia'
- */
 async function saveDateFieldAtomized(facturaId, valor, tipo) {
   if (estadoActual === 'exportada') return;
   if (!valor || valor.trim() === '') return;
 
-  // Obtener factura actual
   const factura = facturas.find(f => f.id === facturaId);
   if (!factura) return;
 
-  // Obtener componentes actuales
   let periodoActual = formatPeriodo(factura.fecha_factura);
   let diaActual = formatDia(factura.fecha_factura);
 
-  // Actualizar el componente modificado
   if (tipo === 'periodo') {
     periodoActual = valor.trim();
   } else if (tipo === 'dia') {
     diaActual = valor.trim();
   }
 
-  // Reconstruir fecha ISO
   const fechaISO = reconstruirFechaISO(periodoActual, diaActual);
 
   if (!fechaISO) {
@@ -762,7 +911,6 @@ async function saveDateFieldAtomized(facturaId, valor, tipo) {
     return;
   }
 
-  // Guardar en BD
   await saveField(facturaId, 'fecha_factura', fechaISO);
 }
 
@@ -830,7 +978,7 @@ function getAnomalia(f) {
   const dups = facturas.filter(x => x.ncf === f.ncf && x.ncf && !x.revisada);
   if (dups.length > 1) return { tipo: 'duplicado', icono: '🔴' };
   
-  const sosp = facturas.filter(x => x.id !== f.id && x.proveedor === f.proveedor && x.total_pagado === f.total_pagado && x.fecha_factura === f.fecha_factura && x.ncf !== f1.ncf && !x.revisada);
+  const sosp = facturas.filter(x => x.id !== f.id && x.proveedor === f.proveedor && x.total_pagado === f.total_pagado && x.fecha_factura === f.fecha_factura && x.ncf !== f.ncf && !x.revisada);
   if (sosp.length > 0) return { tipo: 'sospechosa', icono: '🟡' };
   
   const itbisVal = f.itbis_facturado !== undefined ? f.itbis_facturado : f.itbis;
@@ -1021,7 +1169,6 @@ function prepararDatosParaExportar() {
           else val = '';
       }
       
-      // Extraer componentes de fecha atomizados
       if (col === 'periodo') {
         val = formatPeriodo(f.fecha_factura);
       }

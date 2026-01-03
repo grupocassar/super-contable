@@ -732,6 +732,7 @@
 .dashboard-header p {
   color: #64748b;
   margin: 0;
+  font-size: 0.95rem;
 }
 
 /* TABLA DE FACTURAS */
@@ -992,4 +993,51 @@
   font-size: 13px;
   color: #6b7280;
   text-align: right;
+}
+
+/* =========================================
+   NUEVO: ZOOM FACTURA (CHECKLIST ITEM)
+   ========================================= */
+
+/* 1. Contenedor con posición relativa (CRUCIAL para la lupa) */
+.image-container, 
+#imageContainerFactura { 
+    position: relative;
+    display: inline-block; /* Ajusta el contenedor al tamaño de la imagen */
+    max-width: 100%;
+}
+
+/* 2. Aseguramos que la imagen dentro respete el contenedor */
+#imageContainerFactura img,
+.image-container img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+}
+
+/* 3. Estilos básicos para la LUPA (glass) */
+.img-zoom-lens {
+    position: absolute;
+    border: 1px solid #d4d4d4;
+    /* El tamaño se suele calcular en JS, pero esto es un fallback */
+    width: 100px; 
+    height: 100px;
+    /* Cursor personalizado para indicar zoom */
+    cursor: crosshair;
+    /* Fondo semitransparente para ver qué estamos seleccionando */
+    background-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 5px rgba(0,0,0,0.2);
+    /* Asegura que esté sobre la imagen */
+    z-index: 10;
+}
+
+/* 4. Contenedor del resultado del zoom (opcional, si decides mostrarlo al lado) */
+.img-zoom-result {
+    border: 1px solid #d4d4d4;
+    /* El tamaño debe coincidir con la relación de aspecto de la lupa */
+    width: 300px;
+    height: 300px;
+    overflow: hidden;
+    display: none; /* Se muestra vía JS */
+    z-index: 20;
 }

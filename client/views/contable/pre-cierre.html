@@ -206,7 +206,7 @@
     .anomalia-clickeable:hover { transform: scale(1.2); }
     .fila-historico { background-color: #f8fafc; opacity: 0.9; }
 
-    /* --- MODALES GENERALES --- */
+    /* --- MODALES OPTIMIZADOS (DUPLICADOS Y SOSPECHOSAS) --- */
     .modal-duplicados {
       display: none;
       position: fixed;
@@ -214,7 +214,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background-color: rgba(0, 0, 0, 0.75);
+      background-color: rgba(0, 0, 0, 0.85);
       z-index: 3000;
       align-items: center;
       justify-content: center;
@@ -224,35 +224,217 @@
 
     .modal-duplicados-content {
       background-color: white;
-      border-radius: 8px;
+      border-radius: 6px;
       width: 95%;
-      max-width: 1000px;
-      max-height: 95vh;
+      max-width: 1100px;
+      max-height: 90vh;
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
     }
     
+    /* HEADER COMPACTO */
     .modal-duplicados-header {
-      padding: 1rem 1.5rem;
+      padding: 0.5rem 1rem;
       border-bottom: 1px solid #e2e8f0;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      background: #f8fafc;
     }
-    .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #64748b; }
 
+    .modal-duplicados-header h3 {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .ncf-highlight {
+      font-family: 'JetBrains Mono', 'Courier New', monospace;
+      color: #2563eb;
+      background: #eff6ff;
+      padding: 0.15rem 0.5rem;
+      border-radius: 3px;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    .modal-close { 
+      background: none; 
+      border: none; 
+      font-size: 1.3rem; 
+      cursor: pointer; 
+      color: #64748b;
+      line-height: 1;
+      padding: 0;
+    }
+
+    /* BODY OPTIMIZADO */
     .modal-duplicados-body {
-      padding: 1.5rem;
+      padding: 0.75rem;
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 1.5rem;
+      gap: 0.75rem;
       overflow-y: auto;
       flex: 1;
+      background: #f8fafc;
     }
 
-    /* --- REJILLA DE COLUMNAS PARA EXPORTACIÓN --- */
+    /* TARJETAS DE COMPARACIÓN */
+    .factura-comparacion {
+      border: 2px solid #e2e8f0;
+      border-radius: 6px;
+      background: white;
+      display: flex;
+      flex-direction: column;
+      height: fit-content;
+      overflow: hidden;
+    }
+
+    .factura-comparacion-header {
+      background: #f1f5f9;
+      padding: 0.4rem 0.75rem;
+      font-weight: 700;
+      font-size: 0.8rem;
+      border-bottom: 1px solid #e2e8f0;
+      color: #475569;
+    }
+
+    /* CONTENEDOR DE IMAGEN CON LUPA */
+    .comparacion-imagen {
+      height: 160px;
+      background: #0f172a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      position: relative;
+      overflow: hidden;
+      cursor: crosshair;
+    }
+
+    .comparacion-imagen img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      transition: opacity 0.2s;
+    }
+
+    /* LUPA INTELIGENTE */
+    .lupa-lens {
+      position: absolute;
+      border: 3px solid #3b82f6;
+      border-radius: 50%;
+      width: 120px;
+      height: 120px;
+      pointer-events: none;
+      background-repeat: no-repeat;
+      background-color: white;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      display: none;
+      z-index: 10;
+    }
+
+    .comparacion-imagen:hover .lupa-lens {
+      display: block;
+    }
+
+    .comparacion-imagen:hover img {
+      opacity: 0.3;
+    }
+
+    /* DATOS COMPACTOS */
+    .comparacion-datos {
+      padding: 0.6rem 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .dato-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      border-bottom: 1px dashed #e2e8f0;
+      padding-bottom: 0.25rem;
+    }
+
+    .dato-row strong {
+      color: #64748b;
+      font-weight: 600;
+      font-size: 0.75rem;
+    }
+
+    .dato-valor {
+      color: #1e293b;
+      font-weight: 500;
+    }
+
+    /* RESALTAR DIFERENCIAS */
+    .dato-diferente {
+      background: #fef3c7;
+      padding: 0.15rem 0.4rem;
+      border-radius: 3px;
+      border: 1px solid #fbbf24;
+      color: #92400e;
+      font-weight: 700;
+    }
+
+    /* BOTONES COMPACTOS */
+    .btn-danger {
+      background: #ef4444;
+      color: white;
+      border: none;
+      padding: 0.45rem 0.75rem;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 0.75rem;
+      cursor: pointer;
+      width: calc(100% - 1.5rem);
+      margin: 0.5rem 0.75rem 0.75rem;
+      display: block;
+      transition: background 0.2s;
+    }
+    .btn-danger:hover { background: #dc2626; }
+
+    /* FOOTER COMPACTO */
+    .modal-duplicados-footer {
+      padding: 0.6rem 1rem;
+      border-top: 1px solid #e2e8f0;
+      background: #f8fafc;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .keyboard-hint {
+      font-size: 0.7rem;
+      color: #64748b;
+      display: flex;
+      gap: 1rem;
+    }
+
+    .keyboard-hint kbd {
+      background: white;
+      border: 1px solid #cbd5e1;
+      border-radius: 3px;
+      padding: 0.1rem 0.3rem;
+      font-family: monospace;
+      font-size: 0.7rem;
+    }
+
+    /* MODAL DE EXPORTACIÓN */
+    .modal-warning { border-top: 4px solid #f59e0b; background: white; border-radius: 8px; width: 90%; max-width: 500px; padding: 0; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 4000; display: flex; align-items: center; justify-content: center; }
+    .checkbox-confirm { background: #fffbeb; border-radius: 6px; border: 1px solid #fef3c7; padding: 0.5rem; display: flex; align-items: center; gap: 0.75rem; cursor: pointer; }
+    
+    /* REJILLA DE COLUMNAS PARA EXPORTACIÓN */
     .columns-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -274,90 +456,6 @@
       color: #334155;
       cursor: pointer;
     }
-    
-    /* --- COMPARACIÓN DE FACTURAS --- */
-    .factura-comparacion {
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      background: white;
-      display: flex;
-      flex-direction: column;
-      height: fit-content;
-      padding-bottom: 1rem;
-    }
-
-    .factura-comparacion-header {
-      background: #f1f5f9;
-      padding: 0.75rem 1rem;
-      font-weight: 700;
-      font-size: 0.85rem;
-      border-bottom: 1px solid #e2e8f0;
-    }
-
-    .comparacion-imagen {
-      height: 250px;
-      background: #0f172a;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-    }
-
-    .comparacion-imagen img {
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain;
-    }
-
-    .comparacion-datos {
-      padding: 1rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    .dato-row {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.85rem;
-      border-bottom: 1px dashed #e2e8f0;
-      padding-bottom: 2px;
-    }
-
-    /* BOTONES */
-    .btn-danger {
-      background: #ef4444;
-      color: white;
-      border: none;
-      padding: 0.75rem 1rem;
-      border-radius: 6px;
-      font-weight: 700;
-      cursor: pointer;
-      width: calc(100% - 2rem);
-      margin: 0 auto;
-      display: block;
-      transition: background 0.2s;
-    }
-    .btn-danger:hover { background: #dc2626; }
-
-    .modal-duplicados-footer {
-      padding: 1rem 1.5rem;
-      border-top: 1px solid #e2e8f0;
-      background: #f8fafc;
-      display: flex;
-      justify-content: flex-end;
-      gap: 1rem;
-    }
-
-    .btn-primary { background: #2563eb; color: white; border: none; padding: 0.6rem 1.5rem; border-radius: 6px; font-weight: 600; cursor: pointer; }
-    .btn-secondary { background: #e2e8f0; color: #475569; border: none; padding: 0.6rem 1.2rem; border-radius: 6px; font-weight: 600; cursor: pointer; }
-    .btn-success { background: #10b981; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 6px; font-weight: 600; cursor: pointer; }
-    .btn-outline { background: transparent; border: 1px solid #cbd5e1; color: #475569; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; }
-
-    /* ALERTAS */
-    .modal-warning { border-top: 4px solid #f59e0b; background: white; border-radius: 8px; width: 90%; max-width: 500px; padding: 0; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
-    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 4000; display: flex; align-items: center; justify-content: center; }
-    .checkbox-confirm { background: #fffbeb; border-radius: 6px; border: 1px solid #fef3c7; padding: 0.5rem; display: flex; align-items: center; gap: 0.75rem; cursor: pointer; }
     
     /* TOOLTIP */
     .company-tooltip {
@@ -398,6 +496,48 @@
     .status-item.success { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
     .status-item.warning { background: #fffbeb; color: #b45309; border-color: #fcd34d; }
     .status-item.danger { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+
+    /* BOTONES GENERALES */
+    .btn-primary { 
+      background: #2563eb; 
+      color: white; 
+      border: none; 
+      padding: 0.5rem 1.2rem; 
+      border-radius: 4px; 
+      font-weight: 600; 
+      font-size: 0.8rem;
+      cursor: pointer; 
+    }
+    
+    .btn-secondary { 
+      background: #e2e8f0; 
+      color: #475569; 
+      border: none; 
+      padding: 0.5rem 1rem; 
+      border-radius: 4px; 
+      font-weight: 600; 
+      font-size: 0.8rem;
+      cursor: pointer; 
+    }
+
+    .btn-success { 
+      background: #10b981; 
+      color: white; 
+      border: none; 
+      padding: 0.6rem 1.2rem; 
+      border-radius: 6px; 
+      font-weight: 600; 
+      cursor: pointer; 
+    }
+    
+    .btn-outline { 
+      background: transparent; 
+      border: 1px solid #cbd5e1; 
+      color: #475569; 
+      padding: 0.4rem 0.8rem; 
+      border-radius: 4px; 
+      cursor: pointer; 
+    }
   </style>
 </head>
 <body>
@@ -501,7 +641,7 @@
               </select>
             </th>
             
-            <!-- TIPO DE GASTO (MOVIDO A POSICIÓN 3) -->
+            <!-- TIPO DE GASTO -->
             <th class="col-gasto">
               Tipo de Gasto
               <select class="header-filter" id="filterGasto" onchange="aplicarFiltros()">
@@ -530,10 +670,10 @@
             <!-- NCF MODIFICADO (AVANZADO) -->
             <th class="col-avanzado" style="display: none;">NCF Modificado</th>
             
-            <!-- PERIODO (YYYYMM) - NUEVO -->
+            <!-- PERIODO (YYYYMM) -->
             <th class="col-periodo">Periodo</th>
             
-            <!-- DÍA (DD) - NUEVO -->
+            <!-- DÍA (DD) -->
             <th class="col-dia">Día</th>
             
             <!-- PROVEEDOR -->
@@ -548,7 +688,7 @@
             <!-- MONTO BIENES -->
             <th class="col-monto-dgii">Monto Bienes</th>
             
-            <!-- TOTAL FACTURADO (MOVIDO A POSICIÓN 11) -->
+            <!-- TOTAL FACTURADO -->
             <th class="col-total text-right">Total Facturado</th>
             
             <!-- ITBIS FACTURADO -->
@@ -571,7 +711,7 @@
               </select>
             </th>
             
-            <!-- ========== COLUMNAS AVANZADAS (RESTO) ========== -->
+            <!-- COLUMNAS AVANZADAS -->
             <th class="col-avanzado" style="display: none;">ITBIS Proporcionalidad</th>
             <th class="col-avanzado" style="display: none;">ITBIS Costo</th>
             <th class="col-avanzado" style="display: none;">ITBIS Adelantar</th>
@@ -684,78 +824,169 @@
     </div>
   </div>
 
-  <!-- MODAL DE DUPLICADOS -->
+  <!-- MODAL DE DUPLICADOS OPTIMIZADO -->
   <div id="duplicadosModal" class="modal-duplicados">
     <div class="modal-duplicados-content">
       <div class="modal-duplicados-header">
-        <h3>⚠️ COMPARACIÓN DE DUPLICADOS (NCF: <span id="duplicadoNCF"></span>)</h3>
+        <h3>
+          🔴 DUPLICADO DETECTADO
+          <span class="ncf-highlight" id="duplicadoNCF"></span>
+        </h3>
         <button class="modal-close" onclick="cerrarModalDuplicados()">×</button>
       </div>
       <div class="modal-duplicados-body">
+        <!-- FACTURA A -->
         <div class="factura-comparacion">
-          <div class="factura-comparacion-header"><h4 id="factura1Title">FACTURA A</h4></div>
-          <div class="comparacion-imagen"><img id="factura1Imagen" src="" alt="Factura A"></div>
-          <div class="comparacion-datos">
-            <div class="dato-row"><span>Fecha:</span><span id="factura1Fecha"></span></div>
-            <div class="dato-row"><span>NCF:</span><span id="factura1NCF" style="color:#ef4444; font-weight:700;"></span></div>
-            <div class="dato-row"><span>Monto:</span><span id="factura1Total"></span></div>
-            <div class="dato-row"><span>Proveedor:</span><span id="factura1Proveedor"></span></div>
+          <div class="factura-comparacion-header">
+            <span id="factura1Title">FACTURA A</span>
           </div>
-          <button class="btn-danger" id="btnEliminar1">🗑️ Eliminar esta</button>
+          <div class="comparacion-imagen" data-img-id="factura1">
+            <img id="factura1Imagen" src="" alt="Factura A">
+            <div class="lupa-lens" id="lupa1"></div>
+          </div>
+          <div class="comparacion-datos">
+            <div class="dato-row">
+              <strong>Fecha:</strong>
+              <span class="dato-valor" id="factura1Fecha"></span>
+            </div>
+            <div class="dato-row">
+              <strong>NCF:</strong>
+              <span class="dato-valor dato-diferente" id="factura1NCF"></span>
+            </div>
+            <div class="dato-row">
+              <strong>Monto:</strong>
+              <span class="dato-valor" id="factura1Total"></span>
+            </div>
+            <div class="dato-row">
+              <strong>Proveedor:</strong>
+              <span class="dato-valor" id="factura1Proveedor"></span>
+            </div>
+          </div>
+          <button class="btn-danger" id="btnEliminar1">🗑️ Eliminar (1)</button>
         </div>
+
+        <!-- FACTURA B -->
         <div class="factura-comparacion">
-          <div class="factura-comparacion-header"><h4 id="factura2Title">FACTURA B</h4></div>
-          <div class="comparacion-imagen"><img id="factura2Imagen" src="" alt="Factura B"></div>
-          <div class="comparacion-datos">
-            <div class="dato-row"><span>Fecha:</span><span id="factura2Fecha"></span></div>
-            <div class="dato-row"><span>NCF:</span><span id="factura2NCF" style="color:#ef4444; font-weight:700;"></span></div>
-            <div class="dato-row"><span>Monto:</span><span id="factura2Total"></span></div>
-            <div class="dato-row"><span>Proveedor:</span><span id="factura2Proveedor"></span></div>
+          <div class="factura-comparacion-header">
+            <span id="factura2Title">FACTURA B</span>
           </div>
-          <button class="btn-danger" id="btnEliminar2">🗑️ Eliminar esta</button>
+          <div class="comparacion-imagen" data-img-id="factura2">
+            <img id="factura2Imagen" src="" alt="Factura B">
+            <div class="lupa-lens" id="lupa2"></div>
+          </div>
+          <div class="comparacion-datos">
+            <div class="dato-row">
+              <strong>Fecha:</strong>
+              <span class="dato-valor" id="factura2Fecha"></span>
+            </div>
+            <div class="dato-row">
+              <strong>NCF:</strong>
+              <span class="dato-valor dato-diferente" id="factura2NCF"></span>
+            </div>
+            <div class="dato-row">
+              <strong>Monto:</strong>
+              <span class="dato-valor" id="factura2Total"></span>
+            </div>
+            <div class="dato-row">
+              <strong>Proveedor:</strong>
+              <span class="dato-valor" id="factura2Proveedor"></span>
+            </div>
+          </div>
+          <button class="btn-danger" id="btnEliminar2">🗑️ Eliminar (2)</button>
         </div>
       </div>
       <div class="modal-duplicados-footer">
-        <button class="btn btn-secondary" onclick="cerrarModalDuplicados()">Cancelar</button>
-        <button class="btn btn-primary" onclick="mantenerAmbasDuplicadas()">✅ Mantener Ambas</button>
+        <div class="keyboard-hint">
+          <span><kbd>1</kbd>/<kbd>2</kbd> Eliminar</span>
+          <span><kbd>Espacio</kbd> Mantener</span>
+          <span><kbd>Esc</kbd> Cerrar</span>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn btn-secondary" onclick="cerrarModalDuplicados()">Cancelar</button>
+          <button class="btn btn-primary" onclick="mantenerAmbasDuplicadas()">✅ Mantener Ambas</button>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- MODAL SOSPECHOSAS -->
+  <!-- MODAL SOSPECHOSAS OPTIMIZADO -->
   <div id="sospechosasModal" class="modal-duplicados">
     <div class="modal-duplicados-content">
-      <div class="modal-duplicados-header" style="border-bottom: 2px solid #fcd34d;">
-        <h3 style="color: #b45309;">🟡 COMPARACIÓN DE SOSPECHOSAS</h3>
+      <div class="modal-duplicados-header">
+        <h3>🟡 FACTURAS SOSPECHOSAS - Mismo proveedor, fecha y monto</h3>
         <button class="modal-close" onclick="cerrarModalSospechosas()">×</button>
       </div>
       <div class="modal-duplicados-body">
+        <!-- FACTURA A -->
         <div class="factura-comparacion">
-          <div class="factura-comparacion-header"><h4 id="sospechosa1Title">FACTURA A</h4></div>
-          <div class="comparacion-imagen"><img id="sospechosa1Imagen" src=""></div>
-          <div class="comparacion-datos">
-            <div class="dato-row"><span>Fecha:</span><span id="sospechosa1Fecha"></span></div>
-            <div class="dato-row"><span>NCF:</span><span id="sospechosa1NCF"></span></div>
-            <div class="dato-row"><span>Proveedor:</span><span id="sospechosa1Proveedor"></span></div>
-            <div class="dato-row"><span>Monto:</span><span id="sospechosa1Total" style="font-weight:700;"></span></div>
+          <div class="factura-comparacion-header">
+            <span id="sospechosa1Title">FACTURA A</span>
           </div>
-          <button class="btn-danger" id="btnEliminarSosp1">🗑️ Eliminar</button>
+          <div class="comparacion-imagen" data-img-id="sospechosa1">
+            <img id="sospechosa1Imagen" src="" alt="Sospechosa A">
+            <div class="lupa-lens" id="lupaSosp1"></div>
+          </div>
+          <div class="comparacion-datos">
+            <div class="dato-row">
+              <strong>Fecha:</strong>
+              <span class="dato-valor" id="sospechosa1Fecha"></span>
+            </div>
+            <div class="dato-row">
+              <strong>NCF:</strong>
+              <span class="dato-valor dato-diferente" id="sospechosa1NCF"></span>
+            </div>
+            <div class="dato-row">
+              <strong>Proveedor:</strong>
+              <span class="dato-valor" id="sospechosa1Proveedor"></span>
+            </div>
+            <div class="dato-row">
+              <strong>Monto:</strong>
+              <span class="dato-valor" id="sospechosa1Total"></span>
+            </div>
+          </div>
+          <button class="btn-danger" id="btnEliminarSosp1">🗑️ Eliminar (1)</button>
         </div>
+
+        <!-- FACTURA B -->
         <div class="factura-comparacion">
-          <div class="factura-comparacion-header"><h4 id="sospechosa2Title">FACTURA B</h4></div>
-          <div class="comparacion-imagen"><img id="sospechosa2Imagen" src=""></div>
-          <div class="comparacion-datos">
-            <div class="dato-row"><span>Fecha:</span><span id="sospechosa2Fecha"></span></div>
-            <div class="dato-row"><span>NCF:</span><span id="sospechosa2NCF"></span></div>
-            <div class="dato-row"><span>Proveedor:</span><span id="sospechosa2Proveedor"></span></div>
-            <div class="dato-row"><span>Monto:</span><span id="sospechosa2Total" style="font-weight:700;"></span></div>
+          <div class="factura-comparacion-header">
+            <span id="sospechosa2Title">FACTURA B</span>
           </div>
-          <button class="btn-danger" id="btnEliminarSosp2">🗑️ Eliminar</button>
+          <div class="comparacion-imagen" data-img-id="sospechosa2">
+            <img id="sospechosa2Imagen" src="" alt="Sospechosa B">
+            <div class="lupa-lens" id="lupaSosp2"></div>
+          </div>
+          <div class="comparacion-datos">
+            <div class="dato-row">
+              <strong>Fecha:</strong>
+              <span class="dato-valor" id="sospechosa2Fecha"></span>
+            </div>
+            <div class="dato-row">
+              <strong>NCF:</strong>
+              <span class="dato-valor dato-diferente" id="sospechosa2NCF"></span>
+            </div>
+            <div class="dato-row">
+              <strong>Proveedor:</strong>
+              <span class="dato-valor" id="sospechosa2Proveedor"></span>
+            </div>
+            <div class="dato-row">
+              <strong>Monto:</strong>
+              <span class="dato-valor" id="sospechosa2Total"></span>
+            </div>
+          </div>
+          <button class="btn-danger" id="btnEliminarSosp2">🗑️ Eliminar (2)</button>
         </div>
       </div>
       <div class="modal-duplicados-footer">
-        <button class="btn btn-secondary" onclick="cerrarModalSospechosas()">Cancelar</button>
-        <button class="btn btn-primary" onclick="mantenerAmbas()">✅ Son Diferentes</button>
+        <div class="keyboard-hint">
+          <span><kbd>1</kbd>/<kbd>2</kbd> Eliminar</span>
+          <span><kbd>Espacio</kbd> Confirmar</span>
+          <span><kbd>Esc</kbd> Cerrar</span>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn btn-secondary" onclick="cerrarModalSospechosas()">Cancelar</button>
+          <button class="btn btn-primary" onclick="mantenerAmbas()">✅ Son Diferentes</button>
+        </div>
       </div>
     </div>
   </div>

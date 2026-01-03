@@ -123,6 +123,7 @@
       overflow-y: auto;
     }
 
+    /* ✅ CRÍTICO: Container con posición relativa para lupa */
     .image-container {
       background-color: white;
       border: 1px solid #e2e8f0;
@@ -134,14 +135,16 @@
       justify-content: center;
       overflow: hidden;
       min-height: 0;
+      position: relative; /* ← CRÍTICO para lupa */
+      cursor: crosshair; /* ← Indica zoom disponible */
     }
 
     .factura-image {
       max-width: 100%;
       max-height: 100%;
-      transition: transform 0.2s;
-      cursor: zoom-in;
       object-fit: contain;
+      display: block;
+      margin: 0 auto;
     }
 
     .image-placeholder {
@@ -158,11 +161,20 @@
       font-size: 0.85rem;
     }
 
-    .image-controls {
-      display: flex;
-      gap: 0.4rem;
-      justify-content: center;
-      flex-shrink: 0;
+    /* ✅ NUEVO: Hint de instrucciones */
+    .image-instructions {
+      text-align: center;
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-top: 0.5rem;
+      padding: 0.5rem;
+      background: #f8fafc;
+      border-radius: 0.5rem;
+      line-height: 1.4;
+    }
+
+    .image-instructions strong {
+      color: #3b82f6;
     }
 
     /* INFO COMPACTA CON CAMPOS EDITABLES */
@@ -328,7 +340,6 @@
       <div class="filter-group">
         <label class="label">Vista / Estado</label>
         <select id="filterEstado" class="input">
-          <!-- ✅ NUEVO: Filtro inteligente -->
           <option value="activas" selected>📂 Mesa de Trabajo (Activas)</option>
           <option value="exportada">📜 Histórico (Exportadas)</option>
           <option disabled>──────────</option>
@@ -367,7 +378,7 @@
     </div>
   </div>
 
-  <!-- MODAL ULTRA-COMPACTO CON EDICIÓN -->
+  <!-- MODAL ULTRA-COMPACTO CON LUPA INTELIGENTE -->
   <div id="facturaModal" class="modal-split">
     <div class="modal-split-content">
       <div class="modal-split-header">
@@ -378,19 +389,20 @@
       </div>
       
       <div class="modal-split-body">
-        <!-- LADO IZQUIERDO: IMAGEN -->
+        <!-- ✅ LADO IZQUIERDO: IMAGEN CON LUPA INTELIGENTE -->
         <div class="split-view-left">
-          <div class="image-container">
+          <!-- ✅ CRÍTICO: ID añadido para la lupa -->
+          <div class="image-container" id="imageContainerFactura">
             <img id="facturaImage" src="" alt="Factura" class="factura-image" style="display: none;">
             <div class="image-placeholder" id="facturaImagePlaceholder">
               <div class="placeholder-icon">📄</div>
               <div class="placeholder-text">Cargando...</div>
             </div>
           </div>
-          <div class="image-controls">
-            <button class="btn btn-sm btn-outline" onclick="zoomInFactura()">🔍+</button>
-            <button class="btn btn-sm btn-outline" onclick="zoomOutFactura()">🔍-</button>
-            <button class="btn btn-sm btn-outline" onclick="resetZoomFactura()">↺</button>
+          
+          <!-- ✅ NUEVO: Instrucciones de uso -->
+          <div class="image-instructions">
+            💡 <strong>Controles:</strong> Hover para activar lupa • Scroll para ajustar zoom (2x-8x) • Doble click para reset a 3.5x
           </div>
         </div>
 
@@ -458,7 +470,6 @@
         <!-- LADO IZQUIERDO: Acciones destructivas/cierre -->
         <div style="display: flex; gap: 0.5rem;">
           <button class="btn btn-outline" onclick="cerrarModalFactura()">Cerrar</button>
-          <!-- ✅ NUEVO BOTÓN: ELIMINAR DEFINITIVAMENTE -->
           <button class="btn btn-outline" style="color: #ef4444; border-color: #fee2e2;" onclick="eliminarFacturaActual()" title="Eliminar factura permanentemente">
             🗑️
           </button>

@@ -4,9 +4,16 @@ let asistentes = [];
 let facturas = [];
 
 // Variables para modal unificado
-let currentZoomFactura = 1;
 let currentFacturaIdInModal = null; 
-let currentPlanInfo = null; // Almacenamos la info globalmente para la matriz de planes
+let currentPlanInfo = null;
+
+// ============================================
+// VARIABLES PARA LUPA INTELIGENTE
+// ============================================
+let zoomLevelLupa = 3.5;
+const MIN_ZOOM_LUPA = 2;
+const MAX_ZOOM_LUPA = 8;
+const ZOOM_STEP_LUPA = 0.5;
 
 document.addEventListener('DOMContentLoaded', () => {
   if (!requireAuth()) return;
@@ -33,7 +40,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadDashboard() {
   try {
-    // Se agrega fetchAPI('/contable/plan-consumo') al array de promesas
     const [dashboardData, empresasData, facturasData, asistentesData, planData] = await Promise.all([
       fetchAPI('/contable/dashboard'),
       fetchAPI('/contable/empresas'),
@@ -42,7 +48,6 @@ async function loadDashboard() {
       fetchAPI('/contable/plan-consumo')
     ]);
 
-    // Procesar Plan y Consumo (Optimizado para gestión profesional)
     if (planData && planData.success) {
       currentPlanInfo = planData.data;
       mostrarWidgetConsumo(planData.data);
@@ -99,7 +104,6 @@ function applyDynamicFilters() {
 
   if (empresaId) filtradas = filtradas.filter(f => f.empresa_id == empresaId);
   
-  // Filtro de Estado Inteligente
   if (estado) {
     if (estado === 'activas') {
       filtradas = filtradas.filter(f => f.estado !== 'exportada');
@@ -193,7 +197,7 @@ function renderFacturasTable(lista) {
 }
 
 // ============================================
-// MODAL UNIFICADO CON CAMPOS EDITABLES
+// MODAL UNIFICADO CON LUPA INTELIGENTE
 // ============================================
 
 function abrirModalFactura(facturaId) {
@@ -216,7 +220,6 @@ function abrirModalFactura(facturaId) {
   const imgEl = document.getElementById('facturaImage');
   const placeholderEl = document.getElementById('facturaImagePlaceholder');
   
-  // ✅ FIX IMAGEN DRIVE
   let facturaUrl = factura.archivo_url || factura.drive_url;
   if (facturaUrl && facturaUrl.includes('drive.google.com') && facturaUrl.includes('id=')) {
       const fileId = facturaUrl.split('id=')[1];
@@ -228,6 +231,23 @@ function abrirModalFactura(facturaId) {
         imgEl.src = facturaUrl;
         imgEl.style.display = 'block';
         placeholderEl.style.display = 'none';
+        
+        // ✅ SOLUCIÓN: Verificar si imagen ya está cargada (caché) o esperar carga
+        if (imgEl.complete && imgEl.naturalWidth > 0) {
+          // Imagen ya cargada (caché)
+          setTimeout(() => {
+            inicializarLupaFactura();
+            crearIndicadorZoom();
+          }, 100);
+        } else {
+          // Imagen cargando por primera vez
+          imgEl.onload = function() {
+            setTimeout(() => {
+              inicializarLupaFactura();
+              crearIndicadorZoom();
+            }, 100);
+          };
+        }
     } else {
         imgEl.style.display = 'none';
         placeholderEl.style.display = 'flex';
@@ -257,15 +277,195 @@ function abrirModalFactura(facturaId) {
 
   document.getElementById('facturaModal').classList.add('show');
   
-  currentZoomFactura = 1;
-  applyZoomFactura();
+  // Reset zoom inicial
+  zoomLevelLupa = 3.5;
 }
 
 function cerrarModalFactura() {
   document.getElementById('facturaModal').classList.remove('show');
-  currentZoomFactura = 1;
+  zoomLevelLupa = 3.5;
   currentFacturaIdInModal = null;
+  
+  // Limpiar lupa e indicador
+  const lupa = document.getElementById('lupaFacturaLens');
+  const indicador = document.getElementById('zoomIndicador');
+  const hint = document.getElementById('lupaHintFactura');
+  if (lupa) lupa.remove();
+  if (indicador) indicador.remove();
+  if (hint) hint.remove();
 }
+
+// ============================================
+// SISTEMA DE LUPA INTELIGENTE
+// ============================================
+
+function inicializarLupaFactura() {
+  const container = document.getElementById('imageContainerFactura');
+  const img = document.getElementById('facturaImage');
+  
+  if (!container || !img) {
+    console.warn('❌ Container o imagen no encontrados');
+    return;
+  }
+  
+  // Verificar que imagen esté cargada
+  if (!img.complete || img.naturalWidth === 0) {
+    console.warn('⏳ Imagen aún no cargada completamente');
+    return;
+  }
+  
+  console.log('🔍 Inicializando lupa inteligente...');
+  
+  // Crear lupa si no existe
+  let lupa = document.getElementById('lupaFacturaLens');
+  if (!lupa) {
+    lupa = document.createElement('div');
+    lupa.id = 'lupaFacturaLens';
+    lupa.style.cssText = `
+      position: absolute;
+      border: 4px solid #3b82f6;
+      border-radius: 50%;
+      width: 180px;
+      height: 180px;
+      pointer-events: none;
+      background-repeat: no-repeat;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6),
+                  inset 0 0 0 2px rgba(255, 255, 255, 0.2);
+      display: none;
+      z-index: 100;
+    `;
+    container.appendChild(lupa);
+  }
+  
+  // Crear hint visual si no existe
+  let hint = document.getElementById('lupaHintFactura');
+  if (!hint) {
+    hint = document.createElement('div');
+    hint.id = 'lupaHintFactura';
+    hint.style.cssText = `
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(59, 130, 246, 0.95);
+      color: white;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      pointer-events: none;
+      z-index: 101;
+      display: none;
+      white-space: nowrap;
+    `;
+    hint.textContent = '🔍 Scroll para ajustar zoom';
+    container.appendChild(hint);
+  }
+  
+  // Event listeners
+  container.addEventListener('mouseenter', function() {
+    lupa.style.display = 'block';
+    hint.style.display = 'block';
+    setTimeout(() => { hint.style.display = 'none'; }, 2000);
+  });
+  
+  container.addEventListener('mouseleave', function() {
+    lupa.style.display = 'none';
+  });
+  
+  container.addEventListener('mousemove', function(e) {
+    const containerRect = container.getBoundingClientRect();
+    const imgRect = img.getBoundingClientRect();
+    
+    const mouseX = e.clientX - containerRect.left;
+    const mouseY = e.clientY - containerRect.top;
+    
+    lupa.style.left = (mouseX - 90) + 'px';
+    lupa.style.top = (mouseY - 90) + 'px';
+    
+    const imgX = e.clientX - imgRect.left;
+    const imgY = e.clientY - imgRect.top;
+    
+    const imgWidth = img.clientWidth;
+    const imgHeight = img.clientHeight;
+    
+    const percentX = (imgX / imgWidth) * 100;
+    const percentY = (imgY / imgHeight) * 100;
+    
+    lupa.style.backgroundImage = `url('${img.src}')`;
+    lupa.style.backgroundSize = `${imgWidth * zoomLevelLupa}px ${imgHeight * zoomLevelLupa}px`;
+    
+    const bgPosX = -((percentX / 100) * imgWidth * zoomLevelLupa - 90);
+    const bgPosY = -((percentY / 100) * imgHeight * zoomLevelLupa - 90);
+    
+    lupa.style.backgroundPosition = `${bgPosX}px ${bgPosY}px`;
+  });
+  
+  container.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    
+    if (e.deltaY < 0) {
+      zoomLevelLupa = Math.min(zoomLevelLupa + ZOOM_STEP_LUPA, MAX_ZOOM_LUPA);
+    } else {
+      zoomLevelLupa = Math.max(zoomLevelLupa - ZOOM_STEP_LUPA, MIN_ZOOM_LUPA);
+    }
+    
+    actualizarIndicadorZoom();
+    
+    hint.style.display = 'block';
+    hint.textContent = `🔍 Zoom: ${zoomLevelLupa.toFixed(1)}x`;
+    setTimeout(() => { hint.style.display = 'none'; }, 1000);
+  }, { passive: false });
+  
+  container.addEventListener('dblclick', function() {
+    zoomLevelLupa = 3.5;
+    actualizarIndicadorZoom();
+    
+    hint.style.display = 'block';
+    hint.textContent = '↺ Zoom reseteado a 3.5x';
+    setTimeout(() => { hint.style.display = 'none'; }, 1500);
+  });
+  
+  console.log('✅ Lupa inicializada correctamente');
+}
+
+function crearIndicadorZoom() {
+  let indicador = document.getElementById('zoomIndicador');
+  if (!indicador) {
+    indicador = document.createElement('div');
+    indicador.id = 'zoomIndicador';
+    indicador.style.cssText = `
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(30, 41, 59, 0.9);
+      color: white;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      z-index: 102;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(59, 130, 246, 0.5);
+    `;
+    
+    const container = document.getElementById('imageContainerFactura');
+    if (container) container.appendChild(indicador);
+  }
+  
+  actualizarIndicadorZoom();
+}
+
+function actualizarIndicadorZoom() {
+  const indicador = document.getElementById('zoomIndicador');
+  if (indicador) {
+    indicador.textContent = `🔍 Zoom: ${zoomLevelLupa.toFixed(1)}x`;
+  }
+}
+
+// ============================================
+// FUNCIONES AUXILIARES MODAL
+// ============================================
 
 async function eliminarFacturaActual() {
   if (!currentFacturaIdInModal) return;
@@ -348,27 +548,9 @@ async function actualizarEstadoFactura(facturaId, nuevoEstado) {
   }
 }
 
-function zoomInFactura() {
-  currentZoomFactura += 0.2;
-  if (currentZoomFactura > 3) currentZoomFactura = 3;
-  applyZoomFactura();
-}
-
-function zoomOutFactura() {
-  currentZoomFactura -= 0.2;
-  if (currentZoomFactura < 0.5) currentZoomFactura = 0.5;
-  applyZoomFactura();
-}
-
-function resetZoomFactura() {
-  currentZoomFactura = 1;
-  applyZoomFactura();
-}
-
-function applyZoomFactura() {
-  const img = document.getElementById('facturaImage');
-  if (img) img.style.transform = `scale(${currentZoomFactura})`;
-}
+// ============================================
+// GUARDADO DE CAMPOS
+// ============================================
 
 async function saveField(facturaId, field, value) {
   const factura = facturas.find(f => f.id === facturaId);
@@ -437,7 +619,7 @@ function showImagePreview(id, url) {
 }
 
 // ==========================================
-// ESTÁNDAR PROFESIONAL: GESTIÓN DE PLANES
+// GESTIÓN DE PLANES
 // ==========================================
 
 function mostrarWidgetConsumo(datos) {
@@ -589,16 +771,12 @@ function verPlanes() {
     document.body.insertAdjacentHTML('beforeend', modalHtml);
 }
 
-/**
- * ✅ CONECTOR FINAL OPTIMIZADO: Elimina textos hardcodeados y utiliza variables dinámicas
- */
 async function ejecutarSolicitudCambio(planId, planNombre, esUpgrade) {
     const tipoAccion = esUpgrade ? 'Upgrade' : 'Cambio';
     const verboAccion = esUpgrade ? 'mejorar al plan' : 'solicitar el cambio al plan';
     
     if (!confirm(`¿Confirmas que deseas ${verboAccion} ${planNombre}?\n\nUn administrador validará la solicitud y se activarán los nuevos límites de inmediato.`)) return;
 
-    // Mensaje dinámico para la base de datos
     const mensajeSistema = `Solicitud de ${tipoAccion} al plan ${planNombre} gestionada desde la matriz profesional de planes.`;
 
     try {
@@ -614,7 +792,6 @@ async function ejecutarSolicitudCambio(planId, planNombre, esUpgrade) {
             showToast(`Solicitud de ${tipoAccion} enviada correctamente`, 'success');
             document.getElementById('planesModal')?.remove();
             
-            // Invocamos el correo sin abrir pestaña en blanco
             const subject = encodeURIComponent(`Solicitud de ${tipoAccion}: Plan ${planNombre}`);
             const body = encodeURIComponent(`Hola, acabo de solicitar formalmente un ${tipoAccion} al plan ${planNombre} desde mi panel de control. Por favor, procedan con la aprobación.`);
             window.location.href = `mailto:soporte@supercontable.com?subject=${subject}&body=${body}`;
@@ -624,7 +801,9 @@ async function ejecutarSolicitudCambio(planId, planNombre, esUpgrade) {
     }
 }
 
-// --- FUNCIONES DE ESTADÍSTICAS Y MANTENIMIENTO ---
+// ==========================================
+// FUNCIONES DE ESTADÍSTICAS Y MANTENIMIENTO
+// ==========================================
 
 function displayStats(stats) {
   safeUpdate('totalEmpresas', stats.total_empresas || 0);
