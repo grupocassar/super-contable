@@ -6,7 +6,7 @@
 
 // ⚠️ CONFIGURACIÓN: Coloca aquí el número de ventas (Formato internacional sin +)
 // Ejemplo RD: 18091234567
-const WHATSAPP_NUMBER = "358469670124"; 
+const WHATSAPP_NUMBER = "+18099560194"; 
 
 document.addEventListener('DOMContentLoaded', () => {
     initScrollEffects();
