@@ -6,6 +6,7 @@ let facturas = [];
 // Variables para modal unificado
 let currentZoomFactura = 1;
 let currentFacturaIdInModal = null; 
+let currentPlanInfo = null; // Almacenamos la info globalmente para la matriz de planes
 
 document.addEventListener('DOMContentLoaded', () => {
   if (!requireAuth()) return;
@@ -41,8 +42,9 @@ async function loadDashboard() {
       fetchAPI('/contable/plan-consumo')
     ]);
 
-    // Procesar Plan y Consumo (NUEVO)
+    // Procesar Plan y Consumo (Optimizado para gestión profesional)
     if (planData && planData.success) {
+      currentPlanInfo = planData.data;
       mostrarWidgetConsumo(planData.data);
     }
 
@@ -97,7 +99,7 @@ function applyDynamicFilters() {
 
   if (empresaId) filtradas = filtradas.filter(f => f.empresa_id == empresaId);
   
-  // Filtro de Estado Inteligente (Igual que en pre-cierre)
+  // Filtro de Estado Inteligente
   if (estado) {
     if (estado === 'activas') {
       filtradas = filtradas.filter(f => f.estado !== 'exportada');
@@ -214,7 +216,7 @@ function abrirModalFactura(facturaId) {
   const imgEl = document.getElementById('facturaImage');
   const placeholderEl = document.getElementById('facturaImagePlaceholder');
   
-  // ✅ FIX IMAGEN DRIVE: Convertir a thumbnail si es de Drive para que se vea en el modal
+  // ✅ FIX IMAGEN DRIVE
   let facturaUrl = factura.archivo_url || factura.drive_url;
   if (facturaUrl && facturaUrl.includes('drive.google.com') && facturaUrl.includes('id=')) {
       const fileId = facturaUrl.split('id=')[1];
@@ -265,7 +267,6 @@ function cerrarModalFactura() {
   currentFacturaIdInModal = null;
 }
 
-// ✅ ELIMINAR DESDE EL MODAL (Asegurando que esté presente)
 async function eliminarFacturaActual() {
   if (!currentFacturaIdInModal) return;
 
@@ -313,7 +314,7 @@ async function saveFieldFromModal(field, value) {
       if (window.location.pathname.includes('facturas.html')) {
          applyDynamicFilters(); 
       } else {
-         loadDashboard();
+          loadDashboard();
       }
     }
   } catch (error) {
@@ -337,9 +338,9 @@ async function actualizarEstadoFactura(facturaId, nuevoEstado) {
       cerrarModalFactura();
       
       if (window.location.pathname.includes('facturas.html')) {
-         applyDynamicFilters();
+          applyDynamicFilters();
       } else {
-         loadDashboard();
+          loadDashboard();
       }
     }
   } catch (error) {
@@ -392,7 +393,6 @@ async function saveField(facturaId, field, value) {
 function showImagePreview(id, url) {
     if (!url || url === 'undefined' || url === 'null') return;
 
-    // ✅ FIX DRIVE URL TAMBIÉN PARA PREVIEW HOVER
     if (url.includes('drive.google.com') && url.includes('id=')) {
         const fileId = url.split('id=')[1];
         url = `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
@@ -437,47 +437,27 @@ function showImagePreview(id, url) {
 }
 
 // ==========================================
-// NUEVO: FUNCIONES PARA WIDGET DE CONSUMO
+// ESTÁNDAR PROFESIONAL: GESTIÓN DE PLANES
 // ==========================================
 
 function mostrarWidgetConsumo(datos) {
   const container = document.getElementById('plan-consumo-widget');
   if (!container) return;
 
-  const { 
-    plan, 
-    limite_facturas, 
-    zona_gracia, 
-    facturas_procesadas, 
-    porcentaje,
-    estado_alerta 
-  } = datos;
+  const { plan, limite_facturas, zona_gracia, facturas_procesadas, porcentaje, estado_alerta } = datos;
 
-  // Determinar color de barra según estado
   const colorBarra = {
-    'normal': '#10b981',      // verde
-    'advertencia': '#f59e0b', // amarillo
-    'critico': '#ef4444',     // rojo
-    'bloqueado': '#991b1b'    // rojo oscuro
+    'normal': '#10b981', 'advertencia': '#f59e0b', 'critico': '#ef4444', 'bloqueado': '#991b1b'
   }[estado_alerta.nivel] || '#10b981';
-
-  // Determinar precio según plan (simulado para visualización)
-  const precios = {
-    'STARTER': 135,
-    'PROFESSIONAL': 195,
-    'BUSINESS': 450
-  };
 
   container.innerHTML = `
     <div class="plan-consumo-card">
       <div class="plan-header">
         <div>
-          <h3>Plan: ${plan}</h3>
-          <p class="plan-precio">$${precios[plan] || 0}/mes</p>
+          <h3 id="widgetPlanNombre">${plan}</h3>
+          <p class="plan-precio" style="font-size: 0.8rem; color: var(--text-secondary)">Suscripción Activa</p>
         </div>
-        <span class="badge-${estado_alerta.nivel}">
-          ${estado_alerta.mensaje}
-        </span>
+        <span class="badge-${estado_alerta.nivel}">${estado_alerta.mensaje}</span>
       </div>
       
       <div class="consumo-info">
@@ -492,13 +472,159 @@ function mostrarWidgetConsumo(datos) {
           <div class="barra-progreso-fill" style="width: ${Math.min(porcentaje, 100)}%; background-color: ${colorBarra}"></div>
         </div>
         
-        <p class="consumo-gracia">
-          Zona de gracia: +${zona_gracia} facturas
-        </p>
+        <div style="margin-top: 1.25rem;">
+            <button onclick="verPlanes()" class="btn btn-sm btn-primary w-full" style="justify-content: center; font-weight: 600;">
+                Gestionar Plan / Ver Mejoras
+            </button>
+        </div>
       </div>
     </div>
   `;
 }
+
+function verPlanes() {
+    if (!currentPlanInfo) return;
+    const planActual = currentPlanInfo.plan;
+
+    const planes = [
+        {
+            id: 'STARTER',
+            nombre: 'Starter',
+            emoji: '🥉',
+            precio: 135,
+            facturas: 800,
+            gracia: 50,
+            features: ['1 Usuario Asistente', 'OCR IA Estándar', 'Exportación 606'],
+            color: '#64748b'
+        },
+        {
+            id: 'PROFESSIONAL',
+            nombre: 'Professional',
+            emoji: '🥈',
+            precio: 195,
+            facturas: 1500,
+            gracia: 100,
+            features: ['Usuarios Ilimitados', 'SLA 99% Uptime', 'Dashboard Real-time', 'Soporte Prioritario'],
+            color: '#3b82f6',
+            recomendado: true
+        },
+        {
+            id: 'BUSINESS',
+            nombre: 'Business',
+            emoji: '🥇',
+            precio: 450,
+            facturas: 6000,
+            gracia: 500,
+            features: ['Soporte 24/7 Dedicado', 'Consultoría Mensual', 'Reportes Custom', 'API Access'],
+            color: '#f59e0b'
+        }
+    ];
+
+    const modalHtml = `
+        <div id="planesModal" style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.8); display: flex; align-items: center; justify-content: center; z-index: 10000; backdrop-filter: blur(4px);" onclick="this.remove()">
+            <div style="background: #f8fafc; padding: 2.5rem; border-radius: 1.5rem; max-width: 900px; width: 95%; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);" onclick="event.stopPropagation()">
+                
+                <div style="text-align: center; margin-bottom: 2.5rem;">
+                    <h2 style="font-size: 2rem; font-weight: 800; color: #1e293b; margin: 0;">Gestión de Suscripción</h2>
+                    <p style="color: #64748b; margin-top: 0.5rem;">Potencia tu firma contable con los planes de Super Contable.</p>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem;">
+                    ${planes.map(p => {
+                        const esActual = p.id === planActual;
+                        const idxActual = planes.findIndex(x => x.id === planActual);
+                        const idxP = planes.findIndex(x => x.id === p.id);
+                        const esUpgrade = idxP > idxActual;
+                        
+                        return `
+                        <div style="background: white; border: 2px solid ${esActual ? p.color : '#e2e8f0'}; border-radius: 1.25rem; padding: 2rem; display: flex; flex-direction: column; position: relative; ${p.recomendado ? 'box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.1);' : ''}">
+                            ${p.recomendado ? `<span style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #3b82f6; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase;">Más popular</span>` : ''}
+                            
+                            <div style="margin-bottom: 1.5rem;">
+                                <span style="font-size: 2rem;">${p.emoji}</span>
+                                <h3 style="font-size: 1.25rem; font-weight: 700; color: #1e293b; margin-top: 0.5rem;">${p.nombre}</h3>
+                                <div style="display: flex; align-items: baseline; margin-top: 0.5rem;">
+                                    <span style="font-size: 2rem; font-weight: 800; color: #1e293b;">$${p.precio}</span>
+                                    <span style="color: #64748b; margin-left: 0.25rem;">/mes</span>
+                                </div>
+                            </div>
+
+                            <div style="background: #f1f5f9; padding: 1rem; border-radius: 0.75rem; margin-bottom: 1.5rem;">
+                                <div style="font-weight: 700; color: #1e293b;">${p.facturas.toLocaleString()} facturas</div>
+                                <div style="font-size: 0.8rem; color: #64748b;">+${p.gracia} zona de gracia</div>
+                            </div>
+
+                            <ul style="list-style: none; padding: 0; margin: 0 0 2rem 0; flex-grow: 1;">
+                                ${p.features.map(f => `
+                                    <li style="display: flex; gap: 0.5rem; font-size: 0.875rem; color: #475569; margin-bottom: 0.75rem;">
+                                        <span style="color: ${p.color}">✓</span> ${f}
+                                    </li>
+                                `).join('')}
+                            </ul>
+
+                            ${esActual ? `
+                                <button disabled style="width: 100%; padding: 0.85rem; border-radius: 0.75rem; border: 2px solid #e2e8f0; background: #f8fafc; color: #94a3b8; font-weight: 700; cursor: not-allowed;">
+                                    Plan Actual
+                                </button>
+                            ` : esUpgrade ? `
+                                <button onclick="ejecutarSolicitudCambio('${p.id}', '${p.nombre}', true)" style="width: 100%; padding: 0.85rem; border-radius: 0.75rem; border: none; background: ${p.color}; color: white; font-weight: 700; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                                    Solicitar Upgrade
+                                </button>
+                            ` : `
+                                <button onclick="ejecutarSolicitudCambio('${p.id}', '${p.nombre}', false)" style="width: 100%; padding: 0.85rem; border-radius: 0.75rem; border: 1px solid #e2e8f0; background: white; color: #64748b; font-size: 0.85rem; font-weight: 600; cursor: pointer;">
+                                    Solicitar Cambio
+                                </button>
+                            `}
+                        </div>
+                        `;
+                    }).join('')}
+                </div>
+
+                <div style="margin-top: 2rem; text-align: center;">
+                    <button onclick="document.getElementById('planesModal').remove()" style="color: #64748b; background: none; border: none; cursor: pointer; font-size: 0.9rem; text-decoration: underline;">Cerrar ventana</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+/**
+ * ✅ CONECTOR FINAL OPTIMIZADO: Elimina textos hardcodeados y utiliza variables dinámicas
+ */
+async function ejecutarSolicitudCambio(planId, planNombre, esUpgrade) {
+    const tipoAccion = esUpgrade ? 'Upgrade' : 'Cambio';
+    const verboAccion = esUpgrade ? 'mejorar al plan' : 'solicitar el cambio al plan';
+    
+    if (!confirm(`¿Confirmas que deseas ${verboAccion} ${planNombre}?\n\nUn administrador validará la solicitud y se activarán los nuevos límites de inmediato.`)) return;
+
+    // Mensaje dinámico para la base de datos
+    const mensajeSistema = `Solicitud de ${tipoAccion} al plan ${planNombre} gestionada desde la matriz profesional de planes.`;
+
+    try {
+        const response = await fetchAPI('/contable/solicitar-upgrade', {
+            method: 'POST',
+            body: JSON.stringify({ 
+                plan_solicitado: planId,
+                mensaje: mensajeSistema
+            })
+        });
+        
+        if (response.success) {
+            showToast(`Solicitud de ${tipoAccion} enviada correctamente`, 'success');
+            document.getElementById('planesModal')?.remove();
+            
+            // Invocamos el correo sin abrir pestaña en blanco
+            const subject = encodeURIComponent(`Solicitud de ${tipoAccion}: Plan ${planNombre}`);
+            const body = encodeURIComponent(`Hola, acabo de solicitar formalmente un ${tipoAccion} al plan ${planNombre} desde mi panel de control. Por favor, procedan con la aprobación.`);
+            window.location.href = `mailto:soporte@supercontable.com?subject=${subject}&body=${body}`;
+        }
+    } catch (error) {
+        showToast(error.message, 'error');
+    }
+}
+
+// --- FUNCIONES DE ESTADÍSTICAS Y MANTENIMIENTO ---
 
 function displayStats(stats) {
   safeUpdate('totalEmpresas', stats.total_empresas || 0);

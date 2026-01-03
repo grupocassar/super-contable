@@ -141,9 +141,9 @@ const deleteFactura = asyncHandler(async (req, res) => {
     db.run('DELETE FROM facturas WHERE id = ?', [id], (err) => {
         if (err) return res.status(500).json({ success: false, message: 'Error al eliminar' });
         res.json({
-            success: true,
-            message: 'Factura eliminada correctamente',
-            data: { id: parseInt(id) }
+          success: true,
+          message: 'Factura eliminada correctamente',
+          data: { id: parseInt(id) }
         });
     });
   });
@@ -353,9 +353,53 @@ const assignEmpresasToAsistente = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * NUEVA FUNCIÓN: Solicitar upgrade de plan
+ */
+const solicitarUpgrade = asyncHandler(async (req, res) => {
+  const contableId = req.user.role === 'contable' ? req.user.userId : req.user.contableId;
+  const { plan_solicitado, mensaje } = req.body;
+  
+  const planesValidos = ['STARTER', 'PROFESSIONAL', 'BUSINESS'];
+  if (!planesValidos.includes(plan_solicitado)) {
+    return res.status(400).json({ success: false, message: 'Plan inválido' });
+  }
+  
+  const db = getDatabase();
+  const planActual = await ContablePlan.getPlanYConsumo(contableId);
+  
+  const solicitudExistente = await new Promise((resolve, reject) => {
+    db.get("SELECT id FROM upgrade_requests WHERE contable_id = ? AND estado = 'pendiente'", [contableId], (err, row) => err ? reject(err) : resolve(row));
+  });
+  
+  if (solicitudExistente) {
+    return res.status(409).json({ success: false, message: 'Ya tienes una solicitud pendiente' });
+  }
+  
+  await new Promise((resolve, reject) => {
+    db.run(`INSERT INTO upgrade_requests (contable_id, plan_actual, plan_solicitado, mensaje_contable) VALUES (?, ?, ?, ?)`, 
+    [contableId, planActual.plan, plan_solicitado, mensaje || ''], function(err) { err ? reject(err) : resolve({ id: this.lastID }); });
+  });
+  
+  res.json({ success: true, message: 'Solicitud enviada correctamente' });
+});
+
+/**
+ * NUEVA FUNCIÓN: Ver estado de solicitud
+ */
+const verEstadoSolicitud = asyncHandler(async (req, res) => {
+  const contableId = req.user.role === 'contable' ? req.user.userId : req.user.contableId;
+  const db = getDatabase();
+  
+  db.get(`SELECT * FROM upgrade_requests WHERE contable_id = ? ORDER BY created_at DESC LIMIT 1`, [contableId], (err, row) => {
+    if (err) return res.status(500).json({ success: false, message: err.message });
+    res.json({ success: true, data: row });
+  });
+});
+
 module.exports = {
   getDashboard,
-  getPlanYConsumo, // <--- NUEVO EXPORT
+  getPlanYConsumo,
   getEmpresas,
   createEmpresa,
   updateEmpresa,
@@ -369,5 +413,7 @@ module.exports = {
   getAsistentes,
   updateAsistente,
   getAsistenteEmpresas,
-  assignEmpresasToAsistente
+  assignEmpresasToAsistente,
+  solicitarUpgrade,
+  verEstadoSolicitud
 };

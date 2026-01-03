@@ -9,7 +9,12 @@ router.get('/dashboard', adminController.getAdminDashboard);
 router.get('/contables', adminController.getContables);
 router.post('/contables', adminController.createContable);
 router.put('/contables/:id', adminController.updateContable);
-router.put('/contables/:id/plan', adminController.cambiarPlanContable); // NUEVA RUTA
+router.put('/contables/:id/plan', adminController.cambiarPlanContable); 
 router.delete('/contables/:id', adminController.deleteContable);
+
+// Gestión de solicitudes de Upgrade (NUEVO)
+router.get('/solicitudes', adminController.getSolicitudesPendientes);
+router.put('/solicitudes/:id/aprobar', adminController.aprobarSolicitud);
+router.put('/solicitudes/:id/rechazar', adminController.rechazarSolicitud);
 
 module.exports = router;

@@ -246,11 +246,132 @@ const cambiarPlanContable = asyncHandler(async (req, res) => {
     }
 });
 
+/**
+ * NUEVA FUNCIÓN: Obtener solicitudes pendientes de upgrade
+ */
+const getSolicitudesPendientes = asyncHandler(async (req, res) => {
+    const db = getDatabase();
+    
+    const query = `
+        SELECT 
+            ur.id,
+            ur.plan_actual,
+            ur.plan_solicitado,
+            ur.mensaje_contable,
+            ur.created_at,
+            u.nombre_completo,
+            u.email
+        FROM upgrade_requests ur
+        INNER JOIN users u ON ur.contable_id = u.id
+        WHERE ur.estado = 'pendiente'
+        ORDER BY ur.created_at ASC
+    `;
+    
+    db.all(query, [], (err, rows) => {
+        if (err) {
+            return res.status(500).json({ success: false, message: err.message });
+        }
+        res.json({ success: true, data: rows });
+    });
+});
+
+/**
+ * NUEVA FUNCIÓN: Aprobar solicitud de upgrade
+ */
+const aprobarSolicitud = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const db = getDatabase();
+    
+    // Obtener la solicitud específica
+    const solicitud = await new Promise((resolve, reject) => {
+        db.get(
+            "SELECT * FROM upgrade_requests WHERE id = ?",
+            [id],
+            (err, row) => err ? reject(err) : resolve(row)
+        );
+    });
+    
+    if (!solicitud) {
+        return res.status(404).json({ success: false, message: 'Solicitud no encontrada' });
+    }
+    
+    if (solicitud.estado !== 'pendiente') {
+        return res.status(400).json({ success: false, message: 'Solicitud ya procesada' });
+    }
+    
+    try {
+        // Usamos PLANES_CONFIG definido al inicio del archivo
+        const config = PLANES_CONFIG[solicitud.plan_solicitado];
+        
+        // 1. Inactivar planes anteriores
+        await new Promise((resolve, reject) => {
+            db.run(
+                "UPDATE contables_planes SET estado = 'inactivo' WHERE contable_id = ? AND estado = 'activo'",
+                [solicitud.contable_id],
+                (err) => err ? reject(err) : resolve()
+            );
+        });
+        
+        // 2. Crear nuevo plan activo basado en la solicitud
+        const now = new Date().toISOString().split('T')[0];
+        await new Promise((resolve, reject) => {
+            db.run(
+                `INSERT INTO contables_planes 
+                (contable_id, plan, limite_facturas, zona_gracia, fecha_inicio, estado, created_at)
+                VALUES (?, ?, ?, ?, ?, 'activo', datetime('now'))`,
+                [solicitud.contable_id, solicitud.plan_solicitado, config.limite, config.gracia, now],
+                function(err) { err ? reject(err) : resolve(); }
+            );
+        });
+        
+        // 3. Marcar solicitud como aprobada
+        await new Promise((resolve, reject) => {
+            db.run(
+                "UPDATE upgrade_requests SET estado = 'aprobada', updated_at = datetime('now') WHERE id = ?",
+                [id],
+                (err) => err ? reject(err) : resolve()
+            );
+        });
+        
+        res.json({ 
+            success: true, 
+            message: `Plan actualizado a ${solicitud.plan_solicitado} con éxito.` 
+        });
+        
+    } catch (error) {
+        console.error('Error aprobando solicitud:', error);
+        res.status(500).json({ success: false, message: 'Error al procesar la aprobación' });
+    }
+});
+
+/**
+ * NUEVA FUNCIÓN: Rechazar solicitud de upgrade
+ */
+const rechazarSolicitud = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { motivo } = req.body;
+    const db = getDatabase();
+    
+    db.run(
+        "UPDATE upgrade_requests SET estado = 'rechazada', respuesta_admin = ?, updated_at = datetime('now') WHERE id = ?",
+        [motivo || '', id],
+        function(err) {
+            if (err) {
+                return res.status(500).json({ success: false, message: err.message });
+            }
+            res.json({ success: true, message: 'Solicitud rechazada correctamente' });
+        }
+    );
+});
+
 module.exports = {
     getAdminDashboard,
     getContables,
     createContable,
     updateContable,
     deleteContable,
-    cambiarPlanContable
+    cambiarPlanContable,
+    getSolicitudesPendientes,
+    aprobarSolicitud,
+    rechazarSolicitud
 };

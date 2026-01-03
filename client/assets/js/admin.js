@@ -19,9 +19,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadDashboard() {
   try {
-    const [dashboardData, contablesData] = await Promise.all([
+    const [dashboardData, contablesData, solicitudesData] = await Promise.all([
       fetchAPI('/admin/dashboard'),
-      fetchAPI('/admin/contables')
+      fetchAPI('/admin/contables'),
+      fetchAPI('/admin/solicitudes') // <--- AGREGADO: Carga de solicitudes
     ]);
 
     if (dashboardData.success) {
@@ -31,6 +32,11 @@ async function loadDashboard() {
     if (contablesData.success) {
       contables = contablesData.data;
       displayContables(contables);
+    }
+
+    // AGREGADO: Mostrar solicitudes pendientes
+    if (solicitudesData && solicitudesData.success) {
+      displaySolicitudes(solicitudesData.data);
     }
   } catch (error) {
     showToast('Error al cargar dashboard: ' + error.message, 'error');
@@ -65,7 +71,7 @@ function displayContables(contables) {
 
   tbody.innerHTML = contables.map(contable => {
     const plan = contable.plan || 'STARTER';
-    const limite = contable.limite_facturas || 800; // ACTUALIZADO: Sincronizado con nueva política (antes 1000)
+    const limite = contable.limite_facturas || 800; 
     const consumo = contable.facturas_mes || 0;
     const estadoPlan = contable.estado_plan || 'normal';
     const porcentaje = contable.porcentaje_uso || 0;
@@ -248,6 +254,91 @@ async function cambiarPlan(e) {
   } catch (error) {
     showToast('Error al cambiar plan: ' + error.message, 'error');
   }
+}
+
+// ============================================
+// NUEVAS FUNCIONES: SISTEMA DE UPGRADES
+// ============================================
+
+function displaySolicitudes(solicitudes) {
+    const container = document.getElementById('solicitudesContainer');
+    if (!container) return;
+    
+    const badge = document.getElementById('solicitudesBadge');
+    if (badge) {
+        if (solicitudes.length > 0) {
+            badge.textContent = solicitudes.length;
+            badge.style.display = 'inline-block';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+    
+    if (solicitudes.length === 0) {
+        container.innerHTML = `
+            <div style="background: white; border: 1px dashed var(--border-color); padding: 2rem; border-radius: 0.75rem; text-align: center;">
+                <p style="color: var(--text-secondary); margin: 0;">No hay solicitudes de upgrade pendientes</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = solicitudes.map(s => `
+        <div style="background: white; border: 1px solid var(--border-color); padding: 1.25rem; border-radius: 0.75rem; margin-bottom: 1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+            <div style="display: flex; justify-content: space-between; align-items: start;">
+                <div>
+                    <strong style="font-size: 1rem; color: #1e293b;">${s.nombre_completo}</strong><br>
+                    <small style="color: #64748b;">${s.email}</small>
+                </div>
+                <div style="text-align: right; display: flex; align-items: center; gap: 0.5rem;">
+                    <span class="badge badge-primary" style="font-size: 0.75rem;">${s.plan_actual}</span>
+                    <span style="color: #94a3b8;">→</span>
+                    <span class="badge badge-success" style="font-size: 0.75rem;">${s.plan_solicitado}</span>
+                </div>
+            </div>
+            ${s.mensaje_contable ? `<div style="margin: 0.75rem 0; padding: 0.75rem; background: #f8fafc; border-radius: 0.5rem; font-size: 0.875rem; color: #475569; border-left: 3px solid #cbd5e1;">"${s.mensaje_contable}"</div>` : ''}
+            <div style="margin-top: 1rem; display: flex; gap: 0.75rem;">
+                <button onclick="aprobarSolicitud(${s.id})" class="btn btn-sm btn-primary" style="padding: 0.5rem 1rem;">Aprobar Upgrade</button>
+                <button onclick="rechazarSolicitud(${s.id})" class="btn btn-sm btn-outline-danger" style="padding: 0.5rem 1rem;">Rechazar</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function aprobarSolicitud(id) {
+    if (!confirm('¿Deseas aprobar esta solicitud de upgrade? El plan y los límites del contable se actualizarán inmediatamente.')) return;
+    
+    try {
+        const response = await fetchAPI(`/admin/solicitudes/${id}/aprobar`, {
+            method: 'PUT'
+        });
+        
+        if (response.success) {
+            showToast(response.message, 'success');
+            loadDashboard();
+        }
+    } catch (error) {
+        showToast('Error al aprobar: ' + error.message, 'error');
+    }
+}
+
+async function rechazarSolicitud(id) {
+    const motivo = prompt('Motivo del rechazo (opcional):');
+    if (motivo === null) return;
+    
+    try {
+        const response = await fetchAPI(`/admin/solicitudes/${id}/rechazar`, {
+            method: 'PUT',
+            body: JSON.stringify({ motivo })
+        });
+        
+        if (response.success) {
+            showToast('Solicitud rechazada correctamente', 'success');
+            loadDashboard();
+        }
+    } catch (error) {
+        showToast('Error al rechazar: ' + error.message, 'error');
+    }
 }
 
 function handleLogout() {
