@@ -1069,7 +1069,7 @@ async function ejecutarExportacion() {
   const paquete = prepararDatosParaExportar();
   if (!paquete) return;
   const archivar = document.getElementById('checkArchivar').checked;
-  generarCSV(paquete.datos, paquete.columnas, paquete.empresa);
+  generarCSV(paquete.datos, paquete.columnas, paquete.empresa, paquete.periodoMes, paquete.periodoAnio);
   
   if (archivar) {
     let datosOriginales = facturasFiltradas;
@@ -1135,7 +1135,7 @@ async function archivarFacturas(ids) {
   } catch (error) { if(typeof showToast === 'function') showToast('Error al archivar facturas', 'error'); }
 }
 
-function generarCSV(datosProcesados, columnas, nombreArchivoBase) {
+function generarCSV(datosProcesados, columnas, nombreEmpresa, periodoMes, periodoAnio) {
   const headerMap = { 
       'empresa_nombre': 'Empresa', 
       'rnc': 'RNC o Cédula', 
@@ -1182,9 +1182,15 @@ function generarCSV(datosProcesados, columnas, nombreArchivoBase) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  const cleanName = nombreArchivoBase.replace(/[^a-zA-Z0-9]/g, '_');
-  const timestamp = new Date().toISOString().slice(0, 10);
-  a.download = `Reporte_${cleanName}_${timestamp}.csv`;
+  const meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+  const nombreMes = meses[parseInt(periodoMes, 10) - 1] || "Mes";
+  let nombreArchivo = `${nombreMes} ${periodoAnio}`;
+  if (nombreEmpresa !== "TODAS") {
+    nombreArchivo += ` - ${nombreEmpresa}`;
+  } else {
+    nombreArchivo += " - Todas las Empresas";
+  }
+  a.download = `${nombreArchivo}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
