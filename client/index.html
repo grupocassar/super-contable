@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Contable - Automatización con IA para Firmas Contables</title>
+    
+    <!-- Tailwind CSS para utilidades base -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Tipografía profesional -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Archivo de estilos dedicado -->
+    <link rel="stylesheet" href="/assets/css/home.css">
+</head>
+<body class="bg-slate-50 text-slate-900 antialiased">
+
+    <nav class="navbar-commercial">
+        <div class="max-w-7xl mx-auto flex justify-between items-center px-6 py-4">
+            <div class="navbar-brand">
+                <span>📊</span> Super Contable
+            </div>
+            <div class="navbar-actions">
+                <a href="/views/auth/login.html" class="btn-login">Acceso Clientes</a>
+                <a href="#precios" class="btn-cta-nav">Empezar Ahora</a>
+            </div>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <div class="hero-overlay"></div>
+        <div class="max-w-5xl mx-auto px-4 relative text-center">
+            <div class="badge">🚀 REVOLUCIÓN CONTABLE EN RD</div>
+            <h1 class="hero-title">
+                Deja de digitar facturas y <br>
+                <span class="gradient-text">empieza a supervisar</span>
+            </h1>
+            <p class="hero-subtitle">
+                Utilizamos Inteligencia Artificial para procesar facturas en segundos. 
+                Reducimos tu carga operativa en un <strong>75%</strong>.
+            </p>
+            <div class="hero-buttons">
+                <a href="#precios" class="btn-hero-primary">Ver Planes</a>
+                <a href="mailto:soporte@supercontable.com" class="btn-hero-secondary">Solicitar Demo</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 pb-32" id="precios">
+        <!-- Implementación / Setup -->
+        <section class="setup-section">
+            <div class="setup-card">
+                <div class="setup-info">
+                    <h2>Implementación Premium</h2>
+                    <p>Configuración a medida, vinculación con Telegram y capacitación de equipo.</p>
+                </div>
+                <div class="setup-price">
+                    <span class="label">Inversión Única</span>
+                    <span class="value">$950</span>
+                    <span class="currency">USD</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Planes Mensuales -->
+        <div class="plans-grid">
+            <div class="pricing-card" data-plan="STARTER">
+                <div class="card-icon">🥉</div>
+                <h3>Starter</h3>
+                <div class="price"><span>$135</span>/mes</div>
+                <ul class="features">
+                    <li>✓ 800 facturas/mes</li>
+                    <li>✓ 1 Usuario Asistente</li>
+                    <li>✓ Exportación 606</li>
+                </ul>
+                <button class="btn-plan-select">Elegir Plan</button>
+            </div>
+
+            <div class="pricing-card featured" data-plan="PROFESSIONAL">
+                <div class="popular-tag">RECOMENDADO</div>
+                <div class="card-icon">🥈</div>
+                <h3>Professional</h3>
+                <div class="price"><span>$195</span>/mes</div>
+                <ul class="features">
+                    <li>✓ 1,500 facturas/mes</li>
+                    <li>✓ Usuarios Ilimitados</li>
+                    <li>✓ Dashboard en Vivo</li>
+                </ul>
+                <button class="btn-plan-select-primary">Automatizar Ahora</button>
+            </div>
+
+            <div class="pricing-card" data-plan="BUSINESS">
+                <div class="card-icon">🥇</div>
+                <h3>Business</h3>
+                <div class="price"><span>$450</span>/mes</div>
+                <ul class="features">
+                    <li>✓ 6,000 facturas/mes</li>
+                    <li>✓ Soporte 24/7</li>
+                    <li>✓ Consultoría Mensual</li>
+                </ul>
+                <button class="btn-plan-select">Contactar Ventas</button>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>© 2026 Super Contable. Todos los derechos reservados.</p>
+    </footer>
+
+    <!-- Lógica de interacción dedicada -->
+    <script src="/assets/js/home.js"></script>
+</body>
+</html>

@@ -1,0 +1,381 @@
+/**
+ * HOME.CSS
+ * Estilos para la Landing Page Comercial de Super Contable.
+ * Implementa diseño responsivo, efectos premium y variables de marca.
+ */
+
+:root {
+    /* Paleta de colores profesional */
+    --primary: #2563eb;          /* Azul corporativo */
+    --primary-hover: #1d4ed8;
+    --dark: #0f172a;             /* Slate 900 */
+    --text-main: #1e293b;        /* Slate 800 */
+    --text-muted: #64748b;       /* Slate 500 */
+    --bg-light: #f8fafc;         /* Slate 50 */
+    --white: #ffffff;
+    --border-color: #e2e8f0;
+}
+
+/* --- Estilos de Navegación --- */
+.navbar-commercial {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.navbar-brand {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--primary);
+    letter-spacing: -0.025em;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-login {
+    color: var(--text-main);
+    font-weight: 600;
+    margin-right: 1.5rem;
+    transition: color 0.3s ease;
+    font-size: 0.95rem;
+}
+
+.btn-login:hover {
+    color: var(--primary);
+}
+
+.btn-cta-nav {
+    background: var(--primary);
+    color: var(--white);
+    padding: 0.65rem 1.4rem;
+    border-radius: 0.75rem;
+    font-weight: 700;
+    font-size: 0.9rem;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+    transition: all 0.3s ease;
+}
+
+.btn-cta-nav:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+}
+
+/* --- Sección Hero --- */
+.hero {
+    padding: 7rem 1rem 10rem 1rem;
+    background: var(--white);
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-overlay {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(var(--text-muted) 0.5px, transparent 0.5px);
+    background-size: 32px 32px;
+    opacity: 0.1;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.5rem 1.25rem;
+    background: #eff6ff;
+    color: var(--primary);
+    border-radius: 9999px;
+    font-weight: 800;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    border: 1px solid #dbeafe;
+    margin-bottom: 2.5rem;
+}
+
+.hero-title {
+    font-size: 4.5rem;
+    font-weight: 900;
+    line-height: 1.05;
+    letter-spacing: -0.04em;
+    color: var(--dark);
+    margin-bottom: 2rem;
+}
+
+.gradient-text {
+    background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.hero-subtitle {
+    font-size: 1.35rem;
+    color: var(--text-muted);
+    max-width: 42rem;
+    margin: 0 auto 3.5rem auto;
+    line-height: 1.6;
+}
+
+.hero-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 1.25rem;
+}
+
+.btn-hero-primary {
+    padding: 1.1rem 2.5rem;
+    background: var(--primary);
+    color: var(--white);
+    border-radius: 1rem;
+    font-weight: 700;
+    font-size: 1.125rem;
+    box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.4);
+    transition: all 0.3s ease;
+}
+
+.btn-hero-primary:hover {
+    transform: scale(1.03);
+    background: var(--primary-hover);
+}
+
+.btn-hero-secondary {
+    padding: 1.1rem 2.5rem;
+    background: var(--white);
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+    border-radius: 1rem;
+    font-weight: 700;
+    font-size: 1.125rem;
+    transition: all 0.3s ease;
+}
+
+.btn-hero-secondary:hover {
+    background: var(--bg-light);
+    border-color: var(--text-muted);
+}
+
+/* --- Sección de Implementación (Setup Fee) --- */
+.setup-section {
+    margin-bottom: 6rem;
+    margin-top: -4rem; /* Traslape visual con el hero */
+}
+
+.setup-card {
+    background: var(--dark);
+    border-radius: 2.5rem;
+    padding: 4rem;
+    color: var(--white);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 3rem;
+    box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.3);
+    position: relative;
+    z-index: 10;
+}
+
+.setup-info h2 {
+    font-size: 2.25rem;
+    font-weight: 800;
+    margin-bottom: 1rem;
+}
+
+.setup-info p {
+    font-size: 1.125rem;
+    color: #94a3b8;
+    max-width: 30rem;
+}
+
+.setup-price {
+    text-align: center;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2.5rem 4rem;
+    border-radius: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.setup-price .label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #60a5fa;
+    margin-bottom: 0.5rem;
+}
+
+.setup-price .value {
+    display: block;
+    font-size: 4.5rem;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.setup-price .currency {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #64748b;
+}
+
+/* --- Grid de Planes Mensuales --- */
+.plans-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 2.5rem;
+    padding-top: 2rem;
+}
+
+.pricing-card {
+    background: var(--white);
+    padding: 3rem;
+    border-radius: 2rem;
+    border: 1px solid var(--border-color);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+}
+
+.pricing-card:hover {
+    transform: translateY(-12px);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+}
+
+.pricing-card.featured {
+    border: 2.5px solid var(--primary);
+    transform: scale(1.05);
+    position: relative;
+    z-index: 20;
+    background: #ffffff;
+}
+
+.pricing-card.featured:hover {
+    transform: scale(1.05) translateY(-12px);
+}
+
+.popular-tag {
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--primary);
+    color: var(--white);
+    padding: 0.35rem 1.25rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+}
+
+.card-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+.pricing-card h3 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--dark);
+    margin-bottom: 0.5rem;
+}
+
+.pricing-card p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 2rem;
+}
+
+.price {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 2.5rem;
+}
+
+.price span {
+    font-size: 3.5rem;
+    font-weight: 900;
+    color: var(--dark);
+    margin-right: 0.25rem;
+}
+
+.features {
+    margin-bottom: 3rem;
+    flex-grow: 1;
+    list-style: none;
+    padding: 0;
+}
+
+.features li {
+    margin-bottom: 1rem;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 500;
+}
+
+.btn-plan-select {
+    width: 100%;
+    padding: 1rem;
+    border-radius: 1rem;
+    border: 1.5px solid var(--border-color);
+    font-weight: 700;
+    color: var(--text-main);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.btn-plan-select:hover {
+    background: var(--bg-light);
+    border-color: var(--text-muted);
+}
+
+.btn-plan-select-primary {
+    width: 100%;
+    padding: 1.1rem;
+    border-radius: 1rem;
+    background: var(--primary);
+    color: var(--white);
+    font-weight: 800;
+    box-shadow: 0 8px 20px -4px rgba(37, 99, 235, 0.3);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.btn-plan-select-primary:hover {
+    background: var(--primary-hover);
+    transform: translateY(-2px);
+}
+
+/* --- Footer --- */
+.footer {
+    padding: 5rem 1rem;
+    text-align: center;
+    background: var(--white);
+    border-top: 1px solid var(--border-color);
+    margin-top: 8rem;
+}
+
+.footer p {
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+/* --- Responsividad --- */
+@media (max-width: 1024px) {
+    .hero-title { font-size: 3.5rem; }
+    .setup-card { text-align: center; justify-content: center; }
+}
+
+@media (max-width: 640px) {
+    .hero-title { font-size: 2.75rem; }
+    .hero-subtitle { font-size: 1.1rem; }
+    .hero-buttons { flex-direction: column; }
+    .pricing-card.featured { transform: scale(1); margin: 1rem 0; }
+    .pricing-card.featured:hover { transform: translateY(-10px); }
+}

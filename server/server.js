@@ -27,11 +27,22 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/contable', contableRoutes);
 app.use('/api/asistente', asistenteRoutes);
 
-// Servir archivos estáticos del frontend
+// Servir archivos estáticos del frontend (CSS, JS, Imágenes)
 app.use(express.static(path.join(__dirname, '../client')));
 
-// Ruta raíz redirige al login
+/**
+ * ✅ RUTA RAÍZ PROFESIONAL
+ * Ahora sirve la Landing Page comercial con los planes actualizados.
+ */
 app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/index.html'));
+});
+
+/**
+ * ✅ RUTA DE ACCESO A LA APP
+ * Mantenemos un acceso directo al login si se requiere navegar manualmente.
+ */
+app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, '../client/views/auth/login.html'));
 });
 
@@ -64,6 +75,7 @@ async function startServer() {
 ⚙️ Worker Service: ONLINE (Procesando cola cada 5s)
 🚀 Super Contable Server Started!
    Port: ${PORT}
+   URL: http://localhost:${PORT}
       `);
     });
   } catch (error) {
